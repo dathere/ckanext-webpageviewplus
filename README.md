@@ -67,10 +67,18 @@ Every frame gets `loading="lazy"`, a `referrerpolicy`, the view's title as its a
 name, and an `allow` list that always denies ad and tracking features. Sysadmins can also set
 sandbox tokens, allowed features and the referrer policy per view.
 
-To convert existing `webpage_view` views:
+To convert existing `webpage_view` views (always start with `--dry-run`, and back up the
+database first: the command rewrites views in place):
 
     ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate --dry-run
-    ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate [--preset NAME]
+    ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate [--uploads-only] [--preset NAME]
+
+**If your site embeds third-party apps or dashboards, migrate with `--uploads-only` for now.**
+Stock `webpage_view` runs embedded pages unsandboxed. Until content-origin support lands,
+`external` runs as `interactive`, so a migrated third-party app loses its own logins and
+saved settings. `--uploads-only` converts just the views of uploaded HTML. Those gain the
+most, since stock `webpage_view` runs them unsandboxed on CKAN's own origin. Linked pages
+stay on `webpage_view`; keep both plugins enabled.
 
 
 ## Config settings

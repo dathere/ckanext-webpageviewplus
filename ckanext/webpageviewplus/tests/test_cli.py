@@ -54,6 +54,19 @@ class TestMigrate:
         assert migrated["page_url"] == "https://other.example.com/b.html"
         assert migrated["preset"] == "interactive"
 
+    def test_uploads_only(self, cli):
+        upload_view = _stock_view(factories.Resource(url_type="upload", url="a.html"))
+        link_view = _stock_view(factories.Resource(url="https://pages.example.com/a.html"))
+        page_url_view = _stock_view(
+            factories.Resource(url_type="upload", url="b.html"),
+            page_url="https://pages.example.com/b.html",
+        )
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate", "--uploads-only"])
+        assert result.exit_code == 0, result.output
+        assert _show(upload_view)["view_type"] == "webpage_view_plus"
+        assert _show(link_view)["view_type"] == "webpage_view"
+        assert _show(page_url_view)["view_type"] == "webpage_view"
+
     def test_preset_option(self, cli):
         view = _stock_view(factories.Resource(url="https://pages.example.com/a.html"))
         result = cli.invoke(ckan, ["webpageviewplus", "migrate", "--preset", "external"])

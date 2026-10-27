@@ -102,14 +102,26 @@ def webpageviewplus():
 @webpageviewplus.command()
 @click.option("--dry-run", is_flag=True, help="Show what would change, change nothing.")
 @click.option(
+    "--uploads-only",
+    is_flag=True,
+    help="Only migrate views of uploaded resources that use their own URL; "
+    "leave views of linked pages on webpage_view.",
+)
+@click.option(
     "--preset",
     type=click.Choice(sorted(frame.PRESETS)),
     help="Preset for every migrated view (default: detect, else the site default).",
 )
-def migrate(dry_run: bool, preset: Optional[str]):
+def migrate(dry_run: bool, uploads_only: bool, preset: Optional[str]):
     """Convert webpage_view views to webpage_view_plus.
 
     Keeps each view's id, title, description, order and page_url.
+
+    Until uploads are served from a separate content origin, the external
+    preset runs sandboxed, so third-party apps that need their own logins or
+    storage stop working once migrated. --uploads-only converts just the
+    views of uploaded HTML, which gain the most (stock webpage_view runs them
+    unsandboxed on CKAN's origin), and leaves linked pages alone.
     """
     if preset and preset not in settings.allowed_presets():
         raise click.UsageError(
@@ -121,9 +133,17 @@ def migrate(dry_run: bool, preset: Optional[str]):
         .order_by(model.ResourceView.resource_id, model.ResourceView.order)
         .all()
     )
+    migrated = 0
     for view in views:
         config = dict(view.config or {})
         resource = model.Resource.get(view.resource_id)
+        if uploads_only and (
+            config.get("page_url")
+            or resource is None
+            or resource.url_type != "upload"
+        ):
+            continue
+        migrated += 1
         chosen, reason = choose_preset(resource, config.get("page_url") or "", preset)
         click.echo("{} {} -> {} ({})".format(view.id, view.resource_id, chosen, reason))
         if not dry_run:
@@ -132,10 +152,10 @@ def migrate(dry_run: bool, preset: Optional[str]):
             view.view_type = "webpage_view_plus"
 
     if dry_run:
-        click.echo("{} view(s) would be migrated (dry run).".format(len(views)))
+        click.echo("{} view(s) would be migrated (dry run).".format(migrated))
     else:
         model.repo.commit()
-        click.echo("{} view(s) migrated.".format(len(views)))
+        click.echo("{} view(s) migrated.".format(migrated))
 
 
 def get_commands():

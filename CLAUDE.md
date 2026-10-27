@@ -11,7 +11,9 @@ self-sizing, a control bar, and a separate content origin for uploaded HTML. Tar
 
 **The design spec is the source of truth for features:** the Claude Docs doc
 "ckanext-webpageviewplus: design spec" (https://claude.ai/artifact/DFvE8C8NViiMK8Yvses1PV). Read it
-with the Claude Docs connector, not WebFetch. Its rollout is phased:
+with the Claude Docs connector, not WebFetch. Its "Decisions" table at the end records where the
+code departs from the earlier sections. Keep it current when you depart further. Its rollout is phased
+(phase 3 was moved ahead of phase 2):
 1. Attribute builder, presets (`strict`, `interactive`, `external`, `data-schematic`), per-view form,
    `ckan webpageviewplus migrate` command (no content origin yet).
 2. Self-sizing (generic `webpageviewplus:resize` message + qsv adapter), control bar,
@@ -57,11 +59,12 @@ content origin (the `content_origin` fixture, or `CO` in `test_frame.py`).
   template a built `Frame` (or `frame_error`). It's also called for the form, where
   `resource_view` can be None (new view) or unsaved form data (preview). Never build the iframe
   `src` from `resource_view`/`resource` in templates.
-- `cli.py`: `ckan webpageviewplus migrate [--dry-run] [--preset NAME]` rewrites
+- `cli.py`: `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME]` rewrites
   `ResourceView.view_type`/`config` directly, because `resource_view_update` can't change a
   view's type. It picks `data-schematic` for uploads containing `qsv-schematic-source`, never
   picks a preset the invariant refuses (that falls to `strict`), and keeps the view's id, title,
-  description, order and `page_url`.
+  description, order and `page_url`. `--uploads-only` exists because, until phase 3, migrating a
+  third-party app's view sandboxes it and breaks its logins/storage.
 - Plugin name and view type are both `webpage_view_plus` (per the spec). Stored views reference
   the view type, so don't rename it. Templates are namespaced under `templates/webpageviewplus/`.
 - Template strings go through CKAN's `_()`, which %-formats, so a literal `%` in a label breaks
