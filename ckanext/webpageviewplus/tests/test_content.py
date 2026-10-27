@@ -63,7 +63,7 @@ class TestContentRoute:
         assert response.headers["Content-Security-Policy"].startswith("frame-ancestors ")
         assert "test.ckan.net:*" in response.headers["Content-Security-Policy"]
         assert response.headers["X-Content-Type-Options"] == "nosniff"
-        assert response.headers["Cache-Control"] == "public, max-age=300"
+        assert response.headers["Cache-Control"] == "public, no-cache"
         assert "Set-Cookie" not in response.headers
         assert "sandbox" not in response.headers["Content-Security-Policy"]
 

@@ -130,13 +130,16 @@ workers work, and the browser keeps them apart from CKAN's pages, cookies and AP
 
 How content is served:
 
-- **Public datasets** get a stable, unsigned URL with an ETag and `Cache-Control: public`, so a
-  CDN in front of the content origin is fine.
+- **Public datasets** get a stable, unsigned URL, sent with an ETag and `Cache-Control: public,
+  no-cache`. A CDN in front of the content origin may store it, but checks with CKAN before
+  each reuse (a cheap 304 while unchanged). So a dataset made private stops being served at
+  once, even through the CDN.
 - **Private datasets** get a URL signed with the secret when CKAN renders the view, after its
   normal access check. It stays valid for one to two `url_ttl` windows, and is sent with
-  `Cache-Control: private`. Anyone holding a signed URL can open it until then, so keep
-  `url_ttl` short. A dataset made private stops its unsigned URLs at once. Rotating
-  `signing_secret` revokes every signed URL.
+  `Cache-Control: private, max-age=<url_ttl>`, so only the viewer's own browser keeps a copy,
+  for at most that long. Anyone holding a signed URL can open it until it expires, so keep
+  `url_ttl` short. Rotating `signing_secret` invalidates every signed URL for new requests;
+  copies already in a viewer's browser last until their `max-age` runs out.
 - Responses send `frame-ancestors` (only CKAN's hosts may frame them) and `nosniff`, and never
   set a cookie.
 - **Only filesystem uploads are served** for now. With a cloud storage uploader (for example

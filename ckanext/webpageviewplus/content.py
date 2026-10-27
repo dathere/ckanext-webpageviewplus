@@ -239,9 +239,15 @@ class ContentHostMiddleware:
 
 
 def cache_control(status: str, visibility: Optional[str]) -> str:
-    """Public content is cacheable by anyone (CDN-friendly, revalidated by
-    ETag); private content only by the viewer's browser; anything the route
-    didn't explicitly mark (errors included) not at all."""
-    if not status.startswith(("200", "304")) or visibility not in ("public", "private"):
+    """Public content may be stored by any cache (a CDN in front of the
+    content origin) but must be revalidated with CKAN on every use, a cheap
+    304 via its ETag, so making a dataset private takes effect at once.
+    Private content may be kept only by the viewer's own browser, for one
+    url_ttl. Anything the route didn't explicitly mark (errors) not at all."""
+    if not status.startswith(("200", "304")):
         return "no-store"
-    return "{}, max-age={}".format(visibility, settings.url_ttl())
+    if visibility == "public":
+        return "public, no-cache"
+    if visibility == "private":
+        return "private, max-age={}".format(settings.url_ttl())
+    return "no-store"

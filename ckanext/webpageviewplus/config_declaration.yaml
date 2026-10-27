@@ -24,8 +24,8 @@ groups:
         type: int
         description: |
           Length, in seconds, of the signing window for private resources'
-          content URLs (a URL stays valid for one to two windows), and the
-          max-age of content responses.
+          content URLs (a URL stays valid for one to two windows), and how
+          long a viewer's browser may keep a private response.
 
       - key: ckanext.webpageviewplus.default_preset
         default: interactive
