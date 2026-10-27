@@ -255,6 +255,26 @@ def violates_same_origin_rule(
     return "allow-scripts" in sandbox and "allow-same-origin" in sandbox
 
 
+def frame_on_ckan_host(
+    url: str,
+    ckan_hosts: list[str],
+    is_upload: bool,
+    content_origin: Optional[str],
+) -> bool:
+    """Whether the frame loads from CKAN's own host. An upload counts as
+    CKAN's unless it is served from the content origin (its stored url is a
+    bare filename at model level, and its download URL is on CKAN's host)."""
+    if is_upload:
+        return not (content_origin and url_host(url) == url_host(content_origin))
+    return is_ckan_host(url, ckan_hosts)
+
+
+def preset_for_upload(name: str) -> str:
+    """Uploaded HTML is user content: it always gets a sandbox, so external
+    (no sandbox) becomes interactive. data-schematic is the upload preset."""
+    return "interactive" if name == "external" else name
+
+
 def effective_preset_name(name: str, content_origin: Optional[str]) -> str:
     """Resolve presets that can't run as configured. Without a content origin
     (always, before phase 3) data-schematic and external degrade to
@@ -346,6 +366,9 @@ def build_frame(
     name = effective_preset_name(preset_name, content_origin)
     if name != preset_name and preset_name in PRESETS:
         notices.append("degraded")
+    if is_upload and preset_for_upload(name) != name:
+        name = preset_for_upload(name)
+        notices.append("external_not_for_uploads")
     preset = PRESETS[name]
 
     sandbox: Optional[tuple[str, ...]] = preset.sandbox
@@ -356,7 +379,8 @@ def build_frame(
         allow = parse_allow(allow_override)[0]
 
     same_origin = must_isolate(
-        is_upload or is_ckan_host(url, ckan_hosts), content_origin
+        frame_on_ckan_host(url, ckan_hosts, is_upload, content_origin),
+        content_origin,
     )
     if violates_same_origin_rule(sandbox, same_origin):
         name = "strict"

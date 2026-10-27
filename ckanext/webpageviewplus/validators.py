@@ -134,7 +134,25 @@ def view_after_validator(
     else:
         return
 
-    on_ckan_host = is_upload or frame.is_ckan_host(url, settings.ckan_hosts())
+    isolating = settings.isolating_content_origin()
+    if is_upload and settings.content_origin():
+        # Framed from the content origin (see plugin.setup_template_variables).
+        url = settings.content_origin() + "/"
+    on_ckan_host = frame.frame_on_ckan_host(
+        url, settings.ckan_hosts(), is_upload, settings.content_origin()
+    )
+
+    chosen = _get(data, "preset") or settings.default_preset()
+    if is_upload and frame.preset_for_upload(chosen) != chosen:
+        _add_error(
+            errors,
+            "preset",
+            toolkit._(
+                "External is for third-party sites: uploaded HTML always gets "
+                "a sandbox. Use Data Schematic or Interactive"
+            ),
+        )
+        return
 
     allowed_hosts = settings.allowed_hosts()
     if page_url and allowed_hosts and not on_ckan_host:
@@ -145,15 +163,12 @@ def view_after_validator(
                 toolkit._("This host isn't on the site's list of allowed hosts"),
             )
 
-    preset_name = frame.effective_preset_name(
-        _get(data, "preset") or settings.default_preset(),
-        settings.content_origin(),
-    )
+    preset_name = frame.effective_preset_name(chosen, isolating)
     sandbox = frame.PRESETS[preset_name].sandbox
     override = _get(data, "sandbox")
     if override:
         sandbox = tuple(frame.parse_sandbox(override)[0])
-    same_origin = frame.must_isolate(on_ckan_host, settings.content_origin())
+    same_origin = frame.must_isolate(on_ckan_host, isolating)
     if frame.violates_same_origin_rule(sandbox, same_origin):
         _add_error(
             errors,

@@ -9,9 +9,11 @@ pages, its cookies or its API with the viewer's session.
 """
 from __future__ import annotations
 
-from flask import Blueprint, Response, request
+from flask import Blueprint, Response, redirect, request
 
-from ckanext.webpageviewplus import settings
+import ckan.model as model
+
+from ckanext.webpageviewplus import content, settings
 
 # Response types a browser runs scripts in.
 ACTIVE_TYPES = frozenset(
@@ -41,11 +43,44 @@ def _is_ckan_served_resource(endpoint: str) -> bool:
     )
 
 
+def _content_redirect(response: Response) -> Response | None:
+    """With a content origin, send an HTML upload's download there instead:
+    CKAN's origin then never serves it. CKAN's download view has already
+    checked that the viewer may see the resource, so a private one gets a
+    signed URL."""
+    if not settings.content_origin() or not (request.endpoint or "").endswith(
+        "_resource.download"
+    ):
+        return None
+    resource_id = (request.view_args or {}).get("resource_id")
+    resource_obj = model.Resource.get(resource_id) if resource_id else None
+    if resource_obj is None or resource_obj.package is None:
+        return None
+    resource = {
+        "id": resource_obj.id,
+        "url": resource_obj.url,
+        "url_type": resource_obj.url_type,
+        "format": resource_obj.format,
+        "mimetype": resource_obj.mimetype,
+    }
+    if not content.is_html_upload(resource):
+        return None
+    response.close()
+    return redirect(
+        content.content_url(resource, private=bool(resource_obj.package.private)),
+        code=302,
+    )
+
+
 @hardening.after_app_request
 def sandbox_active_downloads(response: Response) -> Response:
-    if not settings.harden_downloads():
-        return response
     if not _is_ckan_served_resource(request.endpoint or ""):
+        return response
+    if response.status_code == 200:
+        redirected = _content_redirect(response)
+        if redirected is not None:
+            return redirected
+    if not settings.harden_downloads():
         return response
     if (response.mimetype or "").lower() not in ACTIVE_TYPES:
         return response

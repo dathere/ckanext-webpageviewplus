@@ -116,7 +116,7 @@ docker exec ckan-docker-ckan-dev-1 sh -c '
   TEST_DB_URL="$(echo "$CKAN_SQLALCHEMY_URL" | sed "s#/ckandb\$#/ckan_test#")"
   case "$TEST_DB_URL" in */ckan_test) ;; *) echo "refusing: not ckan_test"; exit 1;; esac
   cd /srv/app/src_extensions/ckanext-webpageviewplus &&
-  env -u CKAN__PLUGINS CKAN_SQLALCHEMY_URL="$TEST_DB_URL" CKAN_SITE_ID=test.ckan.net \
+  env -u CKAN__PLUGINS -u CKAN_SITE_URL CKAN_SQLALCHEMY_URL="$TEST_DB_URL" CKAN_SITE_ID=test.ckan.net \
     pytest --ckan-ini=test.ini --disable-warnings -q -p no:cacheprovider ckanext/webpageviewplus'
 ```
 

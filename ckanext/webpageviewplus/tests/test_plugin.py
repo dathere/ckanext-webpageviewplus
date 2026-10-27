@@ -155,6 +155,7 @@ def content_origin(monkeypatch):
     monkeypatch.setattr(
         settings, "content_origin", lambda: "https://usercontent.example.net"
     )
+    monkeypatch.setattr(settings, "signing_secret", lambda: "s" * 32)
 
 
 def _view(user, resource_id, **fields):
@@ -236,9 +237,22 @@ class TestViewValidation:
 
     def test_external_saves_without_content_origin(self):
         # Allowed, but renders as interactive (see test_frame).
-        resource = factories.Resource(url_type="upload", url="report.html")
+        resource = factories.Resource(url="https://pages.example.com/a.html")
         view = _view(factories.Sysadmin(), resource["id"], preset="external")
         assert view["preset"] == "external"
+
+    def test_external_refused_for_uploads(self):
+        resource = factories.Resource(url_type="upload", url="report.html")
+        with pytest.raises(ValidationError) as e:
+            _view(factories.Sysadmin(), resource["id"], preset="external")
+        assert "preset" in e.value.error_dict
+
+    def test_data_schematic_with_same_origin_allowed_on_upload_with_content_origin(
+        self, content_origin
+    ):
+        resource = factories.Resource(url_type="upload", url="schematic.html")
+        view = _view(factories.Sysadmin(), resource["id"], preset="data-schematic")
+        assert view["preset"] == "data-schematic"
 
     def test_scripts_and_same_origin_refused_for_any_page_without_content_origin(self):
         resource = factories.Resource(url="https://pages.example.com/a.html")

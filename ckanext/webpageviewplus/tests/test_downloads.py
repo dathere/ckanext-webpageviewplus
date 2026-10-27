@@ -30,7 +30,7 @@ def _upload(content, filename, mimetype=None):
 
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
-@pytest.mark.usefixtures("non_clean_db", "with_plugins", "with_request_context")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
 class TestHardenedDownloads:
     def test_html_upload_is_sandboxed(self, app, tmp_path, ckan_config, monkeypatch):
         monkeypatch.setitem(ckan_config, "ckan.storage_path", str(tmp_path))

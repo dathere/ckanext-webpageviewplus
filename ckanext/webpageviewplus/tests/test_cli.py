@@ -14,6 +14,7 @@ def content_origin(monkeypatch):
     monkeypatch.setattr(
         settings, "content_origin", lambda: "https://usercontent.example.net"
     )
+    monkeypatch.setattr(settings, "signing_secret", lambda: "s" * 32)
 
 
 def _stock_view(resource, **fields):
@@ -110,6 +111,15 @@ class TestMigrate:
         result = cli.invoke(ckan, ["webpageviewplus", "migrate"])
         assert result.exit_code == 0, result.output
         assert _show(view)["preset"] == "interactive"
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "external")
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.default_preset", "external")
+    def test_view_skipped_when_no_allowed_preset_fits(self, cli):
+        view = _stock_view(factories.Resource(url_type="upload", url="a.html"))
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate"])
+        assert result.exit_code == 0, result.output
+        assert "skipped" in result.output
+        assert _show(view)["view_type"] == "webpage_view"
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "strict interactive")
     def test_preset_outside_site_list_refused(self, cli):

@@ -2,6 +2,31 @@ version: 1
 groups:
   - annotation: ckanext-webpageviewplus settings
     options:
+      - key: ckanext.webpageviewplus.content_origin
+        default: ""
+        description: |
+          Origin that serves uploaded HTML, e.g. https://example-usercontent.org.
+          Must be a different registrable domain from CKAN's (not a
+          subdomain), use https (http only for localhost), and be proxied to
+          this same CKAN. Empty turns it off: uploads are framed from CKAN's
+          own origin, sandboxed without allow-same-origin.
+
+      - key: ckanext.webpageviewplus.signing_secret
+        default: ""
+        description: |
+          HMAC key (32+ characters) for signed content URLs of private
+          resources. Required with content_origin. Separate from CKAN's own
+          secret so it can be rotated alone; rotating it invalidates signed
+          URLs already handed out.
+
+      - key: ckanext.webpageviewplus.url_ttl
+        default: 300
+        type: int
+        description: |
+          Length, in seconds, of the signing window for private resources'
+          content URLs (a URL stays valid for one to two windows), and the
+          max-age of content responses.
+
       - key: ckanext.webpageviewplus.default_preset
         default: interactive
         description: |

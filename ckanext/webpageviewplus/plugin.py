@@ -8,7 +8,14 @@ import ckan.plugins.toolkit as toolkit
 from ckan.common import CKANConfig
 from ckan.types import Context
 
-from ckanext.webpageviewplus import cli, downloads, frame, settings, validators as v
+from ckanext.webpageviewplus import (
+    cli,
+    content,
+    downloads,
+    frame,
+    settings,
+    validators as v,
+)
 from ckanext.webpageviewplus.frame import is_http_url  # noqa: F401 (re-export)
 
 ignore_empty = toolkit.get_validator("ignore_empty")
@@ -24,6 +31,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IConfigurable)
     plugins.implements(plugins.IClick)
     plugins.implements(plugins.IBlueprint)
+    plugins.implements(plugins.IMiddleware, inherit=True)
     plugins.implements(plugins.IResourceView, inherit=True)
 
     # IConfigurer
@@ -41,7 +49,15 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
     # IBlueprint
 
     def get_blueprint(self):
-        return [downloads.hardening]
+        # The content route is always registered; it answers only on the
+        # content origin's host, and only when one is configured.
+        return [downloads.hardening, content.content]
+
+    # IMiddleware
+
+    def make_middleware(self, app: Any, config: CKANConfig) -> Any:
+        app.wsgi_app = content.ContentHostMiddleware(app.wsgi_app)
+        return app
 
     # IClick
 
@@ -108,6 +124,9 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
 
         ckan_hosts = settings.ckan_hosts()
         is_upload = not page_url and resource.get("url_type") == "upload"
+        if is_upload and settings.content_origin() and content.is_html_upload(resource):
+            package = data_dict.get("package") or {}
+            url = content.content_url(resource, private=bool(package.get("private")))
         allowed_hosts = settings.allowed_hosts()
         if (
             page_url
@@ -128,7 +147,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             preset,
             ckan_hosts=ckan_hosts,
             is_upload=is_upload,
-            content_origin=settings.content_origin(),
+            content_origin=settings.isolating_content_origin(),
             sandbox_override=resource_view.get("sandbox") or "",
             allow_override=resource_view.get("allow") or "",
             referrer_policy=(

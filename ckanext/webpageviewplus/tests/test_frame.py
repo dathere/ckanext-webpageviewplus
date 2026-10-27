@@ -42,9 +42,27 @@ def test_external_refused_on_own_origin(url):
     assert "same_origin_fallback" in f.notices
 
 
-def test_upload_counts_as_own_origin_whatever_its_url():
-    f = build(content_origin=CO, preset="external", is_upload=True)
+def test_external_never_applies_to_uploads():
+    f = build(content_origin=CO, url=CO + "/x/a.html", preset="external", is_upload=True)
+    assert f.preset == "interactive"
+    assert "external_not_for_uploads" in f.notices
+
+
+def test_upload_not_on_content_origin_counts_as_ckan():
+    # e.g. the CKAN-origin download URL: scripts may not keep their origin.
+    f = build(
+        content_origin=CO,
+        url="https://pages.example.com/a.html",
+        is_upload=True,
+        sandbox_override="allow-scripts allow-same-origin",
+    )
     assert f.preset == "strict"
+
+
+def test_data_schematic_on_upload_from_content_origin_keeps_same_origin():
+    f = build(content_origin=CO, url=CO + "/x/s.html", preset="data-schematic", is_upload=True)
+    assert f.preset == "data-schematic"
+    assert "allow-same-origin" in f.sandbox
 
 
 def test_scripts_plus_same_origin_refused_on_own_origin():

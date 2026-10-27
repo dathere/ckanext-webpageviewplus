@@ -51,9 +51,10 @@ def choose_preset(
     resource: Optional[model.Resource],
     page_url: str,
     requested: Optional[str],
-) -> tuple[str, str]:
-    """Return (preset, reason) for a migrated view, never one that the
-    same-origin rule would refuse at save time."""
+) -> tuple[Optional[str], str]:
+    """Return (preset, reason) for a migrated view: never one the site
+    disallows or the same-origin rule would refuse at save time. None means
+    no preset fits, and the view is left as it is."""
     if requested:
         preset, reason = requested, "--preset"
     elif (
@@ -66,18 +67,25 @@ def choose_preset(
     else:
         preset, reason = settings.default_preset(), "default"
 
+    is_upload = not page_url and resource is not None and resource.url_type == "upload"
     if page_url:
-        same_origin = frame.is_ckan_host(page_url, settings.ckan_hosts())
-    elif resource is not None and resource.url_type == "upload":
-        same_origin = True
+        url = page_url
+    elif is_upload and settings.content_origin():
+        url = settings.content_origin() + "/"
     else:
-        url = resource.url if resource is not None else ""
-        same_origin = frame.is_ckan_host(url or "", settings.ckan_hosts())
-
-    same_origin = frame.must_isolate(same_origin, settings.content_origin())
+        url = (resource.url if resource is not None else "") or ""
+    isolating = settings.isolating_content_origin()
+    same_origin = frame.must_isolate(
+        frame.frame_on_ckan_host(
+            url, settings.ckan_hosts(), is_upload, settings.content_origin()
+        ),
+        isolating,
+    )
 
     def safe(name: str) -> bool:
-        effective = frame.effective_preset_name(name, settings.content_origin())
+        if is_upload and frame.preset_for_upload(name) != name:
+            return False
+        effective = frame.effective_preset_name(name, isolating)
         return not frame.violates_same_origin_rule(
             frame.PRESETS[effective].sandbox, same_origin
         )
@@ -90,8 +98,8 @@ def choose_preset(
     allowed = settings.allowed_presets()
     for name in [settings.default_preset()] + allowed:
         if name in allowed and safe(name):
-            return name, "{} refused on CKAN's own host".format(preset)
-    return "strict", "{} refused on CKAN's own host".format(preset)
+            return name, "{} isn't allowed for this page".format(preset)
+    return None, "no allowed preset is safe for this page"
 
 
 @click.group(short_help="ckanext-webpageviewplus commands")
@@ -145,6 +153,15 @@ def migrate(dry_run: bool, uploads_only: bool, preset: Optional[str]):
             continue
         migrated += 1
         chosen, reason = choose_preset(resource, config.get("page_url") or "", preset)
+        if chosen is None:
+            click.echo(
+                "{} {} skipped: {}; left on webpage_view".format(
+                    view.id, view.resource_id, reason
+                ),
+                err=True,
+            )
+            migrated -= 1
+            continue
         click.echo("{} {} -> {} ({})".format(view.id, view.resource_id, chosen, reason))
         if not dry_run:
             config["preset"] = chosen
