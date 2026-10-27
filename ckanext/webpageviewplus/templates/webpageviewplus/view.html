@@ -1,4 +1,5 @@
 {% asset 'webpageviewplus/webpageviewplus-css' %}
+{% asset 'webpageviewplus/webpageviewplus-js' %}
 {% if frame %}
   {% set desc_id = ('webpageviewplus-desc-' ~ resource_view.id) if resource_view and resource_view.id and resource_view.description else none %}
   <div class="webpageviewplus">
@@ -12,6 +13,10 @@
             style="{{ frame.style }}"
             data-preset="{{ frame.preset }}"
             data-height-mode="{{ frame.height_mode }}"
+            data-frame-origin="{{ frame.origin }}"
+            data-opaque="{{ 'true' if frame.opaque else 'false' }}"
+            data-min-height="{{ frame.min_height }}"
+            data-max-height="{{ frame.max_height }}"
             {% if desc_id %}aria-describedby="{{ desc_id }}"{% endif %}></iframe>
     {% if desc_id %}<p id="{{ desc_id }}" class="visually-hidden">{{ resource_view.description }}</p>{% endif %}
   </div>

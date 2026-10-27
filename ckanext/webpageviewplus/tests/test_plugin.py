@@ -362,6 +362,10 @@ def test_rendered_iframe_attributes(app):
     assert "aria-describedby=" in body
     assert "frameborder" not in body
     assert 'data-module="data-viewer"' not in body
+    assert 'data-frame-origin="https://pages.example.com"' in body
+    assert 'data-opaque="true"' in body
+    assert 'data-min-height="400"' in body
+    assert "webpageviewplus.js" in body or "webpageviewplus-js" in body or "webpageviewplus/" in body
 
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")

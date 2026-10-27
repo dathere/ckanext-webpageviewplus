@@ -222,3 +222,26 @@ def test_scripts_plus_same_origin_refused_everywhere_without_content_origin():
 def test_same_origin_without_scripts_allowed_without_content_origin():
     f = build(sandbox_override="allow-same-origin allow-forms")
     assert f.sandbox == "allow-same-origin allow-forms"
+
+
+@pytest.mark.parametrize(
+    "url,origin",
+    [
+        ("https://Pages.Example.com/a.html", "https://pages.example.com"),
+        ("https://pages.example.com:443/a", "https://pages.example.com"),
+        ("http://127.0.0.1:5001/x", "http://127.0.0.1:5001"),
+        ("http://[::1]:8080/x", "http://[::1]:8080"),
+        ("https://%63kan.example.org/", ""),
+    ],
+)
+def test_serialize_origin(url, origin):
+    assert frame.serialize_origin(url) == origin
+
+
+def test_opaque_frames():
+    assert build(preset="strict").opaque
+    assert build(preset="interactive").opaque
+    assert not build(preset="external", content_origin=CO).opaque
+    f = build(content_origin=CO, url=CO + "/x/s.html", preset="data-schematic", is_upload=True)
+    assert not f.opaque
+    assert f.origin == CO

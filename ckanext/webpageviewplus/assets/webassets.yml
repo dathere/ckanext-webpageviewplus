@@ -2,3 +2,9 @@ webpageviewplus-css:
   output: ckanext-webpageviewplus/%(version)s-webpageviewplus.css
   contents:
     - style.css
+
+webpageviewplus-js:
+  filters: rjsmin
+  output: ckanext-webpageviewplus/%(version)s-webpageviewplus.js
+  contents:
+    - webpageviewplus.js

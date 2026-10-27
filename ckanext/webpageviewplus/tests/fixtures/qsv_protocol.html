@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>qsv protocol fixture</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; }
+  #filler { height: 200px; background: repeating-linear-gradient(45deg, #eee 0 10px, #fff 10px 20px); }
+  button { margin: 4px 4px 4px 0; }
+  code { background: #f4f4f4; padding: 0 3px; }
+</style>
+</head>
+<body>
+<!--
+  Speaks the parent<->child messages a qsv Data Schematic uses when framed
+  (qsv after 27.0.1; see the qsv wiki, Visualization#embedding): messages are
+  plain objects whose key is the message name, posted with targetOrigin "*".
+  Used to check ckanext-webpageviewplus's self-sizing in a browser.
+-->
+<h1>qsv protocol fixture</h1>
+<p>origin: <code id="origin"></code></p>
+<p>last <code>qsvVizViewport</code> reply: <code id="viewport">none yet</code></p>
+<p>
+  <button id="grow" type="button">Grow by 300px</button>
+  <button id="shrink" type="button">Shrink by 300px</button>
+  <button id="reveal-bottom" type="button">qsvVizReveal bottom</button>
+  <button id="reveal-top" type="button">qsvVizReveal top (offset 150)</button>
+</p>
+<div id="filler"></div>
+<script>
+(function () {
+  "use strict";
+  var framed = window.self !== window.top;
+  document.getElementById("origin").textContent = self.origin;
+
+  function post(message) {
+    if (framed) window.parent.postMessage(message, "*");
+  }
+  function reportHeight() {
+    var style = getComputedStyle(document.body);
+    post({qsvVizHeight: Math.ceil(document.body.offsetHeight +
+      parseFloat(style.marginTop) + parseFloat(style.marginBottom))});
+  }
+
+  window.addEventListener("message", function (event) {
+    if (event.source !== window.parent || !event.data) return;
+    if (typeof event.data.qsvVizViewport === "number") {
+      document.getElementById("viewport").textContent = event.data.qsvVizViewport + "px";
+      reportHeight();
+    }
+  });
+
+  var filler = document.getElementById("filler");
+  document.getElementById("grow").onclick = function () {
+    filler.style.height = (filler.offsetHeight + 300) + "px";
+  };
+  document.getElementById("shrink").onclick = function () {
+    filler.style.height = Math.max(50, filler.offsetHeight - 300) + "px";
+  };
+  document.getElementById("reveal-bottom").onclick = function () {
+    post({qsvVizReveal: "bottom"});
+  };
+  document.getElementById("reveal-top").onclick = function () {
+    post({qsvVizReveal: "top", qsvVizOffset: 150});
+  };
+
+  window.addEventListener("load", function () {
+    reportHeight();
+    post({qsvVizWantViewport: 1});
+  });
+  window.addEventListener("resize", reportHeight);
+  if (window.ResizeObserver) new ResizeObserver(reportHeight).observe(document.body);
+  setTimeout(reportHeight, 200);
+  setTimeout(reportHeight, 800);
+})();
+</script>
+</body>
+</html>

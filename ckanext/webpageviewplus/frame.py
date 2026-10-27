@@ -200,6 +200,24 @@ def canonical_config_host(entry: str) -> str:
     return url_host("https://" + entry)
 
 
+def serialize_origin(url: str) -> str:
+    """The origin a browser gives a page at this URL (scheme://host[:port],
+    default ports omitted), or "" if the URL isn't usable."""
+    host = url_host(url)
+    if not host:
+        return ""
+    parts = urlsplit(url)
+    scheme = parts.scheme.lower()
+    try:
+        port = parts.port
+    except ValueError:
+        return ""
+    default = {"http": 80, "https": 443}.get(scheme)
+    if port and port != default:
+        return "{}://{}:{}".format(scheme, host, port)
+    return "{}://{}".format(scheme, host)
+
+
 def url_host(url: str) -> str:
     """The URL's canonical host, or "" if it's ambiguous or unparseable."""
     try:
@@ -297,6 +315,13 @@ class Frame:
     height_mode: str
     title: str = ""
     notices: list[str] = field(default_factory=list)
+    # For the self-sizing script: the origin the framed page has, unless
+    # opaque (sandboxed without allow-same-origin), when its messages arrive
+    # with origin "null" and replies must be posted to "*".
+    origin: str = ""
+    opaque: bool = False
+    min_height: int = 0
+    max_height: int = 0
 
 
 def _int(value: Any) -> int:
@@ -398,6 +423,7 @@ def build_frame(
     allow_attr = "; ".join(
         allow + ["{} 'none'".format(f) for f in DENIED_FEATURES]
     )
+    opaque = sandbox is not None and "allow-same-origin" not in sandbox
     return Frame(
         src=url,
         preset=name,
@@ -412,4 +438,8 @@ def build_frame(
         height_mode=mode,
         title=title,
         notices=notices,
+        origin=serialize_origin(url),
+        opaque=opaque,
+        min_height=min_height,
+        max_height=max_height,
     )

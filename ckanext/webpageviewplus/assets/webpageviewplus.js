@@ -1,0 +1,145 @@
+/*
+ * ckanext-webpageviewplus: self-sizing for embedded pages.
+ *
+ * Contract with view.html: each .webpageviewplus-frame iframe carries
+ *   data-frame-origin  the origin of its src ("" if unknown)
+ *   data-opaque        "true" when sandboxed without allow-same-origin: its
+ *                      messages arrive with origin "null", and replies must
+ *                      be posted to "*"
+ *   data-height-mode   only "auto" frames are resized
+ *   data-min-height / data-max-height  clamp, in px
+ *
+ * Messages a framed page may send (plain objects, posted to "*"):
+ *   {type: "webpageviewplus:resize", height: px}   any page
+ *   {qsvVizHeight: px}                             qsv Data Schematics
+ *   {qsvVizWantViewport: 1}  -> reply {qsvVizViewport: window.innerHeight}
+ *                               (also sent unasked when each frame loads)
+ *   {qsvVizReveal: "bottom"} / {qsvVizReveal: "top", qsvVizOffset: px}
+ * See the qsv wiki, Visualization#embedding.
+ *
+ * A message counts only if it comes from one of these frames' windows, and
+ * its origin is the frame's (or "null" for an opaque frame). Plain script, no
+ * dependencies and nothing inline, so a site CSP without 'unsafe-inline' works.
+ */
+(function () {
+  "use strict";
+
+  var frames = [];
+
+  function stateFor(source) {
+    for (var i = 0; i < frames.length; i++) {
+      if (frames[i].iframe.contentWindow === source) return frames[i];
+    }
+    return null;
+  }
+
+  function intAttr(el, name, fallback) {
+    var value = parseInt(el.getAttribute(name), 10);
+    return isFinite(value) ? value : fallback;
+  }
+
+  function setup(iframe) {
+    var state = {
+      iframe: iframe,
+      origin: iframe.getAttribute("data-frame-origin") || "",
+      opaque: iframe.getAttribute("data-opaque") === "true",
+      auto: iframe.getAttribute("data-height-mode") === "auto",
+      min: intAttr(iframe, "data-min-height", 0),
+      max: intAttr(iframe, "data-max-height", 100000),
+      height: null,
+      wantsViewport: false
+    };
+    frames.push(state);
+    // A schematic asks for the viewport once, on its load, which can happen
+    // before this script runs. So also send it unasked: when the frame
+    // finishes loading (its listeners are in place by then) and now. It's
+    // just window.innerHeight, harmless to any page.
+    iframe.addEventListener("load", function () { replyViewport(state); });
+    replyViewport(state);
+  }
+
+  function trusted(state, event) {
+    if (state.opaque) return event.origin === "null";
+    return state.origin !== "" && event.origin === state.origin;
+  }
+
+  function resize(state, value) {
+    if (!state.auto) return;
+    var height = Math.ceil(Number(value));
+    if (!isFinite(height) || height <= 0) return;
+    height = Math.min(Math.max(height, state.min), state.max);
+    if (state.height !== null && Math.abs(height - state.height) <= 1) return;
+    var rect = state.iframe.getBoundingClientRect();
+    var before = rect.height;
+    state.height = height;
+    state.iframe.style.height = height + "px";
+    // Keep the reader's place when a frame above them changes height.
+    if (rect.bottom <= 0) window.scrollBy(0, height - before);
+  }
+
+  function replyViewport(state) {
+    var target = state.opaque ? "*" : state.origin;
+    if (!target || !state.iframe.contentWindow) return;
+    state.iframe.contentWindow.postMessage(
+      {qsvVizViewport: window.innerHeight}, target);
+  }
+
+  function reveal(state, where, offset) {
+    var rect = state.iframe.getBoundingClientRect();
+    if (where === "bottom") {
+      if (rect.bottom > window.innerHeight) {
+        window.scrollBy({top: rect.bottom - window.innerHeight, behavior: "instant"});
+      }
+    } else if (where === "top") {
+      var y = Number(offset);
+      y = isFinite(y) ? Math.min(Math.max(y, 0), rect.height) : 0;
+      window.scrollTo({
+        top: window.scrollY + rect.top + y - 80,
+        behavior: "instant"
+      });
+    }
+  }
+
+  function onMessage(event) {
+    var state = stateFor(event.source);
+    if (!state || !trusted(state, event)) return;
+    var data = event.data;
+    if (data === null || typeof data !== "object") return;
+
+    if (data.type === "webpageviewplus:resize") resize(state, data.height);
+    if ("qsvVizHeight" in data) resize(state, data.qsvVizHeight);
+    if ("qsvVizWantViewport" in data) {
+      state.wantsViewport = true;
+      replyViewport(state);
+    }
+    if ("qsvVizReveal" in data) reveal(state, data.qsvVizReveal, data.qsvVizOffset);
+  }
+
+  var resizeTimer = null;
+  function onWindowResize() {
+    if (resizeTimer) return;
+    resizeTimer = setTimeout(function () {
+      resizeTimer = null;
+      frames.forEach(function (state) {
+        if (state.wantsViewport) replyViewport(state);
+      });
+    }, 100);
+  }
+
+  function init() {
+    var nodes = document.querySelectorAll("iframe.webpageviewplus-frame");
+    for (var i = 0; i < nodes.length; i++) setup(nodes[i]);
+    if (!frames.length) return;
+    window.addEventListener("message", onMessage);
+    window.addEventListener("resize", onWindowResize);
+  }
+
+  // Exposed for the control bar.
+  window.webpageviewplus = {frames: frames};
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
