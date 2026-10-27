@@ -45,6 +45,9 @@
 {% if frame and 'same_origin_fallback' in frame.notices %}
   <div class="alert alert-warning">{{ _('This view\'s sandbox would let scripts keep a real origin, which isn\'t allowed here, so it runs as Strict.') }}</div>
 {% endif %}
+{% if frame and 'credentialless' in frame.notices %}
+  <div class="alert alert-info">{{ _('In Chrome and Edge, this site loads pages with this preset without the visitor\'s cookies or saved data, so logins inside the page and sign-in popups won\'t work.') }}</div>
+{% endif %}
 
 <div class="form-group control-medium">
   <label class="form-label" for="field-height_mode">{{ _('Height') }}</label>

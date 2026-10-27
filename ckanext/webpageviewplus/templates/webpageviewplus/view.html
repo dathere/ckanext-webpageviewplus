@@ -10,6 +10,7 @@
             allow="{{ frame.allow }}"
             referrerpolicy="{{ frame.referrerpolicy }}"
             loading="lazy"
+            {% if frame.credentialless %}credentialless{% endif %}
             style="{{ frame.style }}"
             data-preset="{{ frame.preset }}"
             data-height-mode="{{ frame.height_mode }}"

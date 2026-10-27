@@ -72,6 +72,19 @@ groups:
         description: |
           Default referrerpolicy for the iframe.
 
+      - key: ckanext.webpageviewplus.credentialless
+        default: ""
+        type: list
+        description: |
+          Space-separated presets whose frames get the credentialless
+          attribute: the page loads without the visitor's cookies or existing
+          storage, in a throwaway storage partition. Chromium only (other
+          browsers ignore it), so it is extra hardening, never a security
+          boundary. Logins inside the frame stop working, and popups it opens
+          can't talk back to it (no OAuth popups). Listing external usually
+          defeats its purpose, which is running a third-party app with its
+          own login. Empty (the default) turns it off.
+
       - key: ckanext.webpageviewplus.min_height
         default: 400
         type: int

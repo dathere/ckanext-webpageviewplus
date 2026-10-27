@@ -25,7 +25,10 @@ order now being built:
    spec's self-sizing table and the qsv wiki (Visualization#embedding). Its messages have no
    `type` field, are posted with targetOrigin `*`, and arrive with `event.origin` "null" from
    frames without `allow-same-origin`, so validate on `event.source`.
-4. Chromium-only extras behind settings (`credentialless`, `csp`).
+4. Chromium-only extras behind settings. Done: `credentialless` (a site list of presets, applied
+   at the end of `build_frame` to the preset the frame runs as). It's ignored outside Chromium, so
+   it must never count toward the invariant. `csp` (CSP Embedded Enforcement) is undecided: in
+   Chromium it blocks any page whose server doesn't opt in.
 
 ## The security model (read before touching frame, validator, content or download code)
 

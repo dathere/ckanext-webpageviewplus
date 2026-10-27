@@ -246,3 +246,33 @@ def test_opaque_frames():
     f = build(content_origin=CO, url=CO + "/x/s.html", preset="data-schematic", is_upload=True)
     assert not f.opaque
     assert f.origin == CO
+
+
+def test_credentialless_off_by_default():
+    f = build()
+    assert not f.credentialless
+    assert "credentialless" not in f.notices
+
+
+def test_credentialless_by_preset():
+    f = build(preset="interactive", credentialless_presets=["interactive"])
+    assert f.credentialless
+    assert "credentialless" in f.notices
+    assert not build(preset="strict", credentialless_presets=["interactive"]).credentialless
+
+
+def test_credentialless_follows_the_preset_the_frame_runs_as():
+    # data-schematic runs as interactive without a content origin.
+    assert build(preset="data-schematic", credentialless_presets=["interactive"]).credentialless
+    assert not build(preset="data-schematic", credentialless_presets=["data-schematic"]).credentialless
+    # A frame refused by the same-origin rule runs as strict.
+    f = build(url=OWN, sandbox_override="allow-scripts allow-same-origin",
+              credentialless_presets=["strict"])
+    assert f.preset == "strict" and f.credentialless
+
+
+def test_credentialless_never_loosens_the_sandbox():
+    plain = build(url=OWN, preset="external", content_origin=CO)
+    hardened = build(url=OWN, preset="external", content_origin=CO,
+                     credentialless_presets=["external", "strict"])
+    assert hardened.sandbox == plain.sandbox == ""

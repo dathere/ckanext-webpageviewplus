@@ -186,6 +186,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             min_height=settings.min_height(),
             max_height=settings.max_height(),
             title=resource_view.get("title") or toolkit._("Embedded web page"),
+            credentialless_presets=settings.credentialless_presets(),
         )
         return dict(
             form_vars,

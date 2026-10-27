@@ -67,6 +67,10 @@ def controls() -> list[str]:
     return [c.lower() for c in toolkit.aslist(_get("controls"))]
 
 
+def credentialless_presets() -> list[str]:
+    return toolkit.aslist(_get("credentialless"))
+
+
 def formats() -> list[str]:
     return [f.lower() for f in toolkit.aslist(_get("formats"))]
 
@@ -162,6 +166,11 @@ def check() -> None:
     if unknown:
         raise CkanConfigurationException(
             PREFIX + "presets" + ": " + "Unknown presets: " + " ".join(unknown)
+        )
+    unknown = [p for p in credentialless_presets() if p not in frame.PRESETS]
+    if unknown:
+        raise CkanConfigurationException(
+            PREFIX + "credentialless: Unknown presets: " + " ".join(unknown)
         )
     if not allowed_presets():
         raise CkanConfigurationException(

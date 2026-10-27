@@ -8,7 +8,7 @@ from __future__ import annotations
 import ipaddress
 import re
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 from urllib.parse import urlsplit
 
 ALLOWED_SCHEMES = ("http", "https")
@@ -326,6 +326,7 @@ class Frame:
     opaque: bool = False
     min_height: int = 0
     max_height: int = 0
+    credentialless: bool = False
 
 
 def _int(value: Any) -> int:
@@ -384,6 +385,7 @@ def build_frame(
     min_height: int = 400,
     max_height: int = 4000,
     title: str = "",
+    credentialless_presets: Sequence[str] = (),
 ) -> Frame:
     """Build the iframe attributes for one view.
 
@@ -428,6 +430,11 @@ def build_frame(
         allow + ["{} 'none'".format(f) for f in DENIED_FEATURES]
     )
     opaque = sandbox is not None and "allow-same-origin" not in sandbox
+    # Chromium only, so it may only add hardening: nothing above depends on
+    # it. Decided on the preset the frame actually runs as.
+    credentialless = name in credentialless_presets
+    if credentialless:
+        notices.append("credentialless")
     return Frame(
         src=url,
         preset=name,
@@ -446,4 +453,5 @@ def build_frame(
         opaque=opaque,
         min_height=min_height,
         max_height=max_height,
+        credentialless=credentialless,
     )

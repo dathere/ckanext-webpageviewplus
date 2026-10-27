@@ -451,6 +451,19 @@ class TestControlBar:
         assert 'role="toolbar"' not in _render(app, {})
 
 
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestCredentialless:
+    def test_off_by_default(self, app):
+        assert " credentialless" not in _render(app, {"preset": "strict"})
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.credentialless", "strict")
+    def test_listed_preset_gets_attribute(self, app):
+        assert " credentialless" in _render(app, {"preset": "strict"})
+        assert " credentialless" not in _render(app, {"preset": "interactive"})
+
+
 def test_unknown_control_stops_startup(monkeypatch):
     from ckan.exceptions import CkanConfigurationException
     from ckanext.webpageviewplus import settings
@@ -460,4 +473,17 @@ def test_unknown_control_stops_startup(monkeypatch):
         settings, "_get", lambda key: "open zoom" if key == "controls" else real_get(key)
     )
     with pytest.raises(CkanConfigurationException, match="controls"):
+        settings.check()
+
+
+def test_unknown_credentialless_preset_stops_startup(monkeypatch):
+    from ckan.exceptions import CkanConfigurationException
+    from ckanext.webpageviewplus import settings
+
+    real_get = settings._get
+    monkeypatch.setattr(
+        settings, "_get",
+        lambda key: "strict nope" if key == "credentialless" else real_get(key),
+    )
+    with pytest.raises(CkanConfigurationException, match="credentialless"):
         settings.check()
