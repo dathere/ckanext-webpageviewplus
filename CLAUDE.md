@@ -17,9 +17,14 @@ order now being built:
 1. Done: attribute builder, presets (`strict`, `interactive`, `external`, `data-schematic`),
    per-view form, `ckan webpageviewplus migrate`.
 2. Done (filesystem uploads): content-origin route, signed URLs. Not yet: cloud-storage
-   redirects, an optional height reporter (moved to the self-sizing phase, which listens for it).
+   redirects.
 3. Next: self-sizing (generic `webpageviewplus:resize` message + qsv adapter), control bar,
-   frameability check.
+   frameability check. **Target the qsv release after 27.0.1**: its schematics send
+   `qsvVizHeight` themselves when framed (qsv PR #4949). Never inject a height reporter into
+   uploaded HTML; older schematics just keep a fixed fallback height. The qsv protocol is in the
+   spec's self-sizing table and the qsv wiki (Visualization#embedding). Its messages have no
+   `type` field, are posted with targetOrigin `*`, and arrive with `event.origin` "null" from
+   frames without `allow-same-origin`, so validate on `event.source`.
 4. Chromium-only extras behind settings (`credentialless`, `csp`).
 
 ## The security model (read before touching frame, validator, content or download code)
