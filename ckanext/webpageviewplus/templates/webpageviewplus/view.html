@@ -1,7 +1,22 @@
-{% if frame_url %}
-<iframe title="Webpage view" src="{{ frame_url }}" frameborder="0" width="100%" style="height:100vh" data-module="data-viewer">
-  <p>{{ _('Your browser does not support iframes.') }}</p>
-</iframe>
+{% asset 'webpageviewplus/webpageviewplus-css' %}
+{% if frame %}
+  {% set desc_id = ('webpageviewplus-desc-' ~ resource_view.id) if resource_view and resource_view.id and resource_view.description else none %}
+  <div class="webpageviewplus">
+    <iframe class="webpageviewplus-frame"
+            title="{{ frame.title }}"
+            src="{{ frame.src }}"
+            {% if frame.sandbox is not none %}sandbox="{{ frame.sandbox }}"{% endif %}
+            allow="{{ frame.allow }}"
+            referrerpolicy="{{ frame.referrerpolicy }}"
+            loading="lazy"
+            style="{{ frame.style }}"
+            data-preset="{{ frame.preset }}"
+            data-height-mode="{{ frame.height_mode }}"
+            {% if desc_id %}aria-describedby="{{ desc_id }}"{% endif %}></iframe>
+    {% if desc_id %}<p id="{{ desc_id }}" class="visually-hidden">{{ resource_view.description }}</p>{% endif %}
+  </div>
+{% elif frame_error == 'host' %}
+  <p class="text-muted">{{ _("This page can't be embedded: its host isn't on this site's list of allowed hosts.") }}</p>
 {% else %}
-<p class="text-muted">{{ _('This page cannot be embedded: only http:// and https:// URLs are supported.') }}</p>
+  <p class="text-muted">{{ _('This page cannot be embedded: only http:// and https:// URLs are supported.') }}</p>
 {% endif %}

@@ -1,3 +1,70 @@
 {% import 'macros/form.html' as form %}
 
+{% set preset_labels = {
+  'strict': _('Strict: static HTML, no scripts'),
+  'interactive': _('Interactive: scripts, popups and downloads, no storage'),
+  'external': _('External: a trusted third-party site, no sandbox'),
+  'data-schematic': _('Data Schematic: qsv Data Schematics'),
+} %}
+{% set height_labels = {
+  'fixed': _('Fixed (px)'),
+  'viewport': _('Share of the window height, in percent'),
+  'aspect': _('Aspect ratio (e.g. 16/9)'),
+  'auto': _('Auto'),
+} %}
+
 {{ form.input('page_url', id='field-page_url', label=_('Web Page url'), placeholder=_('eg. http://example.com  (if blank uses resource url)'), value=data.page_url, error=errors.page_url, classes=['control-full', 'control-large']) }}
+
+<div class="form-group control-medium">
+  <label class="form-label" for="field-preset">{{ _('Security preset') }}</label>
+  <div class="controls">
+    <select id="field-preset" name="preset" class="form-control form-select">
+      {% for name in presets %}
+        <option value="{{ name }}" {% if (data.preset or default_preset) == name %}selected{% endif %}>{{ preset_labels.get(name, name) }}</option>
+      {% endfor %}
+    </select>
+    {% if errors.preset %}<span class="error-block">{{ errors.preset | join(', ') }}</span>{% endif %}
+  </div>
+</div>
+
+{% if frame and 'degraded' in frame.notices %}
+  <div class="alert alert-warning">{{ _('The Data Schematic preset needs a content origin, which this site doesn\'t have yet. The view runs as Interactive: charts, the Tour and Explore work, but maps stay blank.') }}</div>
+{% endif %}
+{% if frame and 'same_origin_fallback' in frame.notices %}
+  <div class="alert alert-warning">{{ _('This page is on this site\'s own origin, so it runs as Strict: it can\'t run scripts with the site\'s origin.') }}</div>
+{% endif %}
+
+<div class="form-group control-medium">
+  <label class="form-label" for="field-height_mode">{{ _('Height') }}</label>
+  <div class="controls">
+    <select id="field-height_mode" name="height_mode" class="form-control form-select">
+      <option value="" {% if not data.height_mode %}selected{% endif %}>{{ _("Preset's default") }}</option>
+      {% for mode in height_modes %}
+        <option value="{{ mode }}" {% if data.height_mode == mode %}selected{% endif %}>{{ height_labels.get(mode, mode) }}</option>
+      {% endfor %}
+    </select>
+    {% if errors.height_mode %}<span class="error-block">{{ errors.height_mode | join(', ') }}</span>{% endif %}
+  </div>
+</div>
+
+{{ form.input('height_value', id='field-height_value', label=_('Height value'), placeholder=_('eg. 600, 80 or 16/9'), value=data.height_value, error=errors.height_value, classes=['control-medium']) }}
+
+{% if can_set_advanced %}
+  <fieldset class="webpageviewplus-advanced">
+    <legend>{{ _('Advanced') }}</legend>
+    {{ form.input('sandbox', id='field-sandbox', label=_('Sandbox tokens (replace the preset\'s)'), placeholder=_('eg. allow-scripts allow-popups'), value=data.sandbox, error=errors.sandbox, classes=['control-full']) }}
+    {{ form.input('allow', id='field-allow', label=_('Allowed features (replace the preset\'s)'), placeholder=_('eg. fullscreen; clipboard-write'), value=data.allow, error=errors.allow, classes=['control-full']) }}
+    <div class="form-group control-medium">
+      <label class="form-label" for="field-referrer_policy">{{ _('Referrer policy') }}</label>
+      <div class="controls">
+        <select id="field-referrer_policy" name="referrer_policy" class="form-control form-select">
+          <option value="" {% if not data.referrer_policy %}selected{% endif %}>{{ _("Site default") }}</option>
+          {% for policy in referrer_policies %}
+            <option value="{{ policy }}" {% if data.referrer_policy == policy %}selected{% endif %}>{{ policy }}</option>
+          {% endfor %}
+        </select>
+        {% if errors.referrer_policy %}<span class="error-block">{{ errors.referrer_policy | join(', ') }}</span>{% endif %}
+      </div>
+    </div>
+  </fieldset>
+{% endif %}

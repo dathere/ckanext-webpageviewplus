@@ -2,7 +2,7 @@ import pytest
 
 from ckan.plugins import plugin_loaded
 from ckan.plugins.toolkit import ValidationError, url_for
-from ckan.tests import factories
+from ckan.tests import factories, helpers
 from ckanext.webpageviewplus.plugin import WebpageviewplusPlugin, is_http_url
 
 
@@ -99,6 +99,8 @@ def test_is_http_url(url, expected):
         ("javascript:alert(1)", "http://example.com/b.html", None),
     ],
 )
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.usefixtures("with_plugins")
 def test_frame_url_checked_at_render(page_url, resource_url, expected):
     variables = WebpageviewplusPlugin().setup_template_variables(
         {},
@@ -107,7 +109,8 @@ def test_frame_url_checked_at_render(page_url, resource_url, expected):
             "resource": {"url": resource_url},
         },
     )
-    assert variables["frame_url"] == expected
+    frame = variables["frame"]
+    assert (frame.src if frame else None) == expected
 
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
@@ -127,3 +130,180 @@ def test_new_view_form_renders(app):
     response = app.get(url, headers={"Authorization": sysadmin["token"]})
     assert response.status_code == 200
     assert 'name="page_url"' in response
+
+
+def _view(user, resource_id, **fields):
+    return helpers.call_action(
+        "resource_view_create",
+        context={"user": user["name"], "ignore_auth": True},
+        resource_id=resource_id,
+        view_type="webpage_view_plus",
+        title="Report",
+        **fields,
+    )
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestViewValidation:
+    def test_default_preset_filled_in(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        view = _view(factories.Sysadmin(), resource["id"])
+        assert view["preset"] == "interactive"
+
+    def test_preset_must_be_allowed(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        with pytest.raises(ValidationError) as e:
+            _view(factories.Sysadmin(), resource["id"], preset="bogus")
+        assert "preset" in e.value.error_dict
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "strict interactive")
+    def test_preset_outside_site_list_refused(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        with pytest.raises(ValidationError) as e:
+            _view(factories.Sysadmin(), resource["id"], preset="external")
+        assert "preset" in e.value.error_dict
+
+    def test_external_refused_for_upload_on_own_origin(self):
+        resource = factories.Resource(url_type="upload", url="report.html")
+        with pytest.raises(ValidationError) as e:
+            _view(factories.Sysadmin(), resource["id"], preset="external")
+        assert "preset" in e.value.error_dict
+
+    def test_external_refused_for_page_on_site_url(self, ckan_config):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        with pytest.raises(ValidationError) as e:
+            _view(
+                factories.Sysadmin(),
+                resource["id"],
+                preset="external",
+                page_url=ckan_config["ckan.site_url"] + "/some/page.html",
+            )
+        assert "preset" in e.value.error_dict
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.site_aliases", "https://ckan-alias.example.net")
+    def test_external_refused_for_alias_host(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        with pytest.raises(ValidationError) as e:
+            _view(
+                factories.Sysadmin(),
+                resource["id"],
+                preset="external",
+                page_url="http://ckan-alias.example.net:8080/page.html",
+            )
+        assert "preset" in e.value.error_dict
+
+    def test_scripts_and_same_origin_refused_on_own_origin(self):
+        resource = factories.Resource(url_type="upload", url="report.html")
+        with pytest.raises(ValidationError) as e:
+            _view(
+                factories.Sysadmin(),
+                resource["id"],
+                sandbox="allow-scripts allow-same-origin",
+            )
+        assert "sandbox" in e.value.error_dict
+
+    def test_data_schematic_allowed_on_upload(self):
+        # Degrades to interactive, which keeps the page off CKAN's origin.
+        resource = factories.Resource(url_type="upload", url="schematic.html")
+        view = _view(factories.Sysadmin(), resource["id"], preset="data-schematic")
+        assert view["preset"] == "data-schematic"
+
+    def test_external_allowed_for_third_party(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        view = _view(factories.Sysadmin(), resource["id"], preset="external")
+        assert view["preset"] == "external"
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.allowed_hosts", "good.example.com")
+    def test_allowed_hosts(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        _view(factories.Sysadmin(), resource["id"], page_url="https://good.example.com/x")
+        with pytest.raises(ValidationError) as e:
+            _view(factories.Sysadmin(), resource["id"], page_url="https://bad.example.com/x")
+        assert "page_url" in e.value.error_dict
+
+    @pytest.mark.parametrize(
+        "mode,value",
+        [("fixed", "tall"), ("viewport", "200"), ("aspect", "wide"), ("sideways", "1")],
+    )
+    def test_bad_height(self, mode, value):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        with pytest.raises(ValidationError):
+            _view(factories.Sysadmin(), resource["id"], height_mode=mode, height_value=value)
+
+    def test_sysadmin_sets_advanced_fields(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        view = _view(
+            factories.Sysadmin(),
+            resource["id"],
+            sandbox="allow-scripts  allow-forms",
+            allow="fullscreen, clipboard-write",
+            referrer_policy="no-referrer",
+        )
+        assert view["sandbox"] == "allow-scripts allow-forms"
+        assert view["allow"] == "fullscreen; clipboard-write"
+        assert view["referrer_policy"] == "no-referrer"
+
+    def test_denied_feature_refused(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        with pytest.raises(ValidationError) as e:
+            _view(factories.Sysadmin(), resource["id"], allow="browsing-topics")
+        assert "allow" in e.value.error_dict
+
+    def test_editor_advanced_fields_dropped_on_create(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        view = _view(
+            factories.User(), resource["id"], sandbox="allow-scripts allow-same-origin"
+        )
+        assert "sandbox" not in view
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.editor_can_loosen", "true")
+    def test_editor_can_loosen(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        view = _view(factories.User(), resource["id"], sandbox="allow-scripts allow-forms")
+        assert view["sandbox"] == "allow-scripts allow-forms"
+
+    def test_editor_resave_keeps_sysadmin_settings(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        view = _view(factories.Sysadmin(), resource["id"], sandbox="allow-scripts allow-forms")
+        updated = helpers.call_action(
+            "resource_view_update",
+            context={"user": factories.User()["name"], "ignore_auth": True},
+            id=view["id"],
+            resource_id=resource["id"],
+            view_type="webpage_view_plus",
+            title="Renamed",
+            preset="interactive",
+        )
+        assert updated["title"] == "Renamed"
+        assert updated["sandbox"] == "allow-scripts allow-forms"
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+def test_rendered_iframe_attributes(app):
+    dataset = factories.Dataset()
+    resource = factories.Resource(
+        package_id=dataset["id"], url="https://pages.example.com/a.html"
+    )
+    _view(
+        factories.Sysadmin(),
+        resource["id"],
+        preset="strict",
+        description="Quarterly report",
+    )
+    url = url_for(
+        "{}_resource.read".format(dataset["type"]),
+        id=dataset["name"],
+        resource_id=resource["id"],
+    )
+    body = app.get(url).body
+    assert 'sandbox=""' in body
+    assert 'title="Report"' in body
+    assert 'loading="lazy"' in body
+    assert 'referrerpolicy="strict-origin-when-cross-origin"' in body
+    assert "browsing-topics &#39;none&#39;" in body or "browsing-topics 'none'" in body
+    assert "aria-describedby=" in body
+    assert "frameborder" not in body
+    assert 'data-module="data-viewer"' not in body

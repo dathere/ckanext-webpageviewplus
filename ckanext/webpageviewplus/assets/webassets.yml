@@ -1,14 +1,4 @@
-# webpageviewplus-js:
-#   filters: rjsmin
-#   output: ckanext-webpageviewplus/%(version)s-webpageviewplus.js
-#   contents:
-#     - js/webpageviewplus.js
-#   extra:
-#     preload:
-#       - base/main
-
-# webpageviewplus-css:
-#   filters: cssrewrite
-#   output: ckanext-webpageviewplus/%(version)s-webpageviewplus.css
-#   contents:
-#     - css/webpageviewplus.css
+webpageviewplus-css:
+  output: ckanext-webpageviewplus/%(version)s-webpageviewplus.css
+  contents:
+    - style.css

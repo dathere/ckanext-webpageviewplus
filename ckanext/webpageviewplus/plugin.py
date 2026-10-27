@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlsplit
 
 import ckan.plugins as plugins
@@ -8,44 +8,20 @@ import ckan.plugins.toolkit as toolkit
 from ckan.common import CKANConfig
 from ckan.types import Context
 
+from ckanext.webpageviewplus import frame, settings, validators as v
+from ckanext.webpageviewplus.frame import is_http_url  # noqa: F401 (re-export)
+
 ignore_empty = toolkit.get_validator("ignore_empty")
 unicode_safe = toolkit.get_validator("unicode_safe")
 
-ALLOWED_SCHEMES = ("http", "https")
 
-
-def is_http_url(url: Any) -> bool:
-    """True only for absolute http(s) URLs with a host.
-
-    Anything else (``javascript:``, ``data:``, relative or scheme-less URLs,
-    URLs with leading whitespace or control characters) is refused, because an
-    iframe ``src`` with a ``javascript:`` URL runs in CKAN's own origin.
-    """
-    if not isinstance(url, str):
-        return False
-    try:
-        parts = urlsplit(url)
-    except ValueError:
-        return False
-    return parts.scheme.lower() in ALLOWED_SCHEMES and bool(parts.netloc)
-
-
-def http_url_validator(value: Any, context: Context) -> Any:
-    if value and not is_http_url(value):
-        raise toolkit.Invalid(
-            toolkit._("Web Page url must be an http:// or https:// URL")
-        )
-    return value
-
-
+@toolkit.blanket.config_declarations
 class WebpageviewplusPlugin(plugins.SingletonPlugin):
-    """Resource view that embeds a web page in an <iframe>.
-
-    Starts as a copy of CKAN core's ``webpage_view`` under its own view type
-    so both can be enabled side by side.
-    """
+    """Resource view that embeds a web page in an <iframe>, with a security
+    preset per view. Runs beside CKAN core's ``webpage_view``."""
 
     plugins.implements(plugins.IConfigurer)
+    plugins.implements(plugins.IConfigurable)
     plugins.implements(plugins.IResourceView, inherit=True)
 
     # IConfigurer
@@ -55,6 +31,11 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
         toolkit.add_public_directory(config_, "public")
         toolkit.add_resource("assets", "webpageviewplus")
 
+    # IConfigurable
+
+    def configure(self, config_: CKANConfig):
+        settings.check()
+
     # IResourceView
 
     def info(self) -> dict[str, Any]:
@@ -62,7 +43,16 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             "name": "webpage_view_plus",
             "title": toolkit._("Website (Plus)"),
             "schema": {
-                "page_url": [ignore_empty, unicode_safe, http_url_validator]
+                "page_url": [ignore_empty, unicode_safe, v.http_url_validator],
+                "preset": [unicode_safe, v.preset_validator],
+                "height_mode": [ignore_empty, unicode_safe, v.height_mode_validator],
+                "height_value": [ignore_empty, unicode_safe],
+                "sandbox": [ignore_empty, unicode_safe, v.sandbox_validator],
+                "allow": [ignore_empty, unicode_safe, v.allow_validator],
+                "referrer_policy": [
+                    ignore_empty, unicode_safe, v.referrer_policy_validator
+                ],
+                "__after": [v.view_after_validator],
             },
             "iframed": False,
             "icon": "link",
@@ -72,10 +62,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
 
     def can_view(self, data_dict: dict[str, Any]) -> bool:
         resource = data_dict["resource"]
-        formats = toolkit.aslist(
-            toolkit.config.get("ckanext.webpageviewplus.formats", "html htm")
-        )
-        formats = [f.lower() for f in formats]
+        formats = settings.formats()
         if (resource.get("format") or "").lower() in formats:
             return True
         try:
@@ -88,13 +75,54 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
     def setup_template_variables(
         self, context: Context, data_dict: dict[str, Any]
     ) -> dict[str, Any]:
-        # Checked again at render time: views saved before validation existed,
-        # and the resource URL fallback, never went through the form.
-        # resource_view is None on the "new view" form.
+        # Everything is checked again at render time: views saved before
+        # validation existed, previews, and the resource URL fallback never
+        # went through the form. resource_view is None on the "new view" form.
         resource_view = data_dict.get("resource_view") or {}
-        url = resource_view.get("page_url") or data_dict["resource"].get("url")
-        frame_url: Optional[str] = url if is_http_url(url) else None
-        return {"frame_url": frame_url}
+        resource = data_dict["resource"]
+        page_url = resource_view.get("page_url")
+        url = page_url or resource.get("url")
+
+        form_vars = {
+            "presets": settings.allowed_presets(),
+            "default_preset": settings.default_preset(),
+            "height_modes": frame.HEIGHT_MODES,
+            "referrer_policies": frame.REFERRER_POLICIES,
+            "can_set_advanced": v.can_set_advanced(context),
+        }
+
+        if not is_http_url(url):
+            return dict(form_vars, frame=None, frame_error="scheme")
+
+        ckan_hosts = settings.ckan_hosts()
+        is_upload = not page_url and resource.get("url_type") == "upload"
+        allowed_hosts = settings.allowed_hosts()
+        if (
+            page_url
+            and allowed_hosts
+            and not frame.is_ckan_host(page_url, ckan_hosts)
+            and frame.url_host(page_url) not in allowed_hosts
+        ):
+            return dict(form_vars, frame=None, frame_error="host")
+
+        built = frame.build_frame(
+            url,
+            resource_view.get("preset") or settings.default_preset(),
+            ckan_hosts=ckan_hosts,
+            is_upload=is_upload,
+            content_origin=settings.content_origin(),
+            sandbox_override=resource_view.get("sandbox") or "",
+            allow_override=resource_view.get("allow") or "",
+            referrer_policy=(
+                resource_view.get("referrer_policy") or settings.referrer_policy()
+            ),
+            height_mode=resource_view.get("height_mode") or "",
+            height_value=resource_view.get("height_value") or "",
+            min_height=settings.min_height(),
+            max_height=settings.max_height(),
+            title=resource_view.get("title") or toolkit._("Embedded web page"),
+        )
+        return dict(form_vars, frame=built, frame_error=None)
 
     def view_template(self, context: Context, data_dict: dict[str, Any]) -> str:
         return "webpageviewplus/view.html"

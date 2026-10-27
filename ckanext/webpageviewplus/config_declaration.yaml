@@ -1,0 +1,61 @@
+version: 1
+groups:
+  - annotation: ckanext-webpageviewplus settings
+    options:
+      - key: ckanext.webpageviewplus.default_preset
+        default: interactive
+        description: |
+          Preset for new views. Must be one of ckanext.webpageviewplus.presets.
+
+      - key: ckanext.webpageviewplus.presets
+        default: strict interactive external data-schematic
+        type: list
+        description: |
+          Space-separated presets editors may choose from: strict,
+          interactive, external, data-schematic.
+
+      - key: ckanext.webpageviewplus.editor_can_loosen
+        default: false
+        type: bool
+        description: |
+          Whether editors (not only sysadmins) may set a view's sandbox,
+          allow and referrer policy beyond its preset.
+
+      - key: ckanext.webpageviewplus.referrer_policy
+        default: strict-origin-when-cross-origin
+        description: |
+          Default referrerpolicy for the iframe.
+
+      - key: ckanext.webpageviewplus.min_height
+        default: 400
+        type: int
+        description: |
+          Minimum height, in px, for viewport and auto heights.
+
+      - key: ckanext.webpageviewplus.max_height
+        default: 4000
+        type: int
+        description: |
+          Maximum height, in px, for viewport and auto heights.
+
+      - key: ckanext.webpageviewplus.site_aliases
+        default: ""
+        type: list
+        description: |
+          Other hosts this CKAN site is reachable under (bare hosts or URLs),
+          besides ckan.site_url's. Pages on any of them count as CKAN's own,
+          whatever the scheme or port, so they never get a sandbox that lets
+          scripts keep their origin.
+
+      - key: ckanext.webpageviewplus.allowed_hosts
+        default: ""
+        type: list
+        description: |
+          Optional space-separated allow-list of hosts an external page_url
+          may point to. Empty allows any host.
+
+      - key: ckanext.webpageviewplus.formats
+        default: html htm
+        type: list
+        description: |
+          Resource formats (and URL extensions) the view is offered for.
