@@ -35,6 +35,17 @@ DOWNLOAD_SANDBOX = (
 hardening = Blueprint("webpageviewplus_hardening", __name__)
 
 
+def is_active_type(mimetype: str) -> bool:
+    """HTML, SVG and any XML type (``+xml`` subtypes like atom or rss can
+    carry XHTML or SVG with scripts)."""
+    mimetype = mimetype.lower().strip()
+    return (
+        mimetype in ACTIVE_TYPES
+        or mimetype.endswith("+xml")
+        or mimetype.endswith("/xml")
+    )
+
+
 def _is_ckan_served_resource(endpoint: str) -> bool:
     # "<package type>_resource.download" for every dataset type, and the
     # resource proxy (ckanext-resourceproxy).
@@ -61,7 +72,9 @@ def _content_redirect(response: Response) -> Response | None:
         return None
     response.close()
     return redirect(
-        content.content_url(resource, private=bool(resource_obj.package.private)),
+        content.content_url(
+            resource, private=not content.is_public(resource_obj.package_id)
+        ),
         code=302,
     )
 
@@ -76,7 +89,7 @@ def sandbox_active_downloads(response: Response) -> Response:
             return redirected
     if not settings.harden_downloads():
         return response
-    if (response.mimetype or "").lower() not in ACTIVE_TYPES:
+    if not is_active_type(response.mimetype or ""):
         return response
     # Added as its own header, so any policy the site already sends still
     # applies too (browsers enforce every CSP header).

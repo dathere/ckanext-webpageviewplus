@@ -17,7 +17,10 @@ classifiers = [
 ]
 
 keywords = [ "CKAN", "webpage", "view", "iframe", ]
-dependencies = []
+dependencies = [
+    # Bundles the Public Suffix List: no network access at runtime.
+    "publicsuffixlist>=1.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/dathere/ckanext-webpageviewplus"

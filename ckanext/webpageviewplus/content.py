@@ -15,6 +15,7 @@ import hashlib
 import hmac
 import logging
 import os
+import re
 import time
 from typing import Any, Optional
 from urllib.parse import quote, urlsplit
@@ -32,6 +33,9 @@ log = logging.getLogger(__name__)
 PATH = "/webpageviewplus/content/<resource_id>/<path:filename>"
 HTML_FORMATS = ("html", "htm")
 HTML_MIMETYPES = ("text/html", "application/xhtml+xml")
+SIGNATURE_RE = re.compile(r"^[0-9a-f]{64}$")
+# Set by serve() for ContentHostMiddleware, which owns Cache-Control.
+CACHE_ENVIRON_KEY = "webpageviewplus.cache"
 
 content = Blueprint("webpageviewplus_content", __name__)
 
@@ -90,7 +94,9 @@ def signature_valid(resource_id: str, window: str, signature: str) -> bool:
         return False
     if w not in (_window(), _window() - 1):
         return False
-    return hmac.compare_digest(_signature(resource_id, w), signature or "")
+    if not SIGNATURE_RE.match(signature or ""):
+        return False  # also keeps compare_digest to ASCII, which it requires
+    return hmac.compare_digest(_signature(resource_id, w), signature)
 
 
 def _filename(resource: dict[str, Any]) -> str:
@@ -108,12 +114,17 @@ def content_url(resource: dict[str, Any], private: bool) -> str:
     return url
 
 
-def _is_public(package_id: str) -> bool:
-    """Whether an anonymous visitor may see the dataset. Asks package_show,
-    so permission-label plugins and dataset state are respected."""
+def is_public(package_id: str) -> bool:
+    """Whether an anonymous visitor may see the dataset, so its content URL
+    needs no signature. The one decision used to mint URLs and to serve
+    them: it respects drafts, permission-label plugins and dataset state.
+    The user is named explicitly as anonymous, because on CKAN's own host a
+    context without one would be filled in with the logged-in viewer."""
     try:
-        toolkit.get_action("package_show")(
-            {"user": "", "ignore_auth": False}, {"id": package_id}
+        toolkit.check_access(
+            "package_show",
+            {"user": "", "auth_user_obj": None, "ignore_auth": False},
+            {"id": package_id},
         )
         return True
     except (toolkit.NotAuthorized, toolkit.ObjectNotFound):
@@ -136,13 +147,15 @@ def serve(resource_id: str, filename: str):
     if resource_obj is None or resource_obj.state != "active":
         abort(404)
     package = resource_obj.package
-    if package is None or package.state != "active":
+    # Drafts are served too (signed, since they aren't public): that's the
+    # editor's preview while creating a dataset.
+    if package is None or package.state not in ("active", "draft"):
         abort(404)
     resource = resource_dict(resource_obj)
     if not serves(resource):
         abort(404)
 
-    private = not _is_public(package.id)
+    private = not is_public(package.id)
     if private and not signature_valid(
         resource_id, request.args.get("w", ""), request.args.get("s", "")
     ):
@@ -156,8 +169,9 @@ def serve(resource_id: str, filename: str):
     if not path or not os.path.isfile(path):
         abort(404)
 
-    # Cache-Control is set by ContentHostMiddleware: CKAN's own response
-    # hooks run after this view and would overwrite it.
+    # Cache-Control is set by ContentHostMiddleware from this decision: CKAN's
+    # own response hooks run after this view and would overwrite it.
+    request.environ[CACHE_ENVIRON_KEY] = "private" if private else "public"
     return send_file(path, mimetype="text/html", conditional=True)
 
 
@@ -210,23 +224,24 @@ class ContentHostMiddleware:
             )
             return [b"Not found"]
 
-        signed = "s=" in (environ.get("QUERY_STRING") or "")
-
         def finish(status: str, headers: list, exc_info: Any = None):
             headers = [
                 (k, v)
                 for k, v in headers
                 if k.lower() not in ("set-cookie", "cache-control")
             ]
-            headers.append(("Cache-Control", cache_control(status, signed)))
+            headers.append(
+                ("Cache-Control", cache_control(status, environ.get(CACHE_ENVIRON_KEY)))
+            )
             return start_response(status, headers, exc_info)
 
         return self.app(environ, finish)
 
 
-def cache_control(status: str, signed: bool) -> str:
+def cache_control(status: str, visibility: Optional[str]) -> str:
     """Public content is cacheable by anyone (CDN-friendly, revalidated by
-    ETag); signed content only by the viewer's browser; errors not at all."""
-    if not status.startswith(("200", "304")):
+    ETag); private content only by the viewer's browser; anything the route
+    didn't explicitly mark (errors included) not at all."""
+    if not status.startswith(("200", "304")) or visibility not in ("public", "private"):
         return "no-store"
-    return "{}, max-age={}".format("private" if signed else "public", settings.url_ttl())
+    return "{}, max-age={}".format(visibility, settings.url_ttl())

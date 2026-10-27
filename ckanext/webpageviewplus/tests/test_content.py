@@ -58,7 +58,7 @@ class TestContentRoute:
         resource = _upload(factories.Dataset())
         response = _get(app, _content_url(resource))
         assert response.status_code == 200
-        assert response.body.encode() == HTML if isinstance(response.body, str) else True
+        assert response.body == HTML.decode()
         assert response.headers["Content-Type"].startswith("text/html")
         assert response.headers["Content-Security-Policy"].startswith("frame-ancestors ")
         assert "test.ckan.net:*" in response.headers["Content-Security-Policy"]
@@ -99,6 +99,27 @@ class TestContentRoute:
         response = _get(app, _content_url(resource, private=True))
         assert response.status_code == 200
         assert response.headers["Cache-Control"] == "private, max-age=300"
+
+    @pytest.mark.parametrize("sig", ["\u00e9", "zz", "A" * 64, ""])
+    def test_malformed_signature_is_a_404(self, app, sig):
+        resource = _upload(_private_dataset())
+        url = _content_url(resource) + "?w={}&s={}".format(content._window(), sig)
+        assert _get(app, url, status=404).status_code == 404
+
+    def test_encoded_signature_param_is_still_private(self, app):
+        resource = _upload(_private_dataset())
+        url = _content_url(resource, private=True).replace("&s=", "&%73=")
+        response = _get(app, url)
+        assert response.status_code == 200
+        assert response.headers["Cache-Control"] == "private, max-age=300"
+
+    def test_draft_dataset_gets_signed_url(self, app):
+        dataset = factories.Dataset(state="draft")
+        resource = _upload(dataset)
+        assert not content.is_public(dataset["id"])
+        url = _content_url(resource, private=True)
+        assert _get(app, url).status_code == 200
+        assert _get(app, _content_url(resource), status=404).status_code == 404
 
     def test_tampered_signature_refused(self, app):
         resource = _upload(_private_dataset())
@@ -206,6 +227,8 @@ def test_view_frames_content_url_with_data_schematic(app):
         ("https://ckan.net", SECRET),  # a parent
         ("http://usercontent.example.org", SECRET),  # http, not loopback
         ("https://usercontent.example.org/path", SECRET),  # not an origin
+        ("https://usercontent.example.org#x", SECRET),  # a fragment
+        ("https://files.ckan.net", SECRET),  # a sibling: same site ckan.net
         ("https://usercontent.example.org", "short"),  # weak secret
     ],
 )
@@ -229,3 +252,22 @@ def test_other_uploaders_stay_on_ckan_origin(app, monkeypatch):
     resource = _upload(factories.Dataset())
     assert not content.serves(resource)
     assert _get(app, _content_url(resource), status=404).status_code == 404
+
+
+@pytest.mark.usefixtures("storage")
+def test_private_view_src_is_signed_for_permitted_viewer(app):
+    sysadmin = factories.SysadminWithToken()
+    dataset = _private_dataset()
+    resource = _upload(dataset)
+    helpers.call_action(
+        "resource_view_create",
+        context={"user": sysadmin["name"], "ignore_auth": True},
+        resource_id=resource["id"],
+        view_type="webpage_view_plus",
+        title="Private schematic",
+    )
+    body = app.get(
+        url_for("dataset_resource.read", id=dataset["name"], resource_id=resource["id"]),
+        headers={"Authorization": sysadmin["token"]},
+    ).body
+    assert "/webpageviewplus/content/{}/s.html?w=".format(resource["id"]) in body

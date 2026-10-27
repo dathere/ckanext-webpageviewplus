@@ -125,8 +125,12 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
         ckan_hosts = settings.ckan_hosts()
         is_upload = not page_url and resource.get("url_type") == "upload"
         if is_upload and content.serves(resource):
-            package = data_dict.get("package") or {}
-            url = content.content_url(resource, private=bool(package.get("private")))
+            package_id = (data_dict.get("package") or {}).get("id") or resource.get(
+                "package_id"
+            )
+            url = content.content_url(
+                resource, private=not content.is_public(package_id)
+            )
         allowed_hosts = settings.allowed_hosts()
         if (
             page_url

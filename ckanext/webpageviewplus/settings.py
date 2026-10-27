@@ -4,6 +4,10 @@ from __future__ import annotations
 from typing import Optional
 from urllib.parse import urlsplit
 
+import ipaddress
+
+from publicsuffixlist import PublicSuffixList
+
 import ckan.plugins.toolkit as toolkit
 from ckan.exceptions import CkanConfigurationException
 
@@ -57,6 +61,24 @@ def formats() -> list[str]:
 
 
 LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "[::1]")
+_psl = None
+
+
+def site_of(host: str) -> str:
+    """The registrable domain ("site") a host belongs to, per the Public
+    Suffix List: files.example.org and data.example.org are both example.org,
+    a.data.gov.uk is data.gov.uk. IP addresses and single-label hosts are
+    their own site."""
+    global _psl
+    bare = host.strip("[]")
+    try:
+        ipaddress.ip_address(bare)
+        return host
+    except ValueError:
+        pass
+    if _psl is None:
+        _psl = PublicSuffixList()
+    return _psl.privatesuffix(host) or host
 
 
 def content_origin() -> Optional[str]:
@@ -85,7 +107,14 @@ def _check_content_origin(origin: str) -> None:
     key = PREFIX + "content_origin"
     parts = urlsplit(origin)
     host = frame.url_host(origin)
-    if parts.scheme not in ("http", "https") or not host or parts.path or parts.query:
+    if (
+        parts.scheme not in ("http", "https")
+        or not host
+        or parts.path
+        or parts.query
+        or parts.fragment
+        or "#" in origin
+    ):
         raise CkanConfigurationException(
             key + ": must be an origin like https://example-usercontent.org"
         )
@@ -93,15 +122,10 @@ def _check_content_origin(origin: str) -> None:
     if parts.scheme != "https" and not loopback:
         raise CkanConfigurationException(key + ": must use https")
     for ckan_host in ckan_hosts():
-        related = (
-            host == ckan_host
-            or host.endswith("." + ckan_host)
-            or ckan_host.endswith("." + host)
-        )
-        if related:
+        if host == ckan_host or site_of(host) == site_of(ckan_host):
             raise CkanConfigurationException(
-                key + ": must be a different site from CKAN's own host "
-                + ckan_host + " (not the same host, a subdomain or a parent)"
+                key + ": must be a different site (registrable domain) from "
+                "CKAN's host " + ckan_host + ": both are on " + site_of(host)
             )
     if len(signing_secret()) < 32:
         raise CkanConfigurationException(

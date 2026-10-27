@@ -65,3 +65,21 @@ class TestHardenedDownloads:
         assert not any(
             p.startswith("sandbox") for p in response.headers.getlist("Content-Security-Policy")
         )
+
+
+@pytest.mark.parametrize(
+    "mimetype,active",
+    [
+        ("text/html", True),
+        ("application/atom+xml", True),
+        ("application/rss+xml", True),
+        ("Image/SVG+XML", True),
+        ("text/xml", True),
+        ("text/csv", False),
+        ("application/json", False),
+    ],
+)
+def test_active_types(mimetype, active):
+    from ckanext.webpageviewplus.downloads import is_active_type
+
+    assert is_active_type(mimetype) is active

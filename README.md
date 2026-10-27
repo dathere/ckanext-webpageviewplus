@@ -90,9 +90,9 @@ uses `githubusercontent.com`). Pages there keep their own origin, so maps, stora
 workers work, and the browser keeps them apart from CKAN's pages, cookies and API.
 
 1. **Register a separate domain.** It must be a different registrable domain, not a
-   subdomain: `files.data.example.org` is the same site as CKAN, and browsers send CKAN's
-   cookies to it. Startup refuses CKAN's own host, a subdomain of it, or a parent of it. It
-   can't detect two subdomains of one shared parent, so don't use one.
+   subdomain: `files.data.example.org` or `files.example.org` is the same site as
+   `data.example.org`, and can set cookies CKAN reads. Startup checks this against the Public
+   Suffix List and refuses a content origin on the same site as any CKAN host.
 2. **Give it DNS and TLS**, and proxy it to the same CKAN. Keep `ckan.site_url` as it is.
    With nginx:
 
@@ -105,13 +105,18 @@ workers work, and the browser keeps them apart from CKAN's pages, cookies and AP
            gzip_types text/html;
            location /webpageviewplus/content/ {
                proxy_pass http://127.0.0.1:5000;   # the same CKAN
-               proxy_set_header Host $host;        # CKAN answers by host
+               proxy_set_header Host $host;        # required, see below
                proxy_set_header X-Forwarded-Proto $scheme;
            }
            location / { return 404; }
        }
 
-   CKAN only answers the content route on that host, and returns 404 for anything else there.
+   **The proxy must pass the original `Host` header** (`proxy_set_header Host $host` in
+   nginx, `ProxyPreserveHost On` in Apache, and the same in any CDN in front of it). CKAN
+   recognises the content domain by that header. Only on it does CKAN answer the content
+   route alone and 404 everything else. If the header is rewritten, the whole CKAN site
+   answers on the content domain. Check it after deploying: `curl -I
+   https://example-usercontent.org/dataset/` must return 404.
 3. **Configure CKAN**, with a fresh 32+ character secret (for example from
    `python -c "import secrets; print(secrets.token_urlsafe(48))"`):
 
