@@ -26,6 +26,16 @@ It's checked on save (a validator) AND on render (the builder), and a failing re
 ignoring scheme and port, because cookies aren't isolated by either. This is deliberately stricter
 than the spec's origin comparison. Uploads always count as CKAN's own.
 
+**Until there's a content origin (phase 3), the rule applies to every frame, not just CKAN's
+pages** (`frame.must_isolate`). Uploaded HTML is then served from CKAN's origin. A frame whose
+scripts keep a real origin can navigate itself (or be redirected) to such an upload, which would
+then run as CKAN inside the CKAN page, and no save- or render-time URL check can catch that. So
+`external` degrades to `interactive` like `data-schematic` does, and `allow-scripts` +
+`allow-same-origin` is refused everywhere. This deliberately departs from the spec, and was decided
+with the user. Once phase 3 isolates uploads, the plan is to allow those frames only for
+sysadmin-chosen hosts in `allowed_hosts`. Tests that exercise the CKAN-host logic simulate a
+content origin (the `content_origin` fixture, or `CO` in `test_frame.py`).
+
 ## Architecture (phase 1 done)
 
 - `frame.py`: pure code with no CKAN imports. Holds `PRESETS`, `build_frame()` (the attribute

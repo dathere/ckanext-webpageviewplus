@@ -6,6 +6,16 @@ from ckan.tests import factories, helpers
 from ckanext.webpageviewplus import cli as wvp_cli
 
 
+@pytest.fixture
+def content_origin(monkeypatch):
+    """Simulate phase 3, where uploads are served from their own origin."""
+    from ckanext.webpageviewplus import settings
+
+    monkeypatch.setattr(
+        settings, "content_origin", lambda: "https://usercontent.example.net"
+    )
+
+
 def _stock_view(resource, **fields):
     return factories.ResourceView(
         resource_id=resource["id"], view_type="webpage_view", **fields
@@ -50,7 +60,7 @@ class TestMigrate:
         assert result.exit_code == 0, result.output
         assert _show(view)["preset"] == "external"
 
-    def test_unsafe_preset_on_upload_falls_back_to_default(self, cli):
+    def test_unsafe_preset_on_upload_falls_back_to_default(self, cli, content_origin):
         view = _stock_view(factories.Resource(url_type="upload", url="a.html"))
         result = cli.invoke(ckan, ["webpageviewplus", "migrate", "--preset", "external"])
         assert result.exit_code == 0, result.output
@@ -58,7 +68,7 @@ class TestMigrate:
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "strict external")
     @pytest.mark.ckan_config("ckanext.webpageviewplus.default_preset", "external")
-    def test_unsafe_preset_on_upload_becomes_strict_when_nothing_else_fits(self, cli):
+    def test_unsafe_preset_on_upload_becomes_strict_when_nothing_else_fits(self, cli, content_origin):
         view = _stock_view(factories.Resource(url_type="upload", url="a.html"))
         result = cli.invoke(ckan, ["webpageviewplus", "migrate"])
         assert result.exit_code == 0, result.output
@@ -82,7 +92,7 @@ class TestMigrate:
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "external interactive")
     @pytest.mark.ckan_config("ckanext.webpageviewplus.default_preset", "external")
-    def test_unsafe_default_falls_back_to_allowed_preset(self, cli):
+    def test_unsafe_default_falls_back_to_allowed_preset(self, cli, content_origin):
         view = _stock_view(factories.Resource(url_type="upload", url="a.html"))
         result = cli.invoke(ckan, ["webpageviewplus", "migrate"])
         assert result.exit_code == 0, result.output

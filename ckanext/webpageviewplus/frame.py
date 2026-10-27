@@ -84,9 +84,11 @@ PRESETS: dict[str, Preset] = {
         allow=("fullscreen",),
         height_mode="auto",
     ),
+    # Unsandboxed, so the page could navigate itself to HTML uploaded to
+    # CKAN and run it as CKAN: only safe once uploads have their own origin.
     "external": Preset(
         sandbox=None, allow=("fullscreen",), height_mode="fixed",
-        height_value=str(FALLBACK_HEIGHT),
+        height_value=str(FALLBACK_HEIGHT), needs_content_origin=True,
     ),
     "data-schematic": Preset(
         sandbox=(
@@ -224,12 +226,24 @@ def parse_allow(value: str) -> tuple[list[str], list[str]]:
     return ok, bad
 
 
+def must_isolate(on_ckan_host: bool, content_origin: Optional[str]) -> bool:
+    """Whether the frame must not let scripts keep a real origin.
+
+    Always for a page on CKAN's own host. Without a content origin, for every
+    frame: uploaded HTML is then served from CKAN's origin, and a frame whose
+    scripts keep their origin can navigate (or be redirected) to an upload,
+    which would then run as CKAN inside the CKAN page. Checking the URL only
+    when the view is saved or rendered can't catch that.
+    """
+    return on_ckan_host or not content_origin
+
+
 def violates_same_origin_rule(
     sandbox: Optional[tuple[str, ...]], same_origin: bool
 ) -> bool:
-    """The invariant: a page on CKAN's own origin may never run scripts with
-    its real origin. So there it needs a sandbox, and the sandbox may not
-    combine allow-scripts with allow-same-origin."""
+    """The invariant: where ``same_origin`` (see ``must_isolate``) holds, a
+    frame may never run scripts with its real origin. So it needs a sandbox,
+    and the sandbox may not combine allow-scripts with allow-same-origin."""
     if not same_origin:
         return False
     if sandbox is None:
@@ -239,7 +253,8 @@ def violates_same_origin_rule(
 
 def effective_preset_name(name: str, content_origin: Optional[str]) -> str:
     """Resolve presets that can't run as configured. Without a content origin
-    (always, before phase 3) data-schematic degrades to interactive."""
+    (always, before phase 3) data-schematic and external degrade to
+    interactive."""
     if name not in PRESETS:
         return "strict"
     if PRESETS[name].needs_content_origin and not content_origin:
@@ -336,7 +351,9 @@ def build_frame(
     if allow_override:
         allow = parse_allow(allow_override)[0]
 
-    same_origin = is_upload or is_ckan_host(url, ckan_hosts)
+    same_origin = must_isolate(
+        is_upload or is_ckan_host(url, ckan_hosts), content_origin
+    )
     if violates_same_origin_rule(sandbox, same_origin):
         name = "strict"
         sandbox = PRESETS["strict"].sandbox

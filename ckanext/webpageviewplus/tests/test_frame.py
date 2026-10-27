@@ -6,6 +6,8 @@ from ckanext.webpageviewplus import frame
 SITE = "https://ckan.example.org"
 EXTERNAL = "https://pages.example.com/report.html"
 OWN = SITE + "/dataset/x/resource/y/download/report.html"
+# Simulates phase 3, where uploads are served from their own origin.
+CO = "https://usercontent.example.net"
 DENIALS = "; ".join("{} 'none'".format(f) for f in frame.DENIED_FEATURES)
 
 
@@ -20,8 +22,8 @@ def test_strict_is_empty_sandbox_not_absent():
     assert f.allow == DENIALS
 
 
-def test_external_has_no_sandbox_attribute():
-    f = build(preset="external")
+def test_external_has_no_sandbox_attribute_with_content_origin():
+    f = build(content_origin=CO, preset="external")
     assert f.sandbox is None
     assert f.allow == "fullscreen; " + DENIALS
 
@@ -34,14 +36,14 @@ def test_interactive_tokens():
 
 @pytest.mark.parametrize("url", [OWN, SITE + ":443/page.html", "HTTPS://CKAN.example.org/p"])
 def test_external_refused_on_own_origin(url):
-    f = build(url=url, preset="external")
+    f = build(content_origin=CO, url=url, preset="external")
     assert f.preset == "strict"
     assert f.sandbox == ""
     assert "same_origin_fallback" in f.notices
 
 
 def test_upload_counts_as_own_origin_whatever_its_url():
-    f = build(preset="external", is_upload=True)
+    f = build(content_origin=CO, preset="external", is_upload=True)
     assert f.preset == "strict"
 
 
@@ -51,8 +53,8 @@ def test_scripts_plus_same_origin_refused_on_own_origin():
     assert f.sandbox == ""
 
 
-def test_scripts_plus_same_origin_allowed_elsewhere():
-    f = build(sandbox_override="allow-scripts allow-same-origin")
+def test_scripts_plus_same_origin_allowed_elsewhere_with_content_origin():
+    f = build(content_origin=CO, sandbox_override="allow-scripts allow-same-origin")
     assert f.sandbox == "allow-scripts allow-same-origin"
 
 
@@ -66,11 +68,11 @@ def test_scripts_plus_same_origin_allowed_elsewhere():
 )
 def test_other_port_or_scheme_on_ckan_host_counts_as_ckan(url):
     # Cookies aren't isolated by port or (usually) scheme.
-    assert build(url=url, preset="external").preset == "strict"
+    assert build(content_origin=CO, url=url, preset="external").preset == "strict"
 
 
 def test_alias_host_counts_as_ckan():
-    f = build(
+    f = build(content_origin=CO, 
         url="https://ckan-alias.example.net/p.html",
         preset="external",
         ckan_hosts=["ckan.example.org", "ckan-alias.example.net"],
@@ -180,3 +182,22 @@ def test_ambiguous_host_counts_as_ckan():
 )
 def test_canonical_config_host(entry, host):
     assert frame.canonical_config_host(entry) == host
+
+
+def test_external_degrades_to_interactive_without_content_origin():
+    # An unsandboxed page could navigate itself to HTML uploaded to CKAN.
+    f = build(preset="external")
+    assert f.preset == "interactive"
+    assert f.sandbox == "allow-scripts allow-popups allow-downloads"
+    assert f.notices == ["degraded"]
+
+
+def test_scripts_plus_same_origin_refused_everywhere_without_content_origin():
+    f = build(sandbox_override="allow-scripts allow-same-origin")
+    assert f.preset == "strict"
+    assert f.sandbox == ""
+
+
+def test_same_origin_without_scripts_allowed_without_content_origin():
+    f = build(sandbox_override="allow-same-origin allow-forms")
+    assert f.sandbox == "allow-same-origin allow-forms"

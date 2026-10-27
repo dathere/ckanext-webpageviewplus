@@ -147,6 +147,16 @@ def test_new_view_form_renders(app):
     assert 'name="page_url"' in response
 
 
+@pytest.fixture
+def content_origin(monkeypatch):
+    """Simulate phase 3, where uploads are served from their own origin."""
+    from ckanext.webpageviewplus import settings
+
+    monkeypatch.setattr(
+        settings, "content_origin", lambda: "https://usercontent.example.net"
+    )
+
+
 def _view(user, resource_id, **fields):
     return helpers.call_action(
         "resource_view_create",
@@ -179,13 +189,13 @@ class TestViewValidation:
             _view(factories.Sysadmin(), resource["id"], preset="external")
         assert "preset" in e.value.error_dict
 
-    def test_external_refused_for_upload_on_own_origin(self):
+    def test_external_refused_for_upload_on_own_origin(self, content_origin):
         resource = factories.Resource(url_type="upload", url="report.html")
         with pytest.raises(ValidationError) as e:
             _view(factories.Sysadmin(), resource["id"], preset="external")
         assert "preset" in e.value.error_dict
 
-    def test_external_refused_for_page_on_site_url(self, ckan_config):
+    def test_external_refused_for_page_on_site_url(self, ckan_config, content_origin):
         resource = factories.Resource(url="https://pages.example.com/a.html")
         with pytest.raises(ValidationError) as e:
             _view(
@@ -197,7 +207,7 @@ class TestViewValidation:
         assert "preset" in e.value.error_dict
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.site_aliases", "https://ckan-alias.example.net")
-    def test_external_refused_for_alias_host(self):
+    def test_external_refused_for_alias_host(self, content_origin):
         resource = factories.Resource(url="https://pages.example.com/a.html")
         with pytest.raises(ValidationError) as e:
             _view(
@@ -223,6 +233,22 @@ class TestViewValidation:
         resource = factories.Resource(url_type="upload", url="schematic.html")
         view = _view(factories.Sysadmin(), resource["id"], preset="data-schematic")
         assert view["preset"] == "data-schematic"
+
+    def test_external_saves_without_content_origin(self):
+        # Allowed, but renders as interactive (see test_frame).
+        resource = factories.Resource(url_type="upload", url="report.html")
+        view = _view(factories.Sysadmin(), resource["id"], preset="external")
+        assert view["preset"] == "external"
+
+    def test_scripts_and_same_origin_refused_for_any_page_without_content_origin(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        with pytest.raises(ValidationError) as e:
+            _view(
+                factories.Sysadmin(),
+                resource["id"],
+                sandbox="allow-scripts allow-same-origin",
+            )
+        assert "sandbox" in e.value.error_dict
 
     def test_external_allowed_for_third_party(self):
         resource = factories.Resource(url="https://pages.example.com/a.html")

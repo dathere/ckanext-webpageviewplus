@@ -3,7 +3,7 @@
 {% set preset_labels = {
   'strict': _('Strict: static HTML, no scripts'),
   'interactive': _('Interactive: scripts, popups and downloads, no storage'),
-  'external': _('External: a trusted third-party site, no sandbox'),
+  'external': _('External: a trusted third-party site, no sandbox (runs as Interactive for now)'),
   'data-schematic': _('Data Schematic: qsv Data Schematics'),
 } %}
 {% set height_labels = {
@@ -28,10 +28,13 @@
 </div>
 
 {% if frame and 'degraded' in frame.notices %}
-  <div class="alert alert-warning">{{ _('The Data Schematic preset needs a content origin, which this site doesn\'t have yet. The view runs as Interactive: charts, the Tour and Explore work, but maps stay blank.') }}</div>
+  <div class="alert alert-warning">
+    {{ _('This preset needs uploaded HTML to be served from a separate content origin, which this site doesn\'t have yet, so the view runs as Interactive.') }}
+    {% if (data.preset or default_preset) == 'data-schematic' %}{{ _('Charts, the Tour and Explore work, but maps stay blank.') }}{% endif %}
+  </div>
 {% endif %}
 {% if frame and 'same_origin_fallback' in frame.notices %}
-  <div class="alert alert-warning">{{ _('This page is on this site\'s own origin, so it runs as Strict: it can\'t run scripts with the site\'s origin.') }}</div>
+  <div class="alert alert-warning">{{ _('This view\'s sandbox would let scripts keep a real origin, which isn\'t allowed here, so it runs as Strict.') }}</div>
 {% endif %}
 
 <div class="form-group control-medium">

@@ -134,10 +134,10 @@ def view_after_validator(
     else:
         return
 
-    same_origin = is_upload or frame.is_ckan_host(url, settings.ckan_hosts())
+    on_ckan_host = is_upload or frame.is_ckan_host(url, settings.ckan_hosts())
 
     allowed_hosts = settings.allowed_hosts()
-    if page_url and allowed_hosts and not same_origin:
+    if page_url and allowed_hosts and not on_ckan_host:
         if frame.url_host(page_url) not in allowed_hosts:
             _add_error(
                 errors,
@@ -153,13 +153,15 @@ def view_after_validator(
     override = _get(data, "sandbox")
     if override:
         sandbox = tuple(frame.parse_sandbox(override)[0])
+    same_origin = frame.must_isolate(on_ckan_host, settings.content_origin())
     if frame.violates_same_origin_rule(sandbox, same_origin):
         _add_error(
             errors,
             "sandbox" if override else "preset",
             toolkit._(
-                "Pages on this site can't run scripts with this site's origin: "
-                "choose a preset with a sandbox, and don't combine "
-                "allow-scripts with allow-same-origin"
+                "This frame can't let scripts keep a real origin: don't "
+                "combine allow-scripts with allow-same-origin. Pages on this "
+                "site never may; other pages may once uploaded HTML is served "
+                "from a separate content origin"
             ),
         )

@@ -74,6 +74,8 @@ def choose_preset(
         url = resource.url if resource is not None else ""
         same_origin = frame.is_ckan_host(url or "", settings.ckan_hosts())
 
+    same_origin = frame.must_isolate(same_origin, settings.content_origin())
+
     def safe(name: str) -> bool:
         effective = frame.effective_preset_name(name, settings.content_origin())
         return not frame.violates_same_origin_rule(

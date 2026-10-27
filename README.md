@@ -55,8 +55,13 @@ Add a "Website (Plus)" view to an HTML resource and pick a security preset:
 | ---------------- | ----------------------------------------------- | ------- |
 | `strict`         | everything restricted, no scripts               | static HTML |
 | `interactive`    | `allow-scripts allow-popups allow-downloads`    | scripted pages that need no storage (default) |
-| `external`       | none                                            | trusted third-party sites; refused for pages on CKAN's own host |
+| `external`       | none (needs a content origin)                   | trusted third-party sites; runs as `interactive` until content-origin support lands, and is never allowed for pages on CKAN's own host |
 | `data-schematic` | adds `allow-same-origin` (needs a content origin) | qsv Data Schematics; runs as `interactive` until content-origin support lands |
+
+Until uploaded HTML is served from a separate content origin, no frame may let scripts keep
+a real origin: such a page could navigate itself to an HTML file uploaded to CKAN and run it
+as CKAN. So `external` runs as `interactive`, and a sandbox combining `allow-scripts` with
+`allow-same-origin` is refused.
 
 Every frame gets `loading="lazy"`, a `referrerpolicy`, the view's title as its accessible
 name, and an `allow` list that always denies ad and tracking features. Sysadmins can also set
