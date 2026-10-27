@@ -23,7 +23,7 @@ from flask import Blueprint, Response, abort, request, send_file
 
 import ckan.model as model
 import ckan.plugins.toolkit as toolkit
-from ckan.lib.uploader import get_resource_uploader
+from ckan.lib.uploader import ResourceUpload, get_resource_uploader
 
 from ckanext.webpageviewplus import frame, settings
 
@@ -45,6 +45,29 @@ def is_html_upload(resource: dict[str, Any]) -> bool:
         return True
     _, dot, ext = (resource.get("url") or "").rpartition(".")
     return bool(dot) and ext.lower().split("?")[0] in HTML_FORMATS
+
+
+def resource_dict(resource_obj: model.Resource) -> dict[str, Any]:
+    return {
+        "id": resource_obj.id,
+        "url": resource_obj.url,
+        "url_type": resource_obj.url_type,
+        "format": resource_obj.format,
+        "mimetype": resource_obj.mimetype,
+    }
+
+
+def serves(resource: dict[str, Any]) -> bool:
+    """Whether this resource is framed from the content origin: one is
+    configured, it's an HTML upload, and the file is on CKAN's own
+    filesystem storage. Other uploaders (cloud storage) aren't supported yet,
+    so their uploads stay framed from CKAN's origin, sandboxed."""
+    if not settings.content_origin() or not is_html_upload(resource):
+        return False
+    try:
+        return isinstance(get_resource_uploader(resource), ResourceUpload)
+    except Exception:
+        return False
 
 
 def _window(now: Optional[float] = None) -> int:
@@ -115,14 +138,8 @@ def serve(resource_id: str, filename: str):
     package = resource_obj.package
     if package is None or package.state != "active":
         abort(404)
-    resource = {
-        "id": resource_obj.id,
-        "url": resource_obj.url,
-        "url_type": resource_obj.url_type,
-        "format": resource_obj.format,
-        "mimetype": resource_obj.mimetype,
-    }
-    if not is_html_upload(resource):
+    resource = resource_dict(resource_obj)
+    if not serves(resource):
         abort(404)
 
     private = not _is_public(package.id)

@@ -7,7 +7,7 @@ import click
 import ckan.model as model
 from ckan.lib.uploader import get_resource_uploader
 
-from ckanext.webpageviewplus import frame, settings
+from ckanext.webpageviewplus import content, frame, settings
 
 SCHEMATIC_MARKER = b"qsv-schematic-source"
 # Stop scanning large uploads after this many bytes.
@@ -70,7 +70,11 @@ def choose_preset(
     is_upload = not page_url and resource is not None and resource.url_type == "upload"
     if page_url:
         url = page_url
-    elif is_upload and settings.content_origin():
+    elif (
+        is_upload
+        and resource is not None
+        and content.serves(content.resource_dict(resource))
+    ):
         url = settings.content_origin() + "/"
     else:
         url = (resource.url if resource is not None else "") or ""

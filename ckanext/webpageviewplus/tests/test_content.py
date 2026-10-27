@@ -220,3 +220,12 @@ def test_unsafe_content_origin_stops_startup(origin, secret, monkeypatch):
 def test_good_content_origin_accepted(monkeypatch):
     monkeypatch.setattr(settings, "content_origin", lambda: "https://usercontent.example.org")
     settings.check()
+
+
+@pytest.mark.usefixtures("storage")
+def test_other_uploaders_stay_on_ckan_origin(app, monkeypatch):
+    # e.g. ckanext-cloudstorage: not a filesystem ResourceUpload.
+    monkeypatch.setattr(content, "get_resource_uploader", lambda resource: object())
+    resource = _upload(factories.Dataset())
+    assert not content.serves(resource)
+    assert _get(app, _content_url(resource), status=404).status_code == 404

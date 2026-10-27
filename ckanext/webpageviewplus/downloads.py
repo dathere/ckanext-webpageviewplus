@@ -56,14 +56,8 @@ def _content_redirect(response: Response) -> Response | None:
     resource_obj = model.Resource.get(resource_id) if resource_id else None
     if resource_obj is None or resource_obj.package is None:
         return None
-    resource = {
-        "id": resource_obj.id,
-        "url": resource_obj.url,
-        "url_type": resource_obj.url_type,
-        "format": resource_obj.format,
-        "mimetype": resource_obj.mimetype,
-    }
-    if not content.is_html_upload(resource):
+    resource = content.resource_dict(resource_obj)
+    if not content.serves(resource):
         return None
     response.close()
     return redirect(

@@ -8,7 +8,7 @@ import ckan.plugins.toolkit as toolkit
 from ckan.lib.navl.dictization_functions import missing
 from ckan.types import Context, FlattenDataDict, FlattenErrorDict, FlattenKey
 
-from ckanext.webpageviewplus import frame, settings
+from ckanext.webpageviewplus import content, frame, settings
 
 ADVANCED_FIELDS = ("sandbox", "allow", "referrer_policy")
 
@@ -135,7 +135,9 @@ def view_after_validator(
         return
 
     isolating = settings.isolating_content_origin()
-    if is_upload and settings.content_origin():
+    if is_upload and resource is not None and content.serves(
+        content.resource_dict(resource)
+    ):
         # Framed from the content origin (see plugin.setup_template_variables).
         url = settings.content_origin() + "/"
     on_ckan_host = frame.frame_on_ckan_host(
