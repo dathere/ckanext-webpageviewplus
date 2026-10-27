@@ -72,19 +72,27 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
 
     def can_view(self, data_dict: dict[str, Any]) -> bool:
         resource = data_dict["resource"]
-        return (
-            resource.get("format", "").lower() in ["html", "htm"]
-            or resource["url"].split(".")[-1] in ["html", "htm"]
+        formats = toolkit.aslist(
+            toolkit.config.get("ckanext.webpageviewplus.formats", "html htm")
         )
+        formats = [f.lower() for f in formats]
+        if (resource.get("format") or "").lower() in formats:
+            return True
+        try:
+            path = urlsplit(resource.get("url") or "").path
+        except ValueError:
+            return False
+        _, dot, ext = path.rpartition(".")
+        return bool(dot) and ext.lower() in formats
 
     def setup_template_variables(
         self, context: Context, data_dict: dict[str, Any]
     ) -> dict[str, Any]:
         # Checked again at render time: views saved before validation existed,
         # and the resource URL fallback, never went through the form.
-        url = data_dict["resource_view"].get("page_url") or data_dict[
-            "resource"
-        ].get("url")
+        # resource_view is None on the "new view" form.
+        resource_view = data_dict.get("resource_view") or {}
+        url = resource_view.get("page_url") or data_dict["resource"].get("url")
         frame_url: Optional[str] = url if is_http_url(url) else None
         return {"frame_url": frame_url}
 

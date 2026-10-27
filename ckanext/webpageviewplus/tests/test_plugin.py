@@ -43,6 +43,11 @@ class TestWebpageViewPlus:
             ("HTML", "http://example.com/data", True),
             ("", "http://example.com/page.htm", True),
             ("CSV", "http://example.com/data.csv", False),
+            ("", "https://example.com/page.html?download=1", True),
+            ("", "https://example.com/page.HTML#top", True),
+            ("", "https://example.com/html", False),
+            ("", "https://example.com/data.csv?f=x.html", False),
+            (None, "http://example.com/page.htm", True),
         ],
     )
     def test_can_view(self, fmt, url, expected):
@@ -103,3 +108,22 @@ def test_frame_url_checked_at_render(page_url, resource_url, expected):
         },
     )
     assert variables["frame_url"] == expected
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+def test_new_view_form_renders(app):
+    sysadmin = factories.SysadminWithToken()
+    dataset = factories.Dataset()
+    resource = factories.Resource(
+        package_id=dataset["id"], url="http://some.website.html"
+    )
+    url = url_for(
+        "{}_resource.edit_view".format(dataset["type"]),
+        id=dataset["name"],
+        resource_id=resource["id"],
+        view_type="webpage_view_plus",
+    )
+    response = app.get(url, headers={"Authorization": sysadmin["token"]})
+    assert response.status_code == 200
+    assert 'name="page_url"' in response
