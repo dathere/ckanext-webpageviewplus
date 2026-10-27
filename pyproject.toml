@@ -1,0 +1,39 @@
+[project]
+name = "ckanext-webpageviewplus"
+version = "0.0.1"
+description = "An enhanced web page resource view for CKAN"
+readme = "README.md"
+authors = [
+    {name = "Joel Natividad", email = "joel@dathere.com"}
+]
+license = {text = "AGPL"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+keywords = [ "CKAN", "webpage", "view", "iframe", ]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/dathere/ckanext-webpageviewplus"
+
+[project.entry-points."ckan.plugins"]
+webpage_view_plus = "ckanext.webpageviewplus.plugin:WebpageviewplusPlugin"
+
+
+[build-system]
+requires = ["setuptools<82"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+        "ignore::sqlalchemy.exc.SADeprecationWarning",
+        "ignore::sqlalchemy.exc.SAWarning",
+        "ignore::DeprecationWarning",
+]
+addopts = "--ckan-ini test.ini"
