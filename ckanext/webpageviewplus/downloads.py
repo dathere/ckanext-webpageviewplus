@@ -46,12 +46,16 @@ def is_active_type(mimetype: str) -> bool:
     )
 
 
+def _is_download(endpoint: str) -> bool:
+    # "<package type>_resource.download" for every dataset type. CKAN 2.10
+    # also registers a "resource" blueprint on the same URLs, so its
+    # downloads can resolve to "resource.download".
+    return endpoint.endswith("_resource.download") or endpoint == "resource.download"
+
+
 def _is_ckan_served_resource(endpoint: str) -> bool:
-    # "<package type>_resource.download" for every dataset type, and the
-    # resource proxy (ckanext-resourceproxy).
-    return endpoint.endswith("_resource.download") or endpoint == (
-        "resource_proxy.proxy_view"
-    )
+    # Resource downloads, and the resource proxy (ckanext-resourceproxy).
+    return _is_download(endpoint) or endpoint == "resource_proxy.proxy_view"
 
 
 def _content_redirect(response: Response) -> Response | None:
@@ -59,9 +63,7 @@ def _content_redirect(response: Response) -> Response | None:
     CKAN's origin then never serves it. CKAN's download view has already
     checked that the viewer may see the resource, so a private one gets a
     signed URL."""
-    if not settings.content_origin() or not (request.endpoint or "").endswith(
-        "_resource.download"
-    ):
+    if not settings.content_origin() or not _is_download(request.endpoint or ""):
         return None
     resource_id = (request.view_args or {}).get("resource_id")
     resource_obj = model.Resource.get(resource_id) if resource_id else None

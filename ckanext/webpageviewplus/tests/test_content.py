@@ -54,14 +54,15 @@ def _content_url(resource, private=False):
 
 @pytest.mark.usefixtures("storage")
 class TestContentRoute:
-    def test_public_upload_served_with_headers(self, app):
+    def test_public_upload_served_with_headers(self, app, ckan_config):
         resource = _upload(factories.Dataset())
         response = _get(app, _content_url(resource))
         assert response.status_code == 200
         assert response.body == HTML.decode()
         assert response.headers["Content-Type"].startswith("text/html")
         assert response.headers["Content-Security-Policy"].startswith("frame-ancestors ")
-        assert "test.ckan.net:*" in response.headers["Content-Security-Policy"]
+        site_host = urlsplit(ckan_config["ckan.site_url"]).hostname
+        assert "{}:*".format(site_host) in response.headers["Content-Security-Policy"]
         assert response.headers["X-Content-Type-Options"] == "nosniff"
         assert response.headers["Cache-Control"] == "public, no-cache"
         assert "Set-Cookie" not in response.headers

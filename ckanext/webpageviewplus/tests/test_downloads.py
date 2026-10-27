@@ -83,3 +83,19 @@ def test_active_types(mimetype, active):
     from ckanext.webpageviewplus.downloads import is_active_type
 
     assert is_active_type(mimetype) is active
+
+
+@pytest.mark.parametrize(
+    "endpoint,expected",
+    [
+        ("dataset_resource.download", True),
+        ("custom_type_resource.download", True),
+        ("resource.download", True),  # CKAN 2.10's second blueprint
+        ("resource_proxy.proxy_view", True),
+        ("dataset_resource.read", False),
+    ],
+)
+def test_endpoints_covered(endpoint, expected):
+    from ckanext.webpageviewplus.downloads import _is_ckan_served_resource
+
+    assert _is_ckan_served_resource(endpoint) is expected
