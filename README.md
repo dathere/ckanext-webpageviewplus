@@ -16,7 +16,7 @@ Compatibility with core CKAN versions:
 | CKAN version    | Compatible?   |
 | --------------- | ------------- |
 | 2.9 and earlier | no            |
-| 2.10            | yes (CI)      |
+| 2.10            | not yet tested|
 | 2.11            | yes           |
 
 
@@ -75,6 +75,10 @@ do:
 To run the tests, do:
 
     pytest --ckan-ini=test.ini
+
+`test.ini` inherits from `/srv/app/src/ckan/test-core.ini`, the path in the
+`ckan/ckan-dev` Docker images used by CI. Elsewhere, edit its `use = config:` line
+to point at your CKAN checkout's `test-core.ini`.
 
 
 ## Releasing a new version of ckanext-webpageviewplus
