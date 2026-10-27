@@ -76,9 +76,11 @@ groups:
         default: ""
         type: list
         description: |
-          Space-separated presets whose frames get the credentialless
-          attribute: the page loads without the visitor's cookies or existing
-          storage, in a throwaway storage partition. Chromium only (other
+          Space-separated presets whose frames of third-party pages get the
+          credentialless attribute: the page loads without the visitor's
+          cookies or existing storage, in a throwaway storage partition.
+          Never applied to uploads or pages on CKAN's own hosts, which need
+          the visitor's CKAN session for private resources. Chromium only (other
           browsers ignore it), so it is extra hardening, never a security
           boundary. Logins inside the frame stop working, and popups it opens
           can't talk back to it (no OAuth popups). Listing external usually

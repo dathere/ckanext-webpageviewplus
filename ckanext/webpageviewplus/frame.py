@@ -409,10 +409,8 @@ def build_frame(
     if allow_override:
         allow = parse_allow(allow_override)[0]
 
-    same_origin = must_isolate(
-        frame_on_ckan_host(url, ckan_hosts, is_upload, content_origin),
-        content_origin,
-    )
+    on_ckan_host = frame_on_ckan_host(url, ckan_hosts, is_upload, content_origin)
+    same_origin = must_isolate(on_ckan_host, content_origin)
     if violates_same_origin_rule(sandbox, same_origin):
         name = "strict"
         sandbox = PRESETS["strict"].sandbox
@@ -431,8 +429,12 @@ def build_frame(
     )
     opaque = sandbox is not None and "allow-same-origin" not in sandbox
     # Chromium only, so it may only add hardening: nothing above depends on
-    # it. Decided on the preset the frame actually runs as.
-    credentialless = name in credentialless_presets
+    # it. Decided on the preset the frame actually runs as. Third-party pages
+    # only: uploads and CKAN's own pages load (or reload, via the download
+    # URL) through CKAN, which needs the visitor's session for private ones.
+    credentialless = (
+        name in credentialless_presets and not is_upload and not on_ckan_host
+    )
     if credentialless:
         notices.append("credentialless")
     return Frame(

@@ -266,13 +266,27 @@ def test_credentialless_follows_the_preset_the_frame_runs_as():
     assert build(preset="data-schematic", credentialless_presets=["interactive"]).credentialless
     assert not build(preset="data-schematic", credentialless_presets=["data-schematic"]).credentialless
     # A frame refused by the same-origin rule runs as strict.
-    f = build(url=OWN, sandbox_override="allow-scripts allow-same-origin",
+    f = build(sandbox_override="allow-scripts allow-same-origin",
               credentialless_presets=["strict"])
     assert f.preset == "strict" and f.credentialless
 
 
+@pytest.mark.parametrize("kw", [
+    # CKAN's own pages and uploads load (and reload, via the download URL)
+    # through CKAN, which needs the visitor's session for private resources.
+    {"url": OWN},
+    {"url": OWN, "is_upload": True},
+    {"url": CO + "/x/s.html", "is_upload": True, "content_origin": CO},
+])
+def test_credentialless_only_for_third_party_pages(kw):
+    presets = list(frame.PRESETS)
+    assert not build(preset="interactive", credentialless_presets=presets, **kw).credentialless
+
+
 def test_credentialless_never_loosens_the_sandbox():
-    plain = build(url=OWN, preset="external", content_origin=CO)
-    hardened = build(url=OWN, preset="external", content_origin=CO,
-                     credentialless_presets=["external", "strict"])
-    assert hardened.sandbox == plain.sandbox == ""
+    plain = build(preset="external", content_origin=CO)
+    hardened = build(preset="external", content_origin=CO,
+                     credentialless_presets=["external"])
+    assert hardened.credentialless
+    assert hardened.sandbox == plain.sandbox
+    assert hardened.allow == plain.allow
