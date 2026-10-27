@@ -164,3 +164,19 @@ def test_url_host_is_canonical_or_empty(url, host):
 
 def test_ambiguous_host_counts_as_ckan():
     assert frame.is_ckan_host("https://%63kan.example.org/p", ["ckan.example.org"])
+
+
+@pytest.mark.parametrize(
+    "entry,host",
+    [
+        ("::1", "[::1]"),
+        ("[0::1]", "[::1]"),
+        ("https://CKAN.example.org:8443/", "ckan.example.org"),
+        ("ckan.example.org.", "ckan.example.org"),
+        ("127.0.0.1", "127.0.0.1"),
+        ("%63kan.example.org", ""),
+        ("not a host", ""),
+    ],
+)
+def test_canonical_config_host(entry, host):
+    assert frame.canonical_config_host(entry) == host

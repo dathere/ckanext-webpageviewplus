@@ -74,10 +74,22 @@ def choose_preset(
         url = resource.url if resource is not None else ""
         same_origin = frame.is_ckan_host(url or "", settings.ckan_hosts())
 
-    effective = frame.effective_preset_name(preset, settings.content_origin())
-    if frame.violates_same_origin_rule(frame.PRESETS[effective].sandbox, same_origin):
-        return "strict", "{} refused on CKAN's own host".format(preset)
-    return preset, reason
+    def safe(name: str) -> bool:
+        effective = frame.effective_preset_name(name, settings.content_origin())
+        return not frame.violates_same_origin_rule(
+            frame.PRESETS[effective].sandbox, same_origin
+        )
+
+    if safe(preset):
+        return preset, reason
+    # Fall back to an allowed preset the rule accepts: the default if it
+    # qualifies, else the first in the site's list. Only if none does, strict
+    # (which is also what such a view renders as).
+    allowed = settings.allowed_presets()
+    for name in [settings.default_preset()] + allowed:
+        if name in allowed and safe(name):
+            return name, "{} refused on CKAN's own host".format(preset)
+    return "strict", "{} refused on CKAN's own host".format(preset)
 
 
 @click.group(short_help="ckanext-webpageviewplus commands")

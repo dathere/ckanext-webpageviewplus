@@ -338,3 +338,34 @@ def test_preset_removed_from_site_list_renders_as_default():
     )
     assert variables["frame"].preset == "strict"
     assert variables["frame"].sandbox == ""
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckanext.webpageviewplus.site_aliases", "::1 ckan-alias.example.net")
+@pytest.mark.ckan_config("ckanext.webpageviewplus.allowed_hosts", "::1")
+@pytest.mark.usefixtures("with_plugins")
+def test_ipv6_hosts_in_settings_are_canonical():
+    from ckanext.webpageviewplus import settings
+
+    assert "[::1]" in settings.ckan_hosts()
+    assert settings.allowed_hosts() == ["[::1]"]
+
+
+@pytest.mark.parametrize("name", ["site_aliases", "allowed_hosts"])
+def test_invalid_host_setting_stops_startup(name, monkeypatch):
+    from ckan.exceptions import CkanConfigurationException
+    from ckanext.webpageviewplus import settings
+
+    values = {
+        "presets": "strict interactive",
+        "default_preset": "strict",
+        "referrer_policy": "no-referrer",
+        "min_height": 400,
+        "max_height": 4000,
+        "site_aliases": "",
+        "allowed_hosts": "",
+        name: "%63kan.example.org",
+    }
+    monkeypatch.setattr(settings, "_get", lambda key: values.get(key))
+    with pytest.raises(CkanConfigurationException, match=name):
+        settings.check()

@@ -182,6 +182,18 @@ def is_ckan_host(url: str, ckan_hosts: list[str]) -> bool:
     return host in ckan_hosts
 
 
+def canonical_config_host(entry: str) -> str:
+    """Canonicalize a host from a setting, given as a URL or a bare host
+    (``example.org``, ``127.0.0.1``, ``::1`` or ``[::1]``). Returns "" if it
+    isn't a valid host."""
+    entry = entry.strip()
+    if "//" in entry:
+        return url_host(entry)
+    if ":" in entry and not entry.startswith("["):
+        entry = "[" + entry + "]"  # bare IPv6
+    return url_host("https://" + entry)
+
+
 def url_host(url: str) -> str:
     """The URL's canonical host, or "" if it's ambiguous or unparseable."""
     try:

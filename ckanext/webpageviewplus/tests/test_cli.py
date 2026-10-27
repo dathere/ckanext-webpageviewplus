@@ -50,9 +50,17 @@ class TestMigrate:
         assert result.exit_code == 0, result.output
         assert _show(view)["preset"] == "external"
 
-    def test_unsafe_preset_on_upload_becomes_strict(self, cli):
+    def test_unsafe_preset_on_upload_falls_back_to_default(self, cli):
         view = _stock_view(factories.Resource(url_type="upload", url="a.html"))
         result = cli.invoke(ckan, ["webpageviewplus", "migrate", "--preset", "external"])
+        assert result.exit_code == 0, result.output
+        assert _show(view)["preset"] == "interactive"
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "strict external")
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.default_preset", "external")
+    def test_unsafe_preset_on_upload_becomes_strict_when_nothing_else_fits(self, cli):
+        view = _stock_view(factories.Resource(url_type="upload", url="a.html"))
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate"])
         assert result.exit_code == 0, result.output
         assert _show(view)["preset"] == "strict"
 
@@ -71,6 +79,14 @@ class TestMigrate:
         result = cli.invoke(ckan, ["webpageviewplus", "migrate"])
         assert result.exit_code == 0, result.output
         assert _show(view)["preset"] == "strict"
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "external interactive")
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.default_preset", "external")
+    def test_unsafe_default_falls_back_to_allowed_preset(self, cli):
+        view = _stock_view(factories.Resource(url_type="upload", url="a.html"))
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate"])
+        assert result.exit_code == 0, result.output
+        assert _show(view)["preset"] == "interactive"
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "strict interactive")
     def test_preset_outside_site_list_refused(self, cli):

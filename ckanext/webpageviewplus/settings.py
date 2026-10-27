@@ -39,8 +39,12 @@ def max_height() -> int:
     return int(_get("max_height"))
 
 
+def _hosts_setting(name: str) -> list[str]:
+    return [frame.canonical_config_host(h) for h in toolkit.aslist(_get(name))]
+
+
 def allowed_hosts() -> list[str]:
-    return [h.lower() for h in toolkit.aslist(_get("allowed_hosts"))]
+    return [h for h in _hosts_setting("allowed_hosts") if h]
 
 
 def formats() -> list[str]:
@@ -60,11 +64,7 @@ def site_url() -> str:
 def ckan_hosts() -> list[str]:
     """Hosts CKAN is served from: ckan.site_url's, plus site_aliases (given as
     bare hosts or as URLs)."""
-    hosts = [frame.url_host(site_url())]
-    for alias in toolkit.aslist(_get("site_aliases")):
-        hosts.append(
-            frame.url_host(alias if "//" in alias else "https://" + alias)
-        )
+    hosts = [frame.url_host(site_url())] + _hosts_setting("site_aliases")
     return [h for h in hosts if h]
 
 
@@ -87,6 +87,15 @@ def check() -> None:
         raise CkanConfigurationException(
             PREFIX + "referrer_policy" + ": " + "Unknown referrer policy"
         )
+    for name in ("site_aliases", "allowed_hosts"):
+        entries = toolkit.aslist(_get(name))
+        bad = [e for e, h in zip(entries, _hosts_setting(name)) if not h]
+        if bad:
+            # Dropping an alias silently would switch off the same-host check
+            # for it, so refuse to start instead.
+            raise CkanConfigurationException(
+                PREFIX + name + ": " + "Not valid hosts: " + " ".join(bad)
+            )
     if not 0 < min_height() <= max_height():
         raise CkanConfigurationException(
             PREFIX + "min_height" + ": " + "Must be positive and at most max_height"
