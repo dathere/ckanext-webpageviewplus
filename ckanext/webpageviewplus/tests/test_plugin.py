@@ -413,3 +413,51 @@ def test_invalid_host_setting_stops_startup(name, monkeypatch):
     monkeypatch.setattr(settings, "_get", lambda key: values.get(key))
     with pytest.raises(CkanConfigurationException, match=name):
         settings.check()
+
+
+def _render(app, view_fields, resource_url="https://pages.example.com/a.html"):
+    dataset = factories.Dataset()
+    resource = factories.Resource(package_id=dataset["id"], url=resource_url)
+    _view(factories.Sysadmin(), resource["id"], **view_fields)
+    return app.get(
+        url_for("{}_resource.read".format(dataset["type"]), id=dataset["name"],
+                resource_id=resource["id"])
+    ).body
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestControlBar:
+    def test_shown_by_default(self, app):
+        body = _render(app, {})
+        assert 'role="toolbar"' in body
+        assert 'href="https://pages.example.com/a.html" target="_blank" rel="noopener noreferrer"' in body
+        assert 'data-webpageviewplus-action="fullscreen"' in body
+        assert 'data-reload-url="https://pages.example.com/a.html"' in body
+
+    def test_hidden_per_view(self, app):
+        assert 'role="toolbar"' not in _render(app, {"hide_controls": "true"})
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.controls", "open")
+    def test_site_chooses_buttons(self, app):
+        body = _render(app, {})
+        assert "Open in new tab" in body
+        assert 'data-webpageviewplus-action="fullscreen"' not in body
+        assert 'data-webpageviewplus-action="reload"' not in body
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.controls", "")
+    def test_site_can_hide_all(self, app):
+        assert 'role="toolbar"' not in _render(app, {})
+
+
+def test_unknown_control_stops_startup(monkeypatch):
+    from ckan.exceptions import CkanConfigurationException
+    from ckanext.webpageviewplus import settings
+
+    real_get = settings._get
+    monkeypatch.setattr(
+        settings, "_get", lambda key: "open zoom" if key == "controls" else real_get(key)
+    )
+    with pytest.raises(CkanConfigurationException, match="controls"):
+        settings.check()

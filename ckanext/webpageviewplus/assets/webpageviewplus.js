@@ -126,16 +126,65 @@
     }, 100);
   }
 
+  function stateForWrapper(wrapper) {
+    for (var i = 0; i < frames.length; i++) {
+      if (wrapper.contains(frames[i].iframe)) return frames[i];
+    }
+    return null;
+  }
+
+  function toggleFullscreen(wrapper) {
+    if (document.fullscreenElement === wrapper) {
+      document.exitFullscreen();
+    } else if (wrapper.requestFullscreen) {
+      wrapper.requestFullscreen();
+    }
+  }
+
+  function onFullscreenChange() {
+    var buttons = document.querySelectorAll('[data-webpageviewplus-action="fullscreen"]');
+    for (var i = 0; i < buttons.length; i++) {
+      var wrapper = buttons[i].closest(".webpageviewplus");
+      buttons[i].setAttribute(
+        "aria-pressed", String(document.fullscreenElement === wrapper));
+    }
+  }
+
+  function setupControls() {
+    var buttons = document.querySelectorAll("[data-webpageviewplus-action]");
+    for (var i = 0; i < buttons.length; i++) {
+      var button = buttons[i];
+      var action = button.getAttribute("data-webpageviewplus-action");
+      // iPhone Safari has no element fullscreen: leave the button hidden.
+      if (action === "fullscreen" && !document.fullscreenEnabled) continue;
+      button.hidden = false;
+      button.addEventListener("click", function (event) {
+        var target = event.currentTarget;
+        var wrapper = target.closest(".webpageviewplus");
+        if (!wrapper) return;
+        if (target.getAttribute("data-webpageviewplus-action") === "fullscreen") {
+          toggleFullscreen(wrapper);
+          return;
+        }
+        var state = stateForWrapper(wrapper);
+        var url = target.getAttribute("data-reload-url");
+        if (state && url) {
+          state.height = null;
+          state.iframe.src = url;
+        }
+      });
+    }
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+  }
+
   function init() {
     var nodes = document.querySelectorAll("iframe.webpageviewplus-frame");
     for (var i = 0; i < nodes.length; i++) setup(nodes[i]);
+    setupControls();
     if (!frames.length) return;
     window.addEventListener("message", onMessage);
     window.addEventListener("resize", onWindowResize);
   }
-
-  // Exposed for the control bar.
-  window.webpageviewplus = {frames: frames};
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

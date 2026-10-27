@@ -218,6 +218,10 @@ def test_view_frames_content_url_with_data_schematic(app):
     assert 'src="{}/webpageviewplus/content/{}/s.html"'.format(CONTENT, resource["id"]) in body
     assert "allow-same-origin" in body
     assert 'data-preset="data-schematic"' in body
+    # Open in new tab / Reload go through CKAN's download URL, which
+    # re-checks access and redirects to a freshly signed content URL.
+    assert 'data-reload-url="http' in body
+    assert "/resource/{}/download/s.html".format(resource["id"]) in body
 
 
 @pytest.mark.parametrize(

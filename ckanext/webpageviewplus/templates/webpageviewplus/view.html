@@ -19,6 +19,20 @@
             data-max-height="{{ frame.max_height }}"
             {% if desc_id %}aria-describedby="{{ desc_id }}"{% endif %}></iframe>
     {% if desc_id %}<p id="{{ desc_id }}" class="visually-hidden">{{ resource_view.description }}</p>{% endif %}
+    {% if show_controls and controls %}
+      <div class="webpageviewplus-controls" role="toolbar" aria-label="{{ _('Embedded page') }}">
+        {% if 'open' in controls %}
+          <a class="btn btn-sm btn-outline-secondary" href="{{ open_url }}" target="_blank" rel="noopener noreferrer">{{ _('Open in new tab') }}</a>
+        {% endif %}
+        {# Shown by the script once it knows they work. #}
+        {% if 'fullscreen' in controls %}
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-action="fullscreen" aria-pressed="false" hidden>{{ _('Fullscreen') }}</button>
+        {% endif %}
+        {% if 'reload' in controls %}
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-action="reload" data-reload-url="{{ open_url }}" hidden>{{ _('Reload') }}</button>
+        {% endif %}
+      </div>
+    {% endif %}
   </div>
 {% elif frame_error == 'host' %}
   <p class="text-muted">{{ _("This page can't be embedded: its host isn't on this site's list of allowed hosts.") }}</p>

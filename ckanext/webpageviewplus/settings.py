@@ -56,6 +56,13 @@ def allowed_hosts() -> list[str]:
     return [h for h in _hosts_setting("allowed_hosts") if h]
 
 
+CONTROLS = ("open", "fullscreen", "reload")
+
+
+def controls() -> list[str]:
+    return [c.lower() for c in toolkit.aslist(_get("controls"))]
+
+
 def formats() -> list[str]:
     return [f.lower() for f in toolkit.aslist(_get("formats"))]
 
@@ -173,6 +180,12 @@ def check() -> None:
             raise CkanConfigurationException(
                 PREFIX + name + ": " + "Not valid hosts: " + " ".join(bad)
             )
+    bad = [c for c in controls() if c not in CONTROLS]
+    if bad:
+        raise CkanConfigurationException(
+            PREFIX + "controls: unknown buttons " + " ".join(bad)
+            + " (choose from " + " ".join(CONTROLS) + ")"
+        )
     if url_ttl() < 30:
         raise CkanConfigurationException(
             PREFIX + "url_ttl: must be at least 30 seconds"

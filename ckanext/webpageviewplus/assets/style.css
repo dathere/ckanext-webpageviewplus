@@ -3,3 +3,41 @@
   width: 100%;
   border: 0;
 }
+
+.webpageviewplus-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.webpageviewplus-controls .btn {
+  min-height: 24px;
+}
+
+.webpageviewplus-controls .btn:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .webpageviewplus-controls .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Fullscreen: the frame fills the screen above the control bar, beating its
+   inline height. */
+.webpageviewplus:fullscreen {
+  display: flex;
+  flex-direction: column;
+  background: Canvas;
+  padding: 0.5rem;
+}
+
+.webpageviewplus:fullscreen .webpageviewplus-frame {
+  flex: 1;
+  height: auto !important;
+  aspect-ratio: auto !important;
+}

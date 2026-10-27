@@ -52,6 +52,13 @@
 
 {{ form.input('height_value', id='field-height_value', label=_('Height value'), placeholder=_('eg. 600, 80 or 16/9'), value=data.height_value, error=errors.height_value, classes=['control-medium']) }}
 
+<div class="form-group control-medium">
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="field-hide_controls" name="hide_controls" value="true" {% if data.hide_controls in (true, 'true', 'True') %}checked{% endif %}>
+    <label class="form-check-label" for="field-hide_controls">{{ _('Hide the control bar (Open in new tab, Fullscreen, Reload)') }}</label>
+  </div>
+</div>
+
 {% if can_set_advanced %}
   <fieldset class="webpageviewplus-advanced">
     <legend>{{ _('Advanced') }}</legend>

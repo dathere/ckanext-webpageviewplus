@@ -91,6 +91,13 @@ groups:
           Optional space-separated allow-list of hosts an external page_url
           may point to. Empty allows any host.
 
+      - key: ckanext.webpageviewplus.controls
+        default: open fullscreen reload
+        type: list
+        description: |
+          Buttons in the control bar under each view, from: open (in a new
+          tab), fullscreen, reload. Empty hides the bar on every view.
+
       - key: ckanext.webpageviewplus.formats
         default: html htm
         type: list

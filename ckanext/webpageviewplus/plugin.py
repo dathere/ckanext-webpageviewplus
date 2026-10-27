@@ -19,6 +19,8 @@ from ckanext.webpageviewplus import (
 from ckanext.webpageviewplus.frame import is_http_url  # noqa: F401 (re-export)
 
 ignore_empty = toolkit.get_validator("ignore_empty")
+ignore_missing = toolkit.get_validator("ignore_missing")
+boolean_validator = toolkit.get_validator("boolean_validator")
 unicode_safe = toolkit.get_validator("unicode_safe")
 
 
@@ -80,6 +82,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
                 "referrer_policy": [
                     ignore_empty, unicode_safe, v.referrer_policy_validator
                 ],
+                "hide_controls": [ignore_missing, boolean_validator],
                 "__after": [v.view_after_validator],
             },
             "iframed": False,
@@ -124,6 +127,11 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
 
         ckan_hosts = settings.ckan_hosts()
         is_upload = not page_url and resource.get("url_type") == "upload"
+        # Open in new tab and Reload use this URL. For an upload framed from
+        # the content origin it's CKAN's own download URL, which re-checks
+        # access and redirects to a freshly signed content URL: the frame's
+        # own signed URL may have expired by the time someone clicks.
+        open_url = url
         if is_upload and content.serves(resource):
             package_id = (data_dict.get("package") or {}).get("id") or resource.get(
                 "package_id"
@@ -163,7 +171,14 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             max_height=settings.max_height(),
             title=resource_view.get("title") or toolkit._("Embedded web page"),
         )
-        return dict(form_vars, frame=built, frame_error=None)
+        return dict(
+            form_vars,
+            frame=built,
+            frame_error=None,
+            open_url=open_url,
+            controls=settings.controls(),
+            show_controls=not toolkit.asbool(resource_view.get("hide_controls")),
+        )
 
     def view_template(self, context: Context, data_dict: dict[str, Any]) -> str:
         return "webpageviewplus/view.html"
