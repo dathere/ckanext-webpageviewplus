@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
+from urllib.parse import urlsplit
 
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
@@ -9,6 +10,32 @@ from ckan.types import Context
 
 ignore_empty = toolkit.get_validator("ignore_empty")
 unicode_safe = toolkit.get_validator("unicode_safe")
+
+ALLOWED_SCHEMES = ("http", "https")
+
+
+def is_http_url(url: Any) -> bool:
+    """True only for absolute http(s) URLs with a host.
+
+    Anything else (``javascript:``, ``data:``, relative or scheme-less URLs,
+    URLs with leading whitespace or control characters) is refused, because an
+    iframe ``src`` with a ``javascript:`` URL runs in CKAN's own origin.
+    """
+    if not isinstance(url, str):
+        return False
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return False
+    return parts.scheme.lower() in ALLOWED_SCHEMES and bool(parts.netloc)
+
+
+def http_url_validator(value: Any, context: Context) -> Any:
+    if value and not is_http_url(value):
+        raise toolkit.Invalid(
+            toolkit._("Web Page url must be an http:// or https:// URL")
+        )
+    return value
 
 
 class WebpageviewplusPlugin(plugins.SingletonPlugin):
@@ -34,7 +61,9 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
         return {
             "name": "webpage_view_plus",
             "title": toolkit._("Website (Plus)"),
-            "schema": {"page_url": [ignore_empty, unicode_safe]},
+            "schema": {
+                "page_url": [ignore_empty, unicode_safe, http_url_validator]
+            },
             "iframed": False,
             "icon": "link",
             "always_available": True,
@@ -47,6 +76,17 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             resource.get("format", "").lower() in ["html", "htm"]
             or resource["url"].split(".")[-1] in ["html", "htm"]
         )
+
+    def setup_template_variables(
+        self, context: Context, data_dict: dict[str, Any]
+    ) -> dict[str, Any]:
+        # Checked again at render time: views saved before validation existed,
+        # and the resource URL fallback, never went through the form.
+        url = data_dict["resource_view"].get("page_url") or data_dict[
+            "resource"
+        ].get("url")
+        frame_url: Optional[str] = url if is_http_url(url) else None
+        return {"frame_url": frame_url}
 
     def view_template(self, context: Context, data_dict: dict[str, Any]) -> str:
         return "webpageviewplus/view.html"

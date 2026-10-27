@@ -1,3 +1,7 @@
-<iframe title="Webpage view" src="{{ resource_view.get('page_url') or resource.get('url') }}" frameborder="0" width="100%" style="height:100vh" data-module="data-viewer">
+{% if frame_url %}
+<iframe title="Webpage view" src="{{ frame_url }}" frameborder="0" width="100%" style="height:100vh" data-module="data-viewer">
   <p>{{ _('Your browser does not support iframes.') }}</p>
 </iframe>
+{% else %}
+<p class="text-muted">{{ _('This page cannot be embedded: only http:// and https:// URLs are supported.') }}</p>
+{% endif %}

@@ -25,11 +25,17 @@ a failing render falls back to `strict`.
 
 ## Current state
 
-So far, only the scaffold: `plugin.py` is still a straight port of core's `ckanext/webpageview`
-(one `page_url` field, same `can_view`: format or URL extension `html`/`htm`, `always_available`).
+So far, only the scaffold: `plugin.py` is a port of core's `ckanext/webpageview` (one `page_url`
+field, same `can_view`: format or URL extension `html`/`htm`, `always_available`), plus an
+http(s)-only check on the frame URL. Sandbox presets are phase 1.
 - Plugin name (entry point in `pyproject.toml`) and view type (`info()['name']`) are both
   `webpage_view_plus`, as the spec requires. Views stored in the DB reference the view type, so
   don't rename it.
+- The frame URL must be an absolute `http(s)` URL (`is_http_url`), because a `javascript:` iframe
+  `src` runs in CKAN's origin. `page_url` is validated on save (`http_url_validator` in the view
+  schema), and `setup_template_variables` checks the resolved URL (`page_url` or the resource URL)
+  again on render. The template only gets the checked `frame_url`; never build the `src` from
+  `resource_view`/`resource` directly.
 - Templates live under `templates/webpageviewplus/` so they don't collide with core's
   `webpage_view.html` / `webpage_form.html`.
 - Packaging follows the 2.11 cookiecutter: metadata and entry points in `pyproject.toml`,
@@ -43,9 +49,13 @@ So far, only the scaffold: `plugin.py` is still a straight port of core's `ckane
 Dev stack: `~/GitHub/ckan-docker` (`docker-compose.dev.yml`), container `ckan-docker-ckan-dev-1`,
 CKAN 2.11.5, http://localhost:5001.
 - This repo is bind-mounted into the container at
-  `/srv/app/src_extensions/ckanext-webpageviewplus` (an extra volume line in ckan-docker's
-  `docker-compose.dev.yml`), and installed there with `pip install -e`. Python and template edits
-  are live (the dev server auto-reloads).
+  `/srv/app/src_extensions/ckanext-webpageviewplus` and installed there with `pip install -e`.
+  Python and template edits are live (the dev server auto-reloads). The mount is one volume line
+  in ckan-docker's `docker-compose.dev.yml`, committed on ckan-docker's local branch
+  `local/dev-mounts`. If that line is lost while the plugin is still enabled, the editable install
+  points at an empty directory and ckan-dev crash-loops with `Plugin 'webpage_view_plus' not found`.
+  Fix: switch ckan-docker back to `local/dev-mounts` (or remove the plugin from `.env`), then run
+  `docker compose -f docker-compose.dev.yml up -d ckan-dev`.
 - `webpage_view_plus` is in `CKAN__PLUGINS` in ckan-docker's `.env` (before `envvars`, which must
   stay last).
 - Re-run the editable install only after changing entry points / packaging:
