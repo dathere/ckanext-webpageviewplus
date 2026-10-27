@@ -8,7 +8,7 @@ import ckan.plugins.toolkit as toolkit
 from ckan.common import CKANConfig
 from ckan.types import Context
 
-from ckanext.webpageviewplus import cli, frame, settings, validators as v
+from ckanext.webpageviewplus import cli, downloads, frame, settings, validators as v
 from ckanext.webpageviewplus.frame import is_http_url  # noqa: F401 (re-export)
 
 ignore_empty = toolkit.get_validator("ignore_empty")
@@ -23,6 +23,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IConfigurer)
     plugins.implements(plugins.IConfigurable)
     plugins.implements(plugins.IClick)
+    plugins.implements(plugins.IBlueprint)
     plugins.implements(plugins.IResourceView, inherit=True)
 
     # IConfigurer
@@ -36,6 +37,11 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
 
     def configure(self, config_: CKANConfig):
         settings.check()
+
+    # IBlueprint
+
+    def get_blueprint(self):
+        return [downloads.hardening]
 
     # IClick
 

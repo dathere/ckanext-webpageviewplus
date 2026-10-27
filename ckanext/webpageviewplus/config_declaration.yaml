@@ -14,6 +14,18 @@ groups:
           Space-separated presets editors may choose from: strict,
           interactive, external, data-schematic.
 
+      - key: ckanext.webpageviewplus.harden_downloads
+        default: true
+        type: bool
+        description: |
+          Add a CSP sandbox (without allow-same-origin) to HTML, SVG and XML
+          that CKAN serves from its own origin: resource downloads and the
+          resource proxy. Pages still render and run scripts, but can't act
+          as CKAN with the viewer's session. Changes core behaviour: such a
+          page opened from its download link loses storage and a real origin
+          (e.g. a qsv Data Schematic's maps), until a content origin serves
+          it instead.
+
       - key: ckanext.webpageviewplus.editor_can_loosen
         default: false
         type: bool

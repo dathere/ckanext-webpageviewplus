@@ -59,6 +59,11 @@ content origin (the `content_origin` fixture, or `CO` in `test_frame.py`).
   template a built `Frame` (or `frame_error`). It's also called for the form, where
   `resource_view` can be None (new view) or unsaved form data (preview). Never build the iframe
   `src` from `resource_view`/`resource` in templates.
+- `downloads.py`: an `after_app_request` hook (registered through `IBlueprint`) that adds a CSP
+  `sandbox` (no `allow-same-origin`) to HTML/SVG/XML responses from `*_resource.download` and
+  `resource_proxy.proxy_view`. CKAN core serves uploaded HTML inline on its own origin, so
+  without this, a content origin alone wouldn't stop a frame navigating to the CKAN-origin copy.
+  It matches on the response's mimetype, because editors can set a resource's mimetype.
 - `cli.py`: `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME]` rewrites
   `ResourceView.view_type`/`config` directly, because `resource_view_update` can't change a
   view's type. It picks `data-schematic` for uploads containing `qsv-schematic-source`, never

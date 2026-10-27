@@ -67,6 +67,17 @@ Every frame gets `loading="lazy"`, a `referrerpolicy`, the view's title as its a
 name, and an `allow` list that always denies ad and tracking features. Sysadmins can also set
 sandbox tokens, allowed features and the referrer policy per view.
 
+### Uploaded HTML downloads are sandboxed
+
+CKAN core serves an uploaded HTML file inline, on CKAN's own origin. So anyone who opens
+its download link runs its scripts as CKAN, with their session. With this plugin
+enabled, HTML, SVG and XML from resource downloads and the resource proxy get a
+`Content-Security-Policy: sandbox` header without `allow-same-origin`. Pages still render
+and run scripts, but in an isolated origin. The trade-off: opened from its download
+link, a page that needs storage or a real origin (for example a qsv Data Schematic's
+maps) loses those features. Turn it off with `ckanext.webpageviewplus.harden_downloads =
+false` if you trust everyone who can upload.
+
 To convert existing `webpage_view` views (always start with `--dry-run`, and back up the
 database first: the command rewrites views in place):
 
@@ -89,6 +100,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | --- | ------- | ------- |
 | `ckanext.webpageviewplus.default_preset` | `interactive` | Preset for new views |
 | `ckanext.webpageviewplus.presets` | all four | Presets editors may choose from |
+| `ckanext.webpageviewplus.harden_downloads` | `true` | Sandbox HTML/SVG/XML that CKAN serves from its own origin (downloads, resource proxy) |
 | `ckanext.webpageviewplus.editor_can_loosen` | `false` | Let editors (not only sysadmins) set sandbox, allow and referrer policy |
 | `ckanext.webpageviewplus.referrer_policy` | `strict-origin-when-cross-origin` | Default `referrerpolicy` |
 | `ckanext.webpageviewplus.min_height` / `max_height` | `400` / `4000` | Clamp for viewport and auto heights, in px |

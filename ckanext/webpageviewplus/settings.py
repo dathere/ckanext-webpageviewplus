@@ -23,6 +23,10 @@ def default_preset() -> str:
     return _get("default_preset")
 
 
+def harden_downloads() -> bool:
+    return toolkit.asbool(_get("harden_downloads"))
+
+
 def editor_can_loosen() -> bool:
     return toolkit.asbool(_get("editor_can_loosen"))
 
