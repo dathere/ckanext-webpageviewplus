@@ -70,6 +70,16 @@ name, and an `allow` list that always denies ad and tracking features. Editors p
 and height (fixed, share of the window, aspect ratio, auto). Sysadmins can also set sandbox
 tokens, allowed features and the referrer policy per view.
 
+**Auto height.** With height "Auto", the frame takes the height the page reports, clamped to
+`min_height`/`max_height`; until it reports one, it keeps a fixed fallback height. Any page can
+report its height by posting `{type: "webpageviewplus:resize", height: <px>}` to its parent.
+qsv Data Schematics from the release after 27.0.1 do it on their own, and the view also answers
+their viewport and scroll requests (see the qsv wiki, Visualization#embedding). Only messages
+from the view's own frame are accepted.
+
+**Control bar.** Under each view: Open in new tab, Fullscreen and Reload. A site chooses the
+buttons with `ckanext.webpageviewplus.controls`, and editors can hide the bar per view.
+
 ### Uploaded HTML downloads are sandboxed
 
 With this plugin enabled, HTML, SVG and XML from CKAN's resource downloads and the resource
@@ -148,6 +158,26 @@ How content is served:
   sandboxed behaviour.
 
 
+## Frameability check (optional)
+
+With `ckanext.webpageviewplus.frameability_check = true`, the view form warns as an editor types
+a page URL whose site refuses to be framed (`X-Frame-Options`, or a CSP `frame-ancestors` that
+excludes your CKAN), and suggests linking to it instead. It never blocks saving.
+
+**It makes your CKAN server request URLs that editors type**, so it's off by default. If you
+enable it, the server:
+
+- checks only for users who may add views to that resource;
+- fetches only `http(s)` URLs whose host resolves entirely to public addresses, re-checking
+  every redirect (at most three);
+- reads headers only, times out after 5 seconds, and caches each answer for 5 minutes;
+- gives the same "couldn't check" answer for every failure, so it can't be used to probe hosts.
+
+Requests go out through any proxy your environment configures for Python `requests`. One known
+limit: a host whose DNS answer changes between the check and the connection (DNS rebinding)
+isn't caught, so keep internal services behind authentication as well.
+
+
 ## Migrating from webpage_view
 
 `ckan webpageviewplus migrate` converts `webpage_view` views in place, keeping their id, title,
@@ -184,6 +214,8 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.site_aliases` | empty | Other hosts this CKAN is reachable under; treated as CKAN's own |
 | `ckanext.webpageviewplus.allowed_hosts` | empty (any) | Allow-list of hosts an external page URL may point to |
 | `ckanext.webpageviewplus.formats` | `html htm` | Resource formats the view is offered for |
+| `ckanext.webpageviewplus.controls` | `open fullscreen reload` | Buttons in the control bar; empty hides it |
+| `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing. Makes CKAN request editor-typed URLs, see below |
 
 
 ## Developer installation

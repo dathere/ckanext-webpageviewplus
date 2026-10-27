@@ -9,6 +9,7 @@ from ckan.common import CKANConfig
 from ckan.types import Context
 
 from ckanext.webpageviewplus import (
+    actions,
     cli,
     content,
     downloads,
@@ -34,6 +35,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IClick)
     plugins.implements(plugins.IBlueprint)
     plugins.implements(plugins.IMiddleware, inherit=True)
+    plugins.implements(plugins.IActions)
+    plugins.implements(plugins.IAuthFunctions)
     plugins.implements(plugins.IResourceView, inherit=True)
 
     # IConfigurer
@@ -54,6 +57,18 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
         # The content route is always registered; it answers only on the
         # content origin's host, and only when one is configured.
         return [downloads.hardening, content.content]
+
+    # IActions
+
+    def get_actions(self):
+        return {
+            "webpageviewplus_frameability": actions.webpageviewplus_frameability
+        }
+
+    # IAuthFunctions
+
+    def get_auth_functions(self):
+        return {"webpageviewplus_frameability": actions.frameability_auth}
 
     # IMiddleware
 
@@ -120,6 +135,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             "height_modes": frame.HEIGHT_MODES,
             "referrer_policies": frame.REFERRER_POLICIES,
             "can_set_advanced": v.can_set_advanced(context),
+            "frameability_check": settings.frameability_check(),
         }
 
         if not is_http_url(url):

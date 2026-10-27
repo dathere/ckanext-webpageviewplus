@@ -177,7 +177,48 @@
     document.addEventListener("fullscreenchange", onFullscreenChange);
   }
 
+  // View form: warn as the editor types a page URL that refuses framing.
+  function setupFrameabilityCheck() {
+    var status = document.querySelector("[data-webpageviewplus-frameability]");
+    var input = document.getElementById("field-page_url");
+    if (!status || !input || !window.fetch) return;
+    var timer = null;
+    var current = 0;
+    function run() {
+      var url = input.value.trim();
+      var request = ++current;
+      status.textContent = "";
+      status.classList.remove("alert", "alert-warning");
+      if (!url) return;
+      var query = "?resource_id=" + encodeURIComponent(status.getAttribute("data-resource-id")) +
+        "&url=" + encodeURIComponent(url);
+      fetch(status.getAttribute("data-api") + query, {credentials: "same-origin"})
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (body) {
+          if (request !== current || !body || !body.success) return;
+          var result = body.result;
+          var text = "";
+          if (result.verdict === "blocked") {
+            text = status.getAttribute("data-blocked").replace("{reason}", result.reason);
+          } else if (result.verdict === "unknown") {
+            text = status.getAttribute("data-unknown");
+          }
+          if (text) {
+            status.textContent = text;
+            status.classList.add("alert", "alert-warning");
+          }
+        })
+        .catch(function () {});
+    }
+    input.addEventListener("input", function () {
+      clearTimeout(timer);
+      timer = setTimeout(run, 700);
+    });
+    run();
+  }
+
   function init() {
+    setupFrameabilityCheck();
     var nodes = document.querySelectorAll("iframe.webpageviewplus-frame");
     for (var i = 0; i < nodes.length; i++) setup(nodes[i]);
     setupControls();

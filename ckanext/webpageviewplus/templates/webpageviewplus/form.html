@@ -14,6 +14,15 @@
 } %}
 
 {{ form.input('page_url', id='field-page_url', label=_('Web Page url'), placeholder=_('eg. http://example.com  (if blank uses resource url)'), value=data.page_url, error=errors.page_url, classes=['control-full', 'control-large']) }}
+{% if frameability_check %}
+  {% asset 'webpageviewplus/webpageviewplus-js' %}
+  <div class="webpageviewplus-frameability" role="status" aria-live="polite"
+       data-webpageviewplus-frameability
+       data-api="{{ h.url_for('api.action', ver=3, logic_function='webpageviewplus_frameability') }}"
+       data-resource-id="{{ resource.id }}"
+       data-blocked="{{ _('This site refuses to be embedded ({reason}), so the view will show an error. Consider linking to it instead.') }}"
+       data-unknown="{{ _('Couldn\'t check whether this site allows embedding.') }}"></div>
+{% endif %}
 
 <div class="form-group control-medium">
   <label class="form-label" for="field-preset">{{ _('Security preset') }}</label>

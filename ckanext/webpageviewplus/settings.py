@@ -32,6 +32,10 @@ def harden_downloads() -> bool:
     return toolkit.asbool(_get("harden_downloads"))
 
 
+def frameability_check() -> bool:
+    return toolkit.asbool(_get("frameability_check"))
+
+
 def editor_can_loosen() -> bool:
     return toolkit.asbool(_get("editor_can_loosen"))
 

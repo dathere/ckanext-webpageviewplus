@@ -51,6 +51,15 @@ groups:
           (e.g. a qsv Data Schematic's maps), until a content origin serves
           it instead.
 
+      - key: ckanext.webpageviewplus.frameability_check
+        default: false
+        type: bool
+        description: |
+          Warn editors, as they type a page URL, when that page refuses to be
+          framed (X-Frame-Options or CSP frame-ancestors). It never blocks
+          saving. Off by default: turning it on makes the CKAN server request
+          URLs editors type, only those resolving to public addresses.
+
       - key: ckanext.webpageviewplus.editor_can_loosen
         default: false
         type: bool

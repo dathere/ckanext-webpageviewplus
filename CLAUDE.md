@@ -84,6 +84,31 @@ order now being built:
   responses and `resource_proxy.proxy_view` get a CSP `sandbox` header (no
   `allow-same-origin`). It matches on the response mimetype, because editors can set a
   resource's mimetype.
+- `assets/webpageviewplus.js`: plain script, no dependencies and nothing inline, so a site CSP
+  without `'unsafe-inline'` works. It's included via `{% asset %}`. `webassets.yml` is read only
+  at CKAN startup, so restart ckan-dev after adding a bundle. It does three things:
+  - **Self-sizing.** It reads each frame's `data-frame-origin`, `data-opaque`,
+    `data-height-mode` and `data-min/max-height`, which `build_frame` computes. A message counts
+    only if `event.source` is one of the view's frames and `event.origin` is that frame's
+    origin, or `"null"` when it's opaque, i.e. sandboxed without `allow-same-origin`. Replies to
+    opaque frames go to `"*"`.
+  - **The qsv protocol.** It sends `qsvVizViewport` unasked on each frame's load, because a
+    schematic asks only once and may ask before this script runs.
+  - **The control bar and the form's frameability warning.**
+- Control bar: Open in new tab and Reload use `open_url`. For a content-origin upload that's
+  CKAN's download URL, because the frame's signed URL may have expired. The per-view field is
+  `hide_controls`, so a view saved without it shows the bar.
+- `frameability.py` + `actions.py`: `webpageviewplus_frameability`, a `side_effect_free` action
+  the form calls by GET as the editor types (never in the view validator, which runs before
+  CKAN's auth check). Its auth requires `resource_view_create` on the resource. It's off unless
+  `frameability_check` is set. The SSRF guards are documented at the top of `frameability.py`;
+  every failure must stay the same "unknown" verdict. The header rules follow browsers:
+  `frame-ancestors` overrides `X-Frame-Options`, `ALLOW-FROM` is ignored, and `SAMEORIGIN` and
+  `'self'` count as blocked.
+- `tests/fixtures/qsv_protocol.html` speaks the qsv messages. It's uploaded to the `wvp-demo`
+  dataset with three views (`data-schematic` auto, `interactive` auto, `interactive` fixed),
+  for browser checks with Playwright (`uv run --with playwright`, system Chrome via
+  `channel="chrome"`).
 - `cli.py`: `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME]` rewrites
   `ResourceView.view_type`/`config` directly, because `resource_view_update` can't change a
   view's type. It never stores a preset the site disallows or the invariant refuses, and skips
