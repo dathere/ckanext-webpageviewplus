@@ -202,11 +202,15 @@ def canonical_config_host(entry: str) -> str:
 
 def serialize_origin(url: str) -> str:
     """The origin a browser gives a page at this URL (scheme://host[:port],
-    default ports omitted), or "" if the URL isn't usable."""
-    host = url_host(url)
-    if not host:
+    default ports omitted), or "" if the URL isn't usable. Unlike url_host,
+    which compares hosts, this keeps a trailing dot: browsers keep it in the
+    origin, so messages from such a page carry it."""
+    if not url_host(url):
         return ""
     parts = urlsplit(url)
+    host = (parts.hostname or "").lower()
+    if ":" in host:
+        host = "[{}]".format(ipaddress.IPv6Address(host).compressed)
     scheme = parts.scheme.lower()
     try:
         port = parts.port

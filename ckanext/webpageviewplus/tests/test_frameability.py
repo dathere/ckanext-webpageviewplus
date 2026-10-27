@@ -8,7 +8,7 @@ from ckan.tests import factories, helpers
 
 from ckanext.webpageviewplus import frameability as fa
 
-CKAN = ("https", ["ckan.example.org"], None)
+CKAN = ("https", ["ckan.example.org"], 443)
 
 
 @pytest.mark.parametrize(
@@ -26,7 +26,10 @@ CKAN = ("https", ["ckan.example.org"], None)
         (None, "frame-ancestors https://*.example.org", fa.FRAMEABLE),
         (None, "frame-ancestors ckan.example.org", fa.FRAMEABLE),
         (None, "frame-ancestors https://other.example.net", fa.BLOCKED),
-        (None, "frame-ancestors https://ckan.example.org:8443", fa.FRAMEABLE),  # CKAN port unknown
+        (None, "frame-ancestors https://ckan.example.org:8443", fa.BLOCKED),  # wrong port
+        (None, "frame-ancestors https://ckan.example.org:443", fa.FRAMEABLE),
+        (None, "frame-ancestors http://ckan.example.org", fa.FRAMEABLE),  # upgrade to https
+        (None, "frame-ancestors *; frame-ancestors 'none'", fa.FRAMEABLE),  # first one wins
         (None, "default-src 'self'", fa.FRAMEABLE),  # no frame-ancestors
         ("DENY", "frame-ancestors *", fa.FRAMEABLE),  # frame-ancestors wins
         (None, "frame-ancestors *, frame-ancestors 'none'", fa.BLOCKED),  # every policy applies
@@ -38,10 +41,31 @@ def test_verdict(xfo, csp, expected):
     assert fa.verdict(headers, [csp] if csp else [], CKAN)[0] == expected
 
 
-def test_port_must_match_when_known():
+def test_ckan_on_a_nondefault_port():
     ckan = ("https", ["ckan.example.org"], 8443)
     assert fa.verdict({}, ["frame-ancestors https://ckan.example.org:9000"], ckan)[0] == fa.BLOCKED
     assert fa.verdict({}, ["frame-ancestors https://ckan.example.org:8443"], ckan)[0] == fa.FRAMEABLE
+    assert fa.verdict({}, ["frame-ancestors https://ckan.example.org"], ckan)[0] == fa.BLOCKED
+    assert fa.verdict({}, ["frame-ancestors https://ckan.example.org:*"], ckan)[0] == fa.FRAMEABLE
+
+
+def test_schemeless_source_takes_the_pages_scheme():
+    http_ckan = ("http", ["ckan.example.org"], 80)
+    csp = ["frame-ancestors ckan.example.org"]
+    assert fa.verdict({}, csp, http_ckan, page_scheme="https")[0] == fa.BLOCKED
+    assert fa.verdict({}, csp, http_ckan, page_scheme="http")[0] == fa.FRAMEABLE
+
+
+def test_identity_is_site_url_only():
+    assert fa.ckan_identity("https://ckan.example.org") == ("https", ["ckan.example.org"], 443)
+    assert fa.ckan_identity("http://localhost:5001") == ("http", ["localhost"], 5001)
+
+
+@responses.activate
+def test_malformed_redirect_is_unknown(dns):
+    dns["pages.example.com"] = ["93.184.216.34"]
+    responses.get("https://pages.example.com/a", status=302, headers={"Location": "http://["})
+    assert fa.check("https://pages.example.com/a", CKAN) == (fa.UNKNOWN, "")
 
 
 @pytest.fixture

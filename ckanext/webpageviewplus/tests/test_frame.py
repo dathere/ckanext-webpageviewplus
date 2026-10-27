@@ -232,6 +232,7 @@ def test_same_origin_without_scripts_allowed_without_content_origin():
         ("http://127.0.0.1:5001/x", "http://127.0.0.1:5001"),
         ("http://[::1]:8080/x", "http://[::1]:8080"),
         ("https://%63kan.example.org/", ""),
+        ("https://pages.example.com./a.html", "https://pages.example.com."),
     ],
 )
 def test_serialize_origin(url, origin):

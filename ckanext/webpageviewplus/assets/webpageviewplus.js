@@ -46,8 +46,7 @@
       auto: iframe.getAttribute("data-height-mode") === "auto",
       min: intAttr(iframe, "data-min-height", 0),
       max: intAttr(iframe, "data-max-height", 100000),
-      height: null,
-      wantsViewport: false
+      height: null
     };
     frames.push(state);
     // A schematic asks for the viewport once, on its load, which can happen
@@ -108,10 +107,7 @@
 
     if (data.type === "webpageviewplus:resize") resize(state, data.height);
     if ("qsvVizHeight" in data) resize(state, data.qsvVizHeight);
-    if ("qsvVizWantViewport" in data) {
-      state.wantsViewport = true;
-      replyViewport(state);
-    }
+    if ("qsvVizWantViewport" in data) replyViewport(state);
     if ("qsvVizReveal" in data) reveal(state, data.qsvVizReveal, data.qsvVizOffset);
   }
 
@@ -120,9 +116,9 @@
     if (resizeTimer) return;
     resizeTimer = setTimeout(function () {
       resizeTimer = null;
-      frames.forEach(function (state) {
-        if (state.wantsViewport) replyViewport(state);
-      });
+      // To every frame, not only those seen asking: a schematic may have
+      // asked before this script ran. It's just the window height.
+      frames.forEach(replyViewport);
     }, 100);
   }
 

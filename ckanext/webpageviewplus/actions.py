@@ -46,5 +46,5 @@ def webpageviewplus_frameability(
     allowed = settings.allowed_hosts()
     if allowed and frame.url_host(url) not in allowed:
         return {"verdict": "skipped", "reason": "host not allowed"}
-    identity = frameability.ckan_identity(settings.site_url(), hosts)
+    identity = frameability.ckan_identity(settings.site_url())
     return frameability.summary(frameability.check(url, identity))

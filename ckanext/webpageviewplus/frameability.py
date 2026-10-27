@@ -43,15 +43,20 @@ _cache: dict[str, tuple[float, tuple[str, str]]] = {}
 
 def _frame_ancestors(csp_values: list[str]) -> list[list[str]]:
     """The frame-ancestors source lists, one per policy that has one. A
-    header may carry several comma-separated policies; each is enforced."""
+    header may carry several comma-separated policies, each enforced; within
+    one policy, browsers keep only the first frame-ancestors directive."""
     lists = []
     for value in csp_values:
         for policy in value.split(","):
             for directive in policy.split(";"):
                 parts = directive.strip().split()
                 if parts and parts[0].lower() == "frame-ancestors":
-                    lists.append([p for p in parts[1:]])
+                    lists.append(parts[1:])
+                    break
     return lists
+
+
+DEFAULT_PORTS = {"http": 80, "https": 443}
 
 
 _HOST_SOURCE = re.compile(
@@ -61,7 +66,16 @@ _HOST_SOURCE = re.compile(
 )
 
 
-def _source_allows(source: str, ckan: tuple[str, list[str], Optional[int]]) -> bool:
+def _schemes_match(source_scheme: str, scheme: str) -> bool:
+    # A source scheme also allows its secure upgrade (http: allows https).
+    return source_scheme == scheme or (source_scheme == "http" and scheme == "https")
+
+
+def _source_allows(
+    source: str, ckan: tuple[str, list[str], Optional[int]], page_scheme: str
+) -> bool:
+    """Whether one frame-ancestors source matches CKAN's origin: ``ckan`` is
+    (scheme, [host], port) with the port resolved to its default."""
     scheme, hosts, port = ckan
     s = source.lower()
     if s == "*":
@@ -71,15 +85,22 @@ def _source_allows(source: str, ckan: tuple[str, list[str], Optional[int]]) -> b
         # CKAN's host aren't checked).
         return False
     if s.endswith(":") and "/" not in s:
-        return s[:-1] == scheme or (s == "http:" and scheme == "https")
+        return _schemes_match(s[:-1], scheme)
     m = _HOST_SOURCE.match(s)
     if not m:
         return False
-    if m.group("scheme") and m.group("scheme") not in (scheme, "http" if scheme == "https" else scheme):
+    # A host-source without a scheme takes the framed page's scheme.
+    source_scheme = m.group("scheme") or page_scheme
+    if not _schemes_match(source_scheme, scheme):
         return False
+    # Without a port, a source matches only its scheme's default port.
     src_port = m.group("port")
-    if src_port and src_port != "*" and port is not None and int(src_port) != port:
-        return False
+    if src_port != "*":
+        expected = int(src_port) if src_port else DEFAULT_PORTS.get(source_scheme)
+        if src_port is None and scheme != source_scheme:
+            expected = DEFAULT_PORTS.get(scheme)  # an http->https upgrade
+        if expected != port:
+            return False
     host = m.group("host")
     for ckan_host in hosts:
         if host == ckan_host or host == "*":
@@ -93,14 +114,16 @@ def verdict(
     headers: Mapping[str, str],
     csp_values: list[str],
     ckan: tuple[str, list[str], Optional[int]],
+    page_scheme: str = "https",
 ) -> tuple[str, str]:
-    """(verdict, reason) for a response's headers. ``ckan`` is CKAN's
-    (scheme, hosts, port). As in browsers: a frame-ancestors directive
-    overrides X-Frame-Options entirely; ALLOW-FROM is ignored."""
+    """(verdict, reason) for a response's headers. ``ckan`` is CKAN's origin
+    as (scheme, [host], port); ``page_scheme`` is the framed page's. As in
+    browsers: a frame-ancestors directive overrides X-Frame-Options
+    entirely; ALLOW-FROM is ignored."""
     ancestors = _frame_ancestors(csp_values)
     if ancestors:
         for sources in ancestors:
-            if not any(_source_allows(src, ckan) for src in sources):
+            if not any(_source_allows(src, ckan, page_scheme) for src in sources):
                 return BLOCKED, "Content-Security-Policy: frame-ancestors " + " ".join(sources)
         return FRAMEABLE, ""
     xfo = (headers.get("X-Frame-Options") or "").lower()
@@ -139,6 +162,14 @@ def _public(url: str) -> bool:
 
 
 def _fetch(url: str, ckan: tuple[str, list[str], Optional[int]]) -> tuple[str, str]:
+    try:
+        return _fetch_unguarded(url, ckan)
+    except Exception:  # malformed redirects etc.: one answer for every failure
+        log.debug("webpageviewplus: frameability check failed", exc_info=True)
+        return UNKNOWN, ""
+
+
+def _fetch_unguarded(url: str, ckan: tuple[str, list[str], Optional[int]]) -> tuple[str, str]:
     for _ in range(MAX_REDIRECTS + 1):
         if not _public(url):
             return UNKNOWN, ""
@@ -160,7 +191,8 @@ def _fetch(url: str, ckan: tuple[str, list[str], Optional[int]]) -> tuple[str, s
             # requests joins repeated headers with commas, which is also how
             # CSP separates several policies, each of them enforced.
             csp = response.headers.get("Content-Security-Policy")
-            return verdict(response.headers, [csp] if csp else [], ckan)
+            page_scheme = urlsplit(url).scheme.lower()
+            return verdict(response.headers, [csp] if csp else [], ckan, page_scheme)
         finally:
             response.close()
     return UNKNOWN, ""
@@ -168,23 +200,28 @@ def _fetch(url: str, ckan: tuple[str, list[str], Optional[int]]) -> tuple[str, s
 
 def check(url: str, ckan: tuple[str, list[str], Optional[int]]) -> tuple[str, str]:
     now = time.time()
-    cached = _cache.get(url)
+    key = repr((url, ckan))
+    cached = _cache.get(key)
     if cached and now - cached[0] < CACHE_SECONDS:
         return cached[1]
     result = _fetch(url, ckan)
     if len(_cache) >= CACHE_SIZE:
         _cache.clear()
-    _cache[url] = (now, result)
+    _cache[key] = (now, result)
     return result
 
 
-def ckan_identity(site_url: str, hosts: list[str]) -> tuple[str, list[str], Optional[int]]:
+def ckan_identity(site_url: str) -> tuple[str, list[str], Optional[int]]:
+    """CKAN's origin, the parent the framed page will see: ckan.site_url's
+    scheme, host and effective port. Not the aliases: a page permitting only
+    an alias would still refuse the site's own address."""
     parts = urlsplit(site_url)
+    scheme = parts.scheme.lower() or "https"
     try:
-        port = parts.port
+        port = parts.port or DEFAULT_PORTS.get(scheme)
     except ValueError:
-        port = None
-    return parts.scheme.lower() or "https", hosts, port
+        port = DEFAULT_PORTS.get(scheme)
+    return scheme, [frame.url_host(site_url)], port
 
 
 def summary(result: tuple[str, str]) -> dict[str, Any]:
