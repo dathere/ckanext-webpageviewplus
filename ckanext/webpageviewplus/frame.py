@@ -5,6 +5,7 @@ security rules can be unit-tested directly. Callers pass in site settings.
 """
 from __future__ import annotations
 
+import ipaddress
 import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -102,20 +103,68 @@ PRESETS: dict[str, Preset] = {
 }
 
 
+_LABEL = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
+_HOSTNAME_RE = re.compile(r"^{0}(?:\.{0})*\.?$".format(_LABEL))
+_IPV4_RE = re.compile(
+    r"^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$"
+)
+_AUTHORITY_RE = re.compile(r"^(\[[0-9a-f:.]+\]|[a-z0-9.-]+)(?::(\d{0,5}))?$")
+_NUMERIC_LABEL_RE = re.compile(r"^(?:\d+|0x[0-9a-f]*)$")
+
+
+def _canonical_host(netloc: str) -> Optional[str]:
+    """The host a browser would use, or None if this parser and a browser's
+    could disagree about it.
+
+    Python's urlsplit doesn't follow the WHATWG URL parser: it doesn't
+    percent-decode or IDNA-map hosts, and it reads IPv4 numbers literally. So
+    only plain forms are accepted: ASCII hostnames whose last label isn't
+    numeric, dotted-quad IPv4 and bracketed IPv6. Userinfo (``@``),
+    percent-encoding and non-ASCII hosts are refused.
+    """
+    m = _AUTHORITY_RE.match(netloc.lower())
+    if not m:
+        return None
+    host, port = m.group(1), m.group(2)
+    if port and int(port) > 65535:
+        return None
+    if host.startswith("["):
+        try:
+            return "[{}]".format(ipaddress.IPv6Address(host[1:-1]).compressed)
+        except ValueError:
+            return None
+    host = host.rstrip(".")  # a trailing dot names the same host
+    if _IPV4_RE.match(host):
+        return host
+    if not host or not _HOSTNAME_RE.match(host):
+        return None
+    # A numeric last label makes a browser parse the whole host as IPv4.
+    if _NUMERIC_LABEL_RE.match(host.rsplit(".", 1)[-1]):
+        return None
+    return host
+
+
 def is_http_url(url: Any) -> bool:
-    """True only for absolute http(s) URLs with a host.
+    """True only for absolute http(s) URLs whose host is unambiguous.
 
     Anything else (``javascript:``, ``data:``, relative or scheme-less URLs)
     is refused, because an iframe ``src`` with a ``javascript:`` URL runs in
-    CKAN's own origin.
+    CKAN's own origin. Backslashes, spaces and control characters are refused
+    anywhere: browsers treat ``\\`` as ``/`` in http(s) URLs, so the host
+    could differ from the one checked here.
     """
-    if not isinstance(url, str):
+    if not isinstance(url, str) or not url:
+        return False
+    if "\\" in url or any(ord(c) <= 0x20 or ord(c) == 0x7F for c in url):
         return False
     try:
         parts = urlsplit(url)
     except ValueError:
         return False
-    return parts.scheme.lower() in ALLOWED_SCHEMES and bool(parts.netloc)
+    return (
+        parts.scheme.lower() in ALLOWED_SCHEMES
+        and _canonical_host(parts.netloc) is not None
+    )
 
 
 def is_ckan_host(url: str, ckan_hosts: list[str]) -> bool:
@@ -134,9 +183,9 @@ def is_ckan_host(url: str, ckan_hosts: list[str]) -> bool:
 
 
 def url_host(url: str) -> str:
+    """The URL's canonical host, or "" if it's ambiguous or unparseable."""
     try:
-        # A trailing dot names the same host to a browser.
-        return (urlsplit(url).hostname or "").lower().rstrip(".")
+        return _canonical_host(urlsplit(url).netloc) or ""
     except ValueError:
         return ""
 

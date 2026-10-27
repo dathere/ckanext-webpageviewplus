@@ -111,9 +111,15 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
         ):
             return dict(form_vars, frame=None, frame_error="host")
 
+        # A preset the site has since removed from its list falls back to the
+        # default, so narrowing the list applies to existing views too.
+        preset = resource_view.get("preset")
+        if preset not in settings.allowed_presets():
+            preset = settings.default_preset()
+
         built = frame.build_frame(
             url,
-            resource_view.get("preset") or settings.default_preset(),
+            preset,
             ckan_hosts=ckan_hosts,
             is_upload=is_upload,
             content_origin=settings.content_origin(),

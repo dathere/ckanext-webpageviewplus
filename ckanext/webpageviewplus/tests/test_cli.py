@@ -63,6 +63,15 @@ class TestMigrate:
         assert result.exit_code == 0, result.output
         assert _show(view)["preset"] == "data-schematic"
 
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "strict")
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.default_preset", "strict")
+    def test_schematic_not_chosen_when_not_allowed(self, cli, monkeypatch):
+        monkeypatch.setattr(wvp_cli, "looks_like_schematic", lambda resource: True)
+        view = _stock_view(factories.Resource(url_type="upload", url="s.html"))
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate"])
+        assert result.exit_code == 0, result.output
+        assert _show(view)["preset"] == "strict"
+
     @pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "strict interactive")
     def test_preset_outside_site_list_refused(self, cli):
         result = cli.invoke(ckan, ["webpageviewplus", "migrate", "--preset", "external"])

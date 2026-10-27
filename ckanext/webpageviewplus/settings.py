@@ -63,7 +63,7 @@ def ckan_hosts() -> list[str]:
     hosts = [frame.url_host(site_url())]
     for alias in toolkit.aslist(_get("site_aliases")):
         hosts.append(
-            frame.url_host(alias) if "//" in alias else alias.lower().rstrip(".")
+            frame.url_host(alias if "//" in alias else "https://" + alias)
         )
     return [h for h in hosts if h]
 

@@ -56,7 +56,12 @@ def choose_preset(
     same-origin rule would refuse at save time."""
     if requested:
         preset, reason = requested, "--preset"
-    elif resource is not None and not page_url and looks_like_schematic(resource):
+    elif (
+        "data-schematic" in settings.allowed_presets()
+        and resource is not None
+        and not page_url
+        and looks_like_schematic(resource)
+    ):
         preset, reason = "data-schematic", "qsv schematic"
     else:
         preset, reason = settings.default_preset(), "default"

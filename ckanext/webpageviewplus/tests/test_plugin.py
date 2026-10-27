@@ -84,6 +84,21 @@ class TestWebpageViewPlus:
         ("https://", False),
         ("", False),
         (None, False),
+        # Hosts this parser and a browser's could read differently.
+        ("https://%63kan.example.org/p", False),
+        ("https://ckan.example.org\\@evil.com/p", False),
+        ("https:\\\\ckan.example.org/p", False),
+        ("https://user@ckan.example.org/p", False),
+        ("https://\uff43kan.example.org/p", False),
+        ("http://0x7f.1/p", False),
+        ("http://2130706433/p", False),
+        ("http://127.1/p", False),
+        ("https://ckan.example.org:99999/p", False),
+        ("https://ckan example.org/p", False),
+        ("http://127.0.0.1:5000/p", True),
+        ("http://[::1]/p", True),
+        ("https://ckan.example.org./p", True),
+        ("https://xn--bcher-kva.example/p", True),
     ],
 )
 def test_is_http_url(url, expected):
@@ -307,3 +322,19 @@ def test_rendered_iframe_attributes(app):
     assert "aria-describedby=" in body
     assert "frameborder" not in body
     assert 'data-module="data-viewer"' not in body
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "strict")
+@pytest.mark.ckan_config("ckanext.webpageviewplus.default_preset", "strict")
+@pytest.mark.usefixtures("with_plugins")
+def test_preset_removed_from_site_list_renders_as_default():
+    variables = WebpageviewplusPlugin().setup_template_variables(
+        {},
+        {
+            "resource_view": {"preset": "external"},
+            "resource": {"url": "https://pages.example.com/a.html"},
+        },
+    )
+    assert variables["frame"].preset == "strict"
+    assert variables["frame"].sandbox == ""

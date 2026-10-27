@@ -148,3 +148,19 @@ def test_preset_default_height():
 )
 def test_parse_allow(value, ok, bad):
     assert frame.parse_allow(value) == (ok, bad)
+
+
+@pytest.mark.parametrize(
+    "url,host",
+    [
+        ("https://CKAN.example.org./p", "ckan.example.org"),
+        ("http://[0:0::1]:8080/p", "[::1]"),
+        ("https://%63kan.example.org/p", ""),
+    ],
+)
+def test_url_host_is_canonical_or_empty(url, host):
+    assert frame.url_host(url) == host
+
+
+def test_ambiguous_host_counts_as_ckan():
+    assert frame.is_ckan_host("https://%63kan.example.org/p", ["ckan.example.org"])
