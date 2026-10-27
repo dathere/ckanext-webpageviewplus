@@ -6,7 +6,6 @@ An enhanced web page resource view for CKAN. It embeds a web page in an
 `<iframe>`, like CKAN core's `webpage_view`, but under its own view type
 (`webpage_view_plus`) so both can be enabled side by side.
 
-**TODO:** Document the "plus" features as they are added.
 
 
 ## Requirements
@@ -48,15 +47,41 @@ To install ckanext-webpageviewplus:
      sudo service apache2 reload
 
 
+## Usage
+
+Add a "Website (Plus)" view to an HTML resource and pick a security preset:
+
+| Preset           | Sandbox                                         | Use for |
+| ---------------- | ----------------------------------------------- | ------- |
+| `strict`         | everything restricted, no scripts               | static HTML |
+| `interactive`    | `allow-scripts allow-popups allow-downloads`    | scripted pages that need no storage (default) |
+| `external`       | none                                            | trusted third-party sites; refused for pages on CKAN's own host |
+| `data-schematic` | adds `allow-same-origin` (needs a content origin) | qsv Data Schematics; runs as `interactive` until content-origin support lands |
+
+Every frame gets `loading="lazy"`, a `referrerpolicy`, the view's title as its accessible
+name, and an `allow` list that always denies ad and tracking features. Sysadmins can also set
+sandbox tokens, allowed features and the referrer policy per view.
+
+To convert existing `webpage_view` views:
+
+    ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate --dry-run
+    ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate [--preset NAME]
+
+
 ## Config settings
 
-None at present
+All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 
-**TODO:** Document any optional config settings here. For example:
-
-	# The minimum number of hours to wait before re-checking a resource
-	# (optional, default: 24).
-	ckanext.webpageviewplus.some_setting = some_default_value
+| Key | Default | Meaning |
+| --- | ------- | ------- |
+| `ckanext.webpageviewplus.default_preset` | `interactive` | Preset for new views |
+| `ckanext.webpageviewplus.presets` | all four | Presets editors may choose from |
+| `ckanext.webpageviewplus.editor_can_loosen` | `false` | Let editors (not only sysadmins) set sandbox, allow and referrer policy |
+| `ckanext.webpageviewplus.referrer_policy` | `strict-origin-when-cross-origin` | Default `referrerpolicy` |
+| `ckanext.webpageviewplus.min_height` / `max_height` | `400` / `4000` | Clamp for viewport and auto heights, in px |
+| `ckanext.webpageviewplus.site_aliases` | empty | Other hosts this CKAN is reachable under; treated as CKAN's own |
+| `ckanext.webpageviewplus.allowed_hosts` | empty (any) | Allow-list of hosts an external page URL may point to |
+| `ckanext.webpageviewplus.formats` | `html htm` | Resource formats the view is offered for |
 
 
 ## Developer installation

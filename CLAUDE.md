@@ -19,30 +19,47 @@ with the Claude Docs connector, not WebFetch. Its rollout is phased:
 3. Content-origin route, signed URLs, cloud-storage redirects, optional height reporter.
 4. Chromium-only extras behind settings (`credentialless`, `csp`).
 
-The core security invariant: a frame whose resolved URL is on CKAN's own origin must never get
-`allow-scripts` + `allow-same-origin` (or no sandbox at all). It's checked on save AND on render;
-a failing render falls back to `strict`.
+The core security invariant: a frame whose URL is on CKAN's own host must never run scripts with
+its real origin, so it gets no unsandboxed `external` and no `allow-scripts` + `allow-same-origin`.
+It's checked on save (a validator) AND on render (the builder), and a failing render falls back to
+`strict`. "CKAN's own host" means a host match against `ckan.site_url` plus `site_aliases`,
+ignoring scheme and port, because cookies aren't isolated by either. This is deliberately stricter
+than the spec's origin comparison. Uploads always count as CKAN's own.
 
-## Current state
+## Architecture (phase 1 done)
 
-So far, only the scaffold: `plugin.py` is a port of core's `ckanext/webpageview` (one `page_url`
-field, same `can_view`: format or URL extension `html`/`htm`, `always_available`), plus an
-http(s)-only check on the frame URL. Sandbox presets are phase 1.
-- Plugin name (entry point in `pyproject.toml`) and view type (`info()['name']`) are both
-  `webpage_view_plus`, as the spec requires. Views stored in the DB reference the view type, so
-  don't rename it.
-- The frame URL must be an absolute `http(s)` URL (`is_http_url`), because a `javascript:` iframe
-  `src` runs in CKAN's origin. `page_url` is validated on save (`http_url_validator` in the view
-  schema), and `setup_template_variables` checks the resolved URL (`page_url` or the resource URL)
-  again on render. The template only gets the checked `frame_url`; never build the `src` from
-  `resource_view`/`resource` directly.
-- Templates live under `templates/webpageviewplus/` so they don't collide with core's
-  `webpage_view.html` / `webpage_form.html`.
+- `frame.py`: pure code with no CKAN imports. Holds `PRESETS`, `build_frame()` (the attribute
+  builder) and the URL/host helpers. Unit-test it in `tests/test_frame.py`. `build_frame`'s order
+  matters: degrade presets that can't run (data-schematic without a content origin becomes
+  interactive), apply overrides, enforce the invariant, then work out the height.
+  `Preset.sandbox=None` means no sandbox attribute, and `()` means `sandbox=""` (fully
+  restricted). Templates must test `is not none`, never truthiness.
+- `settings.py`: typed accessors for `config_declaration.yaml`, plus `check()`, which
+  `IConfigurable.configure` runs so bad settings stop CKAN at startup. `content_origin()` always
+  returns None until phase 3.
+- `validators.py`: per-field validators, plus `view_after_validator` (`__after` in the view
+  schema) for the checks across fields. It runs before `resource_view_create`/`_update` set
+  `context['resource']`, so it loads the resource itself. At model level an upload's `url` is a
+  bare filename, which is why uploads are special-cased. The advanced fields (`sandbox`, `allow`,
+  `referrer_policy`) are sysadmin-only unless `editor_can_loosen`; for other users, stored
+  values are copied back over whatever they posted, so a re-save doesn't strip them.
+- `plugin.py`: `setup_template_variables` re-checks everything at render time and hands the
+  template a built `Frame` (or `frame_error`). It's also called for the form, where
+  `resource_view` can be None (new view) or unsaved form data (preview). Never build the iframe
+  `src` from `resource_view`/`resource` in templates.
+- `cli.py`: `ckan webpageviewplus migrate [--dry-run] [--preset NAME]` rewrites
+  `ResourceView.view_type`/`config` directly, because `resource_view_update` can't change a
+  view's type. It picks `data-schematic` for uploads containing `qsv-schematic-source`, never
+  picks a preset the invariant refuses (that falls to `strict`), and keeps the view's id, title,
+  description, order and `page_url`.
+- Plugin name and view type are both `webpage_view_plus` (per the spec). Stored views reference
+  the view type, so don't rename it. Templates are namespaced under `templates/webpageviewplus/`.
+- Template strings go through CKAN's `_()`, which %-formats, so a literal `%` in a label breaks
+  rendering.
 - Packaging follows the 2.11 cookiecutter: metadata and entry points in `pyproject.toml`,
   setuptools and Babel options in `setup.cfg`, and `setup.py` only for message extractors.
-  `ckanext/` is a namespace package.
-- Site settings go in `config_declaration.yaml` via `IConfigDeclaration`, keys
-  `ckanext.webpageviewplus.*` (the full list is in the spec).
+  `ckanext/` is a namespace package. Keep `*.yaml` in `MANIFEST.in` (for
+  `config_declaration.yaml`).
 
 ## Local CKAN (Docker)
 
