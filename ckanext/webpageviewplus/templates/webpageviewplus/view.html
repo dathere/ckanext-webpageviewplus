@@ -16,7 +16,7 @@
             aria-label="{{ _('Interact with {title}').format(title=frame.title) }}" hidden><span>{{ _('Tap to interact') }}</span></button>
     <iframe class="webpageviewplus-frame"
             title="{{ frame.title }}"
-            src="{{ frame.src }}"
+            src="{{ deferred_src if load_on_tap else frame.src }}"
             {% if frame.sandbox is not none %}sandbox="{{ frame.sandbox }}"{% endif %}
             allow="{{ frame.allow }}"
             referrerpolicy="{{ frame.referrerpolicy }}"

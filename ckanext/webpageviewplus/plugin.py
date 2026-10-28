@@ -231,6 +231,10 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             frame=built,
             share_url=share_url,
             load_on_tap=load_on_tap,
+            # A content-origin URL's signature may expire before the reader
+            # taps Load, so a held-back upload loads through CKAN's download
+            # URL, which re-checks access and redirects to a fresh one.
+            deferred_src=open_url if preconnect else built.src,
             load_size=load_size,
             frame_error=None,
             open_url=open_url,

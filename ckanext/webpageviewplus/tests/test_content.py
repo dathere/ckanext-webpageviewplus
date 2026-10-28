@@ -279,3 +279,31 @@ def test_private_view_src_is_signed_for_permitted_viewer(app):
         headers={"Authorization": sysadmin["token"]},
     ).body
     assert "/webpageviewplus/content/{}/s.html?w=".format(resource["id"]) in body
+
+
+@pytest.mark.usefixtures("storage")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+def test_held_back_upload_loads_through_download_url(app):
+    """Load on tap: a content URL's signature could expire before the tap,
+    so a held-back upload points at CKAN's download URL, which re-checks
+    access and redirects to a fresh one (the same path for public and
+    private uploads)."""
+    dataset = factories.Dataset()
+    resource = _upload(dataset)
+    helpers.call_action(
+        "resource_view_create",
+        context={"user": factories.Sysadmin()["name"], "ignore_auth": True},
+        resource_id=resource["id"],
+        view_type="webpage_view_plus",
+        title="Schematic",
+        preset="data-schematic",
+    )
+    body = app.get(
+        url_for("dataset_resource.read", id=dataset["name"], resource_id=resource["id"]),
+        headers={"Save-Data": "on"},
+    ).body
+    stage = body[body.index("<template data-webpageviewplus-stage>"):body.index("</template>")]
+    assert "/resource/{}/download/s.html".format(resource["id"]) in stage
+    assert "/webpageviewplus/content/" not in stage
+    assert 'data-frame-origin="{}"'.format(CONTENT) in stage
+    assert '<link rel="preconnect"' not in body

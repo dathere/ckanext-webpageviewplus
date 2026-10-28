@@ -69,7 +69,14 @@
     var limit = wrapper ? intAttr(wrapper, "data-narrow-width", 0) : 0;
     if (!limit || !window.ResizeObserver) return;
     new ResizeObserver(function () {
-      wrapper.classList.toggle("webpageviewplus-narrow", wrapper.clientWidth < limit);
+      // Next frame: the class changes the wrapper's height, which would
+      // re-trigger this observer within the same frame (a loop error).
+      window.requestAnimationFrame(function () {
+        var narrow = wrapper.clientWidth < limit;
+        if (wrapper.classList.contains("webpageviewplus-narrow") !== narrow) {
+          wrapper.classList.toggle("webpageviewplus-narrow", narrow);
+        }
+      });
     }).observe(wrapper);
   }
 
@@ -315,8 +322,11 @@
         button.setAttribute("aria-haspopup", "dialog");
       }
       button.addEventListener("click", onControl);
-      // Close appears only while expanded.
-      if (action !== "close") button.hidden = false;
+      // Close appears only while expanded. Fullscreen and Reload wait for
+      // a frame held back by load on tap (setupLoadOnTap shows them).
+      var waiting = button.closest(".webpageviewplus").querySelector("[data-webpageviewplus-card]");
+      if (action === "close" || (waiting && (action === "fullscreen" || action === "reload"))) continue;
+      button.hidden = false;
     }
     document.addEventListener("fullscreenchange", onFullscreenChange);
     document.addEventListener("keydown", function (event) {
@@ -384,6 +394,9 @@
         var iframe = wrapper.querySelector("iframe.webpageviewplus-frame");
         if (!iframe) return;
         setup(iframe);
+        var held = wrapper.querySelectorAll(
+          '[data-webpageviewplus-action="fullscreen"], [data-webpageviewplus-action="reload"]');
+        for (var j = 0; j < held.length; j++) held[j].hidden = false;
         iframe.focus();
       });
     }

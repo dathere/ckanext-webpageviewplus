@@ -230,9 +230,14 @@ def test_load_on_tap_with_save_data(page, view_urls):
     assert page.locator(FRAME).count() == 0
     load = page.locator("[data-webpageviewplus-load]")
     expect(load).to_have_text(re.compile(r"^Load \(.+\)$"))
+    # Nothing to act on yet: Fullscreen and Reload wait for the frame.
+    page.locator('[data-webpageviewplus-action="share"], .webpageviewplus-controls a').first.wait_for()
+    for action in ("fullscreen", "reload"):
+        expect(page.locator('[data-webpageviewplus-action="%s"]' % action)).to_be_hidden()
 
     load.click()
     expect(card).to_have_count(0)
+    expect(page.locator('[data-webpageviewplus-action="reload"]')).to_be_visible()
     child = page.frame_locator(FRAME)
     child.locator("#viewport").filter(has_text="px").wait_for()
     wait_content_height(page, child)
