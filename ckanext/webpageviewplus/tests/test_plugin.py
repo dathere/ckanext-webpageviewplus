@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from ckan.plugins import plugin_loaded
@@ -449,6 +451,30 @@ class TestControlBar:
     @pytest.mark.ckan_config("ckanext.webpageviewplus.controls", "")
     def test_site_can_hide_all(self, app):
         assert 'role="toolbar"' not in _render(app, {})
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestAccessibilityMarkup:
+    def test_skip_link_and_its_target(self, app):
+        body = _render(app, {})
+        match = re.search(r'<a class="webpageviewplus-skip" href="#([^"]+)">', body)
+        assert match
+        target = match.group(1)
+        assert 'id="{}" class="webpageviewplus-after" tabindex="-1"'.format(target) in body
+        # Past the frame, before the control bar.
+        assert body.index("<iframe") < body.index('id="' + target) < body.index('role="toolbar"')
+
+    def test_skip_target_kept_without_control_bar(self, app):
+        body = _render(app, {"hide_controls": "true"})
+        target = re.search(r'class="webpageviewplus-skip" href="#([^"]+)"', body).group(1)
+        assert 'id="{}"'.format(target) in body
+
+    def test_live_region(self, app):
+        body = _render(app, {})
+        assert 'role="status" data-webpageviewplus-status' in body
+        assert 'data-loaded="Report loaded"' in body
 
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")

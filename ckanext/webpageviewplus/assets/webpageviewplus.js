@@ -53,8 +53,25 @@
     // before this script runs. So also send it unasked: when the frame
     // finishes loading (its listeners are in place by then) and now. It's
     // just window.innerHeight, harmless to any page.
-    iframe.addEventListener("load", function () { replyViewport(state); });
+    iframe.addEventListener("load", function () {
+      replyViewport(state);
+      announceLoaded(iframe);
+    });
     replyViewport(state);
+  }
+
+  // The view's live region says when its page has loaded. A frame that
+  // finished loading before this script ran isn't announced: there's no way
+  // to tell for a cross-origin frame. Cleared first, so a Reload is
+  // announced again.
+  function announceLoaded(iframe) {
+    var wrapper = iframe.closest(".webpageviewplus");
+    var status = wrapper && wrapper.querySelector("[data-webpageviewplus-status]");
+    if (!status) return;
+    status.textContent = "";
+    setTimeout(function () {
+      status.textContent = status.getAttribute("data-loaded") || "";
+    }, 100);
   }
 
   function trusted(state, event) {

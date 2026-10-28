@@ -1,0 +1,5 @@
+# Browser tests (browser_tests/), installed in CI and used locally with
+# uv run --with-requirements. The browsers come from `playwright install`.
+playwright==1.64.1
+pytest==9.2.0
+axe-playwright-python==0.1.8

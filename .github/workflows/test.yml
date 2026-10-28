@@ -89,7 +89,7 @@ jobs:
       run: |
         pip install -r requirements.txt
         pip install -e .
-        pip install pytest playwright
+        pip install -r browser_tests/requirements.txt
         python -m playwright install --with-deps chromium firefox webkit
     - name: Start CKAN with seeded data
       run: |

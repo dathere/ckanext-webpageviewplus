@@ -2,7 +2,10 @@
 {% asset 'webpageviewplus/webpageviewplus-js' %}
 {% if frame %}
   {% set desc_id = ('webpageviewplus-desc-' ~ resource_view.id) if resource_view and resource_view.id and resource_view.description else none %}
+  {# No skip link in the form's preview, which has no view id to key it on. #}
+  {% set after_id = ('webpageviewplus-after-' ~ resource_view.id) if resource_view and resource_view.id else none %}
   <div class="webpageviewplus">
+    {% if after_id %}<a class="webpageviewplus-skip" href="#{{ after_id }}">{{ _('Skip embedded content') }}</a>{% endif %}
     <iframe class="webpageviewplus-frame"
             title="{{ frame.title }}"
             src="{{ frame.src }}"
@@ -20,6 +23,11 @@
             data-max-height="{{ frame.max_height }}"
             {% if desc_id %}aria-describedby="{{ desc_id }}"{% endif %}></iframe>
     {% if desc_id %}<p id="{{ desc_id }}" class="visually-hidden">{{ resource_view.description }}</p>{% endif %}
+    {# The skip link lands here: past the frame, before the control bar, so
+       the next Tab reaches Open in new tab. #}
+    {% if after_id %}<span id="{{ after_id }}" class="webpageviewplus-after" tabindex="-1"></span>{% endif %}
+    <p class="webpageviewplus-sr" role="status" data-webpageviewplus-status
+       data-loaded="{{ _('{title} loaded').format(title=frame.title) }}"></p>
     {% if show_controls and controls %}
       <div class="webpageviewplus-controls" role="toolbar" aria-label="{{ _('Embedded page') }}">
         {% if 'open' in controls %}

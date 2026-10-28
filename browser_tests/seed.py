@@ -29,6 +29,8 @@ VIEWS = [
     ("Interactive fixed 300", {
         "preset": "interactive", "height_mode": "fixed", "height_value": "300",
     }),
+    # No scripts run: the fixture stays as served, and nothing resizes it.
+    ("Strict", {"preset": "strict"}),
 ]
 
 

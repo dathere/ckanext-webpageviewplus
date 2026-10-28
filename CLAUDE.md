@@ -205,12 +205,15 @@ the dev site (a `wvp-browser` dataset; `wvp-demo` is left alone), then run from 
 ```sh
 docker exec ckan-docker-ckan-dev-1 python /srv/app/src_extensions/ckanext-webpageviewplus/browser_tests/seed.py
 WVP_BROWSERS="chromium firefox" WVP_CHROMIUM_CHANNEL=chrome WVP_FIREFOX_CHANNEL=moz-firefox \
-  uv run --with playwright --with pytest --no-project pytest -p no:cacheprovider browser_tests
+  uv run --with playwright --with-requirements browser_tests/requirements.txt --no-project \
+    pytest -p no:cacheprovider browser_tests
 ```
 
 - On this Mac, Playwright's own Firefox build exits with "Could not find profile folder", so use
   the installed Firefox (`moz-firefox`), and WebKit hangs on every request to the dev site.
   WebKit runs in CI only.
+- The pinned dependencies (Playwright, pytest, axe-playwright-python) are in
+  `browser_tests/requirements.txt`, used by CI too.
 - Always pass `--no-project`: without it `uv run` creates `.venv` and `uv.lock` in the repo.
 - Click buttons inside frames from the frame's own script (`locator.evaluate("b => b.click()")`):
   stock Firefox over WebDriver BiDi drops synthesized clicks into cross-origin frames.
