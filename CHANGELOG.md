@@ -9,6 +9,8 @@
   get 600 px.
 - Safari before 16.4 (including iOS) ignored the narrow-screen height and the 320 px reflow
   floor, because those rules named `:fullscreen`. They now apply from Safari 14.1.
+- In Safari before 16.4 (including iOS 15 and 16.0–16.3), the "Tap to interact" overlay never
+  hid, so it sat over every view and blocked using the framed page on touch screens.
 
 ## 0.1.0 (2026-10-28)
 

@@ -141,9 +141,14 @@
   background: transparent;
 }
 
+/* Kept apart from :fullscreen, which Safari before 16.4 doesn't know: it
+   would drop the whole list, and the shield would never hide. */
 .webpageviewplus-shield[hidden],
-.webpageviewplus:fullscreen .webpageviewplus-shield,
 .webpageviewplus-expanded .webpageviewplus-shield {
+  display: none;
+}
+
+.webpageviewplus:fullscreen .webpageviewplus-shield {
   display: none;
 }
 
