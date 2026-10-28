@@ -28,3 +28,34 @@ def events_log():
     yield lambda: list(handler.events)
     logger.removeHandler(handler)
     logger.level, logger.disabled = old
+
+
+@pytest.fixture
+def counts_table(non_clean_db):
+    """The view counts table. CKAN's test fixtures reset the database once
+    per session, which drops plugin tables, so run the plugin's migration
+    (its own upgrade(), through alembic) when the table is missing."""
+    import importlib.util
+    import os
+
+    import sqlalchemy as sa
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+
+    from ckan import model
+
+    if sa.inspect(model.meta.engine).has_table("webpage_view_plus_view_counts"):
+        return
+    versions = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "migration", "webpage_view_plus", "versions")
+    for name in sorted(os.listdir(versions)):
+        if not name.endswith(".py"):
+            continue
+        spec = importlib.util.spec_from_file_location("wvp_migration_" + name[:-3],
+                                                      os.path.join(versions, name))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with model.meta.engine.begin() as connection:
+            with Operations.context(MigrationContext.configure(connection)):
+                module.upgrade()

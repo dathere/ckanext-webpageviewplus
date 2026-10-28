@@ -179,5 +179,32 @@ def migrate(dry_run: bool, uploads_only: bool, preset: Optional[str]):
         click.echo("{} view(s) migrated.".format(migrated))
 
 
+@webpageviewplus.command("purge-stats")
+def purge_stats():
+    """Delete view counts older than view_counting_retention_days. Run it
+    daily from cron."""
+    from ckanext.webpageviewplus import stats
+
+    days = settings.view_counting_retention_days()
+    deleted = stats.purge(days)
+    click.echo("{} daily total(s) older than {} days deleted.".format(deleted, days))
+
+
+@webpageviewplus.command("stats-summary")
+@click.option("--limit", default=20, show_default=True, help="Views to list.")
+def stats_summary(limit: int):
+    """Site-wide view counts per view, busiest first."""
+    from ckanext.webpageviewplus import stats
+
+    rows = stats.summary()[:limit]
+    if not rows:
+        click.echo("No view counts.")
+        return
+    names = ("impressions",) + stats.FLAGS
+    click.echo("view_id\t" + "\t".join(names))
+    for row in rows:
+        click.echo("\t".join([row["view_id"]] + [str(row[n] or 0) for n in names]))
+
+
 def get_commands():
     return [webpageviewplus]

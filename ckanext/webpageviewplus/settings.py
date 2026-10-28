@@ -89,6 +89,18 @@ def consent_gate() -> bool:
     return toolkit.asbool(_get("consent_gate"))
 
 
+def view_counting() -> bool:
+    return toolkit.asbool(_get("view_counting"))
+
+
+def view_counting_retention_days() -> int:
+    return int(_get("view_counting_retention_days") or 365)
+
+
+def privacy_policy_url() -> str:
+    return (_get("privacy_policy_url") or "").strip()
+
+
 def credentialless_presets() -> list[str]:
     return toolkit.aslist(_get("credentialless"))
 
@@ -236,6 +248,20 @@ def check() -> None:
     if privacy_profile() not in PRIVACY_PROFILES:
         raise CkanConfigurationException(
             PREFIX + "privacy_profile: must be one of " + " ".join(PRIVACY_PROFILES)
+        )
+    if view_counting() and not privacy_policy_url():
+        raise CkanConfigurationException(
+            PREFIX + "privacy_policy_url: required when view_counting is on "
+            "(the notice on counted views links to it)"
+        )
+    if privacy_policy_url() and not frame.is_http_url(privacy_policy_url()):
+        # It's an href on every counted view: never javascript: or data:.
+        raise CkanConfigurationException(
+            PREFIX + "privacy_policy_url: must be an http(s) URL"
+        )
+    if view_counting_retention_days() < 1:
+        raise CkanConfigurationException(
+            PREFIX + "view_counting_retention_days: must be at least 1"
         )
     if narrow_width() < 0:
         raise CkanConfigurationException(

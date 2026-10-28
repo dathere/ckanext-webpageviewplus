@@ -4,7 +4,7 @@
   {% set desc_id = ('webpageviewplus-desc-' ~ resource_view.id) if resource_view and resource_view.id and resource_view.description else none %}
   {# No skip link in the form's preview, which has no view id to key it on. #}
   {% set after_id = ('webpageviewplus-after-' ~ resource_view.id) if resource_view and resource_view.id else none %}
-  <div class="webpageviewplus"{% if narrow_width %} data-narrow-width="{{ narrow_width }}"{% endif %}>
+  <div class="webpageviewplus"{% if narrow_width %} data-narrow-width="{{ narrow_width }}"{% endif %}{% if count_url %} data-count-url="{{ count_url }}"{% endif %}>
     {# Warms the connection before the (lazy) frame needs it. Frame
        navigation isn't CORS, so no crossorigin. #}
     {% if preconnect and not held_back %}<link rel="preconnect" href="{{ preconnect }}">{% endif %}
@@ -56,6 +56,12 @@
     {% if after_id %}<span id="{{ after_id }}" class="webpageviewplus-after" tabindex="-1"></span>{% endif %}
     <p class="webpageviewplus-sr" role="status" data-webpageviewplus-status
        data-loaded="{{ _('{title} loaded').format(title=frame.title) }}"></p>
+    {% if count_url %}
+      <p class="webpageviewplus-counted small text-muted">
+        {{ _('This view counts visits.') }}
+        {% if privacy_policy_url %}<a href="{{ privacy_policy_url }}">{{ _('Privacy policy') }}</a>{% endif %}
+      </p>
+    {% endif %}
     {% if show_controls and controls %}
       <div class="webpageviewplus-controls" role="toolbar" aria-label="{{ _('Embedded page') }}">
         {% if 'open' in controls %}

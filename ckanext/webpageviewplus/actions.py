@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+import ckan.model as model
 import ckan.plugins.toolkit as toolkit
 from ckan.types import Context
 
-from ckanext.webpageviewplus import events, frame, frameability, settings
+from ckanext.webpageviewplus import events, frame, frameability, settings, stats
 
 
 def frameability_auth(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:
@@ -50,4 +51,47 @@ def webpageviewplus_frameability(
     result = frameability.summary(frameability.check(url, identity))
     if result.get("verdict") == "blocked":
         events.emit("frameability_blocked", host=frame.url_host(url))
+    return result
+
+
+def _counted_view(data_dict: dict[str, Any]):
+    view_id = toolkit.get_or_bust(data_dict, "id")
+    view = model.Session.query(model.ResourceView).get(view_id)
+    if view is None or view.view_type != "webpage_view_plus":
+        raise toolkit.ObjectNotFound("View not found")
+    return view
+
+
+def view_stats_auth(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:
+    """Anyone who may update the view's resource."""
+    try:
+        view = _counted_view(data_dict)
+        toolkit.check_access("resource_update", context, {"id": view.resource_id})
+    except (toolkit.NotAuthorized, toolkit.ObjectNotFound, toolkit.ValidationError):
+        return {"success": False}
+    return {"success": True}
+
+
+@toolkit.side_effect_free
+def webpageviewplus_view_stats_show(
+    context: Context, data_dict: dict[str, Any]
+) -> dict[str, Any]:
+    """Opt-in view counts for one view.
+
+    :param id: the view's id
+    :param days: how many days back, today included (default 30, at most the
+        retention period)
+    :returns: ``{"counting": bool, "days": [{"day", "impressions", "seen",
+        "loaded", "engaged", "failed"}, ...], "totals": {...}}``. Counts hold
+        nothing about viewers.
+    """
+    toolkit.check_access("webpageviewplus_view_stats_show", context, data_dict)
+    view = _counted_view(data_dict)
+    try:
+        days = int(data_dict.get("days") or 30)
+    except (TypeError, ValueError):
+        raise toolkit.ValidationError({"days": ["Must be a whole number"]})
+    days = max(1, min(days, settings.view_counting_retention_days()))
+    result = stats.totals(view.id, days)
+    result["counting"] = stats.countable(view.config or {})
     return result

@@ -40,6 +40,11 @@ VIEWS = [
     ("Interactive fixed 700", {
         "preset": "interactive", "height_mode": "fixed", "height_value": "700",
     }),
+    # Counted when the site has view_counting on (CI does).
+    ("Counted fixed 300", {
+        "preset": "interactive", "height_mode": "fixed", "height_value": "300",
+        "count_views": True,
+    }),
     # No scripts run: the fixture stays as served, and nothing resizes it.
     ("Strict", {"preset": "strict"}),
 ]

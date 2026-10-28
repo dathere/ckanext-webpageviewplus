@@ -308,3 +308,56 @@ def test_failed_event_on_a_slow_load(page, view_urls):
     page.wait_for_function("() => wvpEvents.some(e => e[0] === 'failed')")
     # It still loads in the end, and says so.
     page.wait_for_function("() => wvpEvents.some(e => e[0] === 'loaded')")
+
+
+def test_counting_beacon(page, view_urls):
+    """One beacon when the page is left, with what happened to the view.
+    Where the site has counting off (the dev site), the beacon URL is added
+    to the wrapper before the script runs, so the script is tested anyway;
+    the CI site counts this view for real."""
+    url = view_urls["Counted fixed 300"]
+    view_id = url.rsplit("view_id=", 1)[1]
+    page.add_init_script("""
+        if (window.top === window) {
+            new MutationObserver((records, observer) => {
+                const view = document.querySelector('.webpageviewplus');
+                if (!view) return;
+                observer.disconnect();
+                if (!view.hasAttribute('data-count-url'))
+                    view.setAttribute('data-count-url', '/webpageviewplus/count/%s');
+            }).observe(document, {childList: true, subtree: true});
+        }
+    """ % view_id)
+    # Not every engine shows a beacon's body to Playwright: record it.
+    page.add_init_script("""
+        if (window.top === window) {
+            window.wvpBeacons = [];
+            const send = navigator.sendBeacon.bind(navigator);
+            navigator.sendBeacon = (url, body) => { wvpBeacons.push([url, String(body)]); return send(url, body); };
+        }
+    """)
+    child = open_view(page, view_urls, "Counted fixed 300")
+    page.locator(FRAME).scroll_into_view_if_needed()
+    page.wait_for_timeout(1300)  # seen: half on screen for 1 s
+    page.locator(".webpageviewplus-controls a").first.evaluate("a => a.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}))")
+    hide = """() => {
+        Object.defineProperty(document, 'visibilityState', {get: () => 'hidden', configurable: true});
+        document.dispatchEvent(new Event('visibilitychange'));
+    }"""
+    # The page being hidden (switching tabs, locking a phone) is when it's
+    # sent; leaving the page sends it too, but a page that's gone can't be
+    # observed reliably.
+    with page.expect_request(lambda r: "/webpageviewplus/count/" in r.url) as info:
+        page.evaluate(hide)
+    request = info.value
+    assert request.method == "POST"
+    beacons = page.evaluate("wvpBeacons")
+    assert len(beacons) == 1 and beacons[0][0].endswith("/webpageviewplus/count/" + view_id)
+    body = dict(p.split("=") for p in beacons[0][1].split("&"))
+    assert body["seen"] == "1" and body["engaged"] == "1"
+    assert set(body) == {"seen", "loaded", "engaged", "failed"}
+    assert request.response().status == 204
+    # Once per page load.
+    page.evaluate(hide)
+    page.wait_for_timeout(300)
+    assert len(page.evaluate("wvpBeacons")) == 1

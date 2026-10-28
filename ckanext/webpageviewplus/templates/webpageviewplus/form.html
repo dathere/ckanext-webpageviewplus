@@ -73,6 +73,18 @@
     <input class="form-check-input" type="checkbox" id="field-consent_gate" name="consent_gate" value="true" {% if data.consent_gate in (true, 'true', 'True') %}checked{% endif %}>
     <label class="form-check-label" for="field-consent_gate">{{ _('Ask before loading a page from another site') }}</label>
   </div>
+  {% if view_counting %}
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="field-count_views" name="count_views" value="true" {% if data.count_views in (true, 'true', 'True') %}checked{% endif %}>
+      <label class="form-check-label" for="field-count_views">{{ _('Count visits (daily totals only, nothing about visitors; the view says so)') }}</label>
+    </div>
+    {% if view_counts and data.count_views in (true, 'true', 'True') %}
+      {% set t = view_counts.totals %}
+      <p class="form-text webpageviewplus-counts">
+        {{ _('Last 30 days: {impressions} shown, {seen} seen, {loaded} loaded, {engaged} used, {failed} failed.').format(**t) }}
+      </p>
+    {% endif %}
+  {% endif %}
 </div>
 
 {% if can_set_advanced %}

@@ -61,9 +61,19 @@ order now being built:
      `signature_refused`, `frameability_blocked`) on `ckanext.webpageviewplus.events`, with
      fields in `record.webpageviewplus` and nothing about the viewer. Tests use the
      `events_log` fixture (`tests/conftest.py`).
-   - Next, each needing a decision first: opt-in view counting (needs tables via an alembic
-     migration), then CSP report-only on the content origin with a "This page connects to"
-     disclosure.
+   - Opt-in view counting (`stats.py`), trimmed scope as decided: the site's `view_counting`
+     (needs `privacy_policy_url`, http(s) only) plus each view's `count_views`. Impressions are
+     added at render (not in the view form); seen/loaded/engaged/failed come in one beacon per
+     page load (`POST /webpageviewplus/count/<view_id>`, CSRF-exempt, always 204). GPC and
+     obvious bots (`stats.is_bot`) are never counted. Daily totals per view in
+     `webpage_view_plus_view_counts` (alembic migration under `migration/webpage_view_plus`;
+     sites run `ckan db upgrade -p webpage_view_plus`, and CI does after `db init`).
+     `webpageviewplus_view_stats_show` (resource_update auth), totals on the view form, and
+     `ckan webpageviewplus purge-stats` / `stats-summary`. No page-events allow-list.
+   - Tests: CKAN's `non_clean_db` resets the test DB once per session, dropping plugin tables,
+     so counting tests use the `counts_table` fixture, which runs the migration's `upgrade()`.
+   - Next: CSP report-only on the content origin with a "This page connects to" disclosure
+     (per resource; a second migration).
 
 ## The security model (read before touching frame, validator, content or download code)
 
@@ -234,6 +244,9 @@ with throwaway Postgres, Solr and Redis services. `pytest-ckan` comes from `dev-
 A second job, `browser`, runs `browser_tests/` (Playwright) in Chromium, Firefox and WebKit
 against a real CKAN 2.11 started with `browser_tests/ci.ini` (CKAN on `localhost:5000`, content
 origin `127.0.0.1:5000`) and seeded by `browser_tests/seed.py`.
+
+The dev DB needs the plugin's tables for view counting:
+`docker exec ckan-docker-ckan-dev-1 ckan db upgrade -p webpage_view_plus`.
 
 ### Browser tests locally
 

@@ -698,8 +698,10 @@ class TestConsentGate:
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.consent_gate", "true")
     def test_never_for_ckans_own_pages(self, app):
+        from ckan.plugins.toolkit import config
+        # The configured site URL: CI's ckan-dev image overrides test.ini's.
         body = _privacy_page(app, headers={"Sec-GPC": "1"},
-                             url="http://test.ckan.net/page.html").body
+                             url=config.get("ckan.site_url").rstrip("/") + "/page.html").body
         assert "data-webpageviewplus-card" not in body
 
 

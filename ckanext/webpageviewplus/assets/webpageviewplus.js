@@ -441,11 +441,54 @@
     return buttons.length;
   }
 
+  // Opt-in view counting: one beacon per page load with what happened to
+  // the view, sent when the page is hidden. Nothing identifying is sent, and
+  // nothing when the browser asks not to be tracked (Global Privacy Control).
+  function setupCounting(wrapper) {
+    var url = wrapper.getAttribute("data-count-url");
+    if (!url || !navigator.sendBeacon || navigator.globalPrivacyControl) return;
+    var flags = {seen: 0, loaded: 0, engaged: 0, failed: 0};
+    var sent = false;
+    wrapper.addEventListener("webpageviewplus:loaded", function () { flags.loaded = 1; });
+    wrapper.addEventListener("webpageviewplus:failed", function () { flags.failed = 1; });
+    wrapper.addEventListener("webpageviewplus:expanded", function () { flags.engaged = 1; });
+    wrapper.addEventListener("click", function (event) {
+      if (event.target.closest(
+        ".webpageviewplus-controls a, .webpageviewplus-narrow-open, [data-webpageviewplus-shield]")) {
+        flags.engaged = 1;
+      }
+    });
+    if (window.IntersectionObserver) {
+      var timer = null;
+      new IntersectionObserver(function (entries) {
+        var visible = entries[entries.length - 1].intersectionRatio >= 0.5;
+        if (visible && !timer && !flags.seen) {
+          timer = setTimeout(function () { flags.seen = 1; }, 1000);
+        } else if (!visible && timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+      }, {threshold: [0, 0.5]}).observe(wrapper);
+    }
+    // On the page being hidden (the reliable signal on phones) or left.
+    function send(force) {
+      if (sent || (force !== true && document.visibilityState !== "hidden")) return;
+      sent = true;
+      var body = new URLSearchParams();
+      for (var key in flags) body.append(key, String(flags[key]));
+      navigator.sendBeacon(url, body);
+    }
+    document.addEventListener("visibilitychange", send);
+    window.addEventListener("pagehide", function () { send(true); });
+  }
+
   function init() {
     setupFrameabilityCheck();
     var nodes = document.querySelectorAll("iframe.webpageviewplus-frame");
     for (var i = 0; i < nodes.length; i++) setup(nodes[i]);
     setupControls();
+    var counted = document.querySelectorAll(".webpageviewplus[data-count-url]");
+    for (var c = 0; c < counted.length; c++) setupCounting(counted[c]);
     var deferred = setupLoadOnTap();
     if (!frames.length && !deferred) return;
     window.addEventListener("message", onMessage);

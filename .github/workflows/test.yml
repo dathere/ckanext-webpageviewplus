@@ -47,7 +47,9 @@ jobs:
     - name: Setup extension
       # Extra initialization steps
       # test.ini already points at /srv/app/src/ckan/test-core.ini, the path in ckan-dev images
-      run: ckan -c test.ini db init
+      run: |
+        ckan -c test.ini db init
+        ckan -c test.ini db upgrade -p webpage_view_plus
     - name: Run tests
       run: pytest --ckan-ini=test.ini --cov=ckanext.webpageviewplus --disable-warnings ckanext/webpageviewplus
 
@@ -94,6 +96,7 @@ jobs:
     - name: Start CKAN with seeded data
       run: |
         ckan -c "$CKAN_INI" db init
+        ckan -c "$CKAN_INI" db upgrade -p webpage_view_plus
         python browser_tests/seed.py
         nohup setsid ckan -c "$CKAN_INI" run -H 0.0.0.0 -p 5000 -r -t > /tmp/ckan.log 2>&1 &
         python - <<'EOF' || { cat /tmp/ckan.log; exit 1; }

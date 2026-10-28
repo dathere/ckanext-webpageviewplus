@@ -15,6 +15,7 @@ from ckanext.webpageviewplus import (
     content,
     downloads,
     events,
+    stats,
     frame,
     settings,
     validators as v,
@@ -72,19 +73,30 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
     def get_blueprint(self):
         # The content route is always registered; it answers only on the
         # content origin's host, and only when one is configured.
-        return [downloads.hardening, content.content, vary]
+        # The beacon carries no session state worth forging, and must keep
+        # working on sites that turn CSRF protection on for extensions.
+        try:
+            from ckan.config.middleware.flask_app import csrf
+            csrf.exempt(stats.beacon)
+        except (ImportError, AttributeError):
+            pass
+        return [downloads.hardening, content.content, vary, stats.beacon]
 
     # IActions
 
     def get_actions(self):
         return {
-            "webpageviewplus_frameability": actions.webpageviewplus_frameability
+            "webpageviewplus_frameability": actions.webpageviewplus_frameability,
+            "webpageviewplus_view_stats_show": actions.webpageviewplus_view_stats_show,
         }
 
     # IAuthFunctions
 
     def get_auth_functions(self):
-        return {"webpageviewplus_frameability": actions.frameability_auth}
+        return {
+            "webpageviewplus_frameability": actions.frameability_auth,
+            "webpageviewplus_view_stats_show": actions.view_stats_auth,
+        }
 
     # IMiddleware
 
@@ -115,6 +127,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
                 ],
                 "hide_controls": [ignore_missing, boolean_validator],
                 "consent_gate": [ignore_missing, boolean_validator],
+                "count_views": [ignore_missing, boolean_validator],
                 "__after": [v.view_after_validator],
             },
             "iframed": False,
@@ -153,6 +166,11 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             "referrer_policies": frame.REFERRER_POLICIES,
             "can_set_advanced": v.can_set_advanced(context),
             "frameability_check": settings.frameability_check(),
+            "view_counting": settings.view_counting(),
+            "view_counts": (
+                stats.totals_or_none(resource_view["id"], 30)
+                if settings.view_counting() and resource_view.get("id") else None
+            ),
         }
 
         if not is_http_url(url):
@@ -239,6 +257,17 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             or (settings.privacy_profile() == "eu" and built.preset == "external")
         )
         held_back = "consent" if consent else ("save-data" if save_data else None)
+        # Opt-in view counting: impressions at render (not in the view form
+        # or its preview), the rest by beacon. Rendered for every reader so a
+        # cached page stays right; GPC browsers and bots are dropped here and
+        # at the beacon.
+        count_url = None
+        if stats.countable(resource_view) and resource_view.get("id"):
+            count_url = toolkit.url_for(
+                "webpageviewplus_beacon.count", view_id=resource_view["id"])
+            if endpoint and not endpoint.endswith(("edit_view", "new_view")) \
+                    and not stats.viewer_opts_out():
+                stats.add(resource_view["id"], impressions=1)
         events.emit(
             "view_rendered", preset=built.preset, requested_preset=preset,
             notices=",".join(built.notices) or "-", endpoint=endpoint,
@@ -255,6 +284,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             frame=built,
             share_url=share_url,
             held_back=held_back,
+            count_url=count_url,
+            privacy_policy_url=settings.privacy_policy_url(),
             consent_host=frame.url_host(built.src),
             # A content-origin URL's signature may expire before the reader
             # taps Load, so a held-back upload loads through CKAN's download

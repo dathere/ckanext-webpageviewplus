@@ -141,6 +141,29 @@ groups:
           CKAN's own pages never get it. A browser sending Global Privacy
           Control (Sec-GPC: 1) gets it on every third-party view regardless.
 
+      - key: ckanext.webpageviewplus.view_counting
+        default: false
+        type: bool
+        description: |
+          Let resource editors turn on view counting per view. Counting
+          keeps per-view daily totals (impressions, seen, loaded, engaged,
+          failed) and nothing about viewers; Global Privacy Control browsers
+          and obvious bots aren't counted. Needs the plugin's tables:
+          ckan db upgrade -p webpage_view_plus.
+
+      - key: ckanext.webpageviewplus.view_counting_retention_days
+        default: 365
+        type: int
+        description: |
+          Days of daily totals to keep. ckan webpageviewplus purge-stats
+          deletes older ones (run it from cron).
+
+      - key: ckanext.webpageviewplus.privacy_policy_url
+        default: ""
+        description: |
+          The site's privacy policy, linked from the "This view counts
+          visits" notice. Required when view_counting is on.
+
       - key: ckanext.webpageviewplus.narrow_width
         default: 576
         type: int
