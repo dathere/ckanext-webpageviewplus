@@ -170,6 +170,17 @@ order now being built:
   every failure must stay the same "unknown" verdict. The header rules follow browsers:
   `frame-ancestors` overrides `X-Frame-Options`, `ALLOW-FROM` is ignored, and `SAMEORIGIN` and
   `'self'` count as blocked.
+- `health.py`: views whose page can't be shown. **Rendering never fetches**: with
+  `frameability_check` on, `resource_view_create`/`_update` are chained (`actions.py`) to probe
+  the page once after the save (`health.after_save`, `SAVE_SECONDS` overall via
+  `frameability.probe(deadline=...)`, never failing the save) and store the answer per view in
+  `webpage_view_plus_frameability` (third migration). `setup_template_variables` reads it
+  (`health.refused`): a stored `blocked` for the view's current URL, or an http page on an
+  https site (`mixed`, no setting needed), renders the "can't be embedded" card instead of the
+  frame, beating consent/Save-Data cards and view counting. `frameability.check()` (the form's
+  action) still collapses every failure to "unknown"; `probe()` keeps status and failure kind
+  for `ckan webpageviewplus check-views` (`cli.assess`), which also covers core `webpage_view`
+  views, fetches each URL once, stores answers for plus views, and exits 1 on any problem.
 - `tests/fixtures/qsv_protocol.html` speaks the qsv messages. It's uploaded to the `wvp-demo`
   dataset with three views (`data-schematic` auto, `interactive` auto, `interactive` fixed),
   for browser checks with Playwright (`uv run --with playwright`, system Chrome via

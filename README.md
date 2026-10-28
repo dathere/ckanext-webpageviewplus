@@ -30,7 +30,9 @@ origin, so anyone who opens it runs its scripts as CKAN, with their login. Stock
 | Loading | immediate | lazy; load on tap under Save-Data; optional consent card for third-party pages |
 | Controls | CKAN's Fullscreen (the view on its own page) and Embed links | the same, plus a bar under the view: Open in new tab, Fullscreen (or Expand on iPhone), Reload, Share |
 | Accessibility | generic "Webpage view" title | the view's title as accessible name, skip link, live region, reflow at 400% zoom |
+| Pages that can't be shown | a blank frame | a card saying why, with Open in new tab: http:// pages on an https:// site, and (optional) pages that refuse to be framed |
 | Editor help | none | optional warning when a page refuses to be framed |
+| Finding broken views | none | `ckan webpageviewplus check-views` lists views (core's too) whose page is gone, unreachable or refuses framing |
 | Telemetry | none | none by default; opt-in view counting and connection reports |
 | Moving over | n/a | `ckan webpageviewplus migrate` converts existing views in place |
 
@@ -103,8 +105,8 @@ sandbox and attributes, but:
 3. Add `webpage_view_plus` to `ckan.plugins` in your CKAN config file (by default
    `/etc/ckan/default/ckan.ini`). Keep `webpage_view` enabled until you've migrated.
 
-4. Create the plugin's tables (used only by opt-in view counting and connection reports, but
-   run it anyway so turning those on later just works). Run it again after every upgrade:
+4. Create the plugin's tables (used only by opt-in view counting, connection reports and the
+   frameability check, but run it anyway so turning those on later just works). Run it again after every upgrade:
 
        ckan -c /etc/ckan/default/ckan.ini db upgrade -p webpage_view_plus
 
@@ -262,6 +264,18 @@ With `ckanext.webpageviewplus.frameability_check = true`, the view form warns as
 a page URL whose site refuses to be framed (`X-Frame-Options`, or a CSP `frame-ancestors` that
 excludes your CKAN), and suggests linking to it instead. It never blocks saving.
 
+**A card instead of a blank frame.** Saving a view checks its page once more (at most 5 seconds,
+redirects included) and stores the answer. A view whose page refuses to be framed then shows a
+card, "*host* doesn't allow its pages to be shown inside other sites", with Open in new tab
+(if the site's `controls` include it), instead of the empty box browsers draw. Showing a view
+only reads the stored answer: **visitors never make CKAN fetch anything**, so a slow site can't
+hold up dataset pages. An answer counts only for the URL it was taken for, so a view whose page
+URL changed, or that was never checked, shows its frame as before. Pages that couldn't be
+checked show their frame too. Keep answers current with `check-views` (below) from cron.
+
+An `http://` page on an `https://` site gets a card too, whatever this setting: browsers block
+it as mixed content. That needs no fetch.
+
 **It makes your CKAN server request URLs that editors type**, so it's off by default. If you
 enable it, the server:
 
@@ -274,6 +288,34 @@ enable it, the server:
 Requests go out through any proxy your environment configures for Python `requests`. One known
 limit: a host whose DNS answer changes between the check and the connection (DNS rebinding)
 isn't caught, so keep internal services behind authentication as well.
+
+
+## Finding broken views
+
+`ckan webpageviewplus check-views` checks every `webpage_view_plus` and core `webpage_view` view
+and lists the ones that can't show their page:
+
+| Problem | Meaning |
+| --- | --- |
+| `refuses-embedding` | the page's `X-Frame-Options` or CSP `frame-ancestors` refuses your CKAN |
+| `gone` | the page answers 404 or 410 |
+| `http-error` | any other 4xx or 5xx answer |
+| `unreachable` | no answer: network error, timeout or more than three redirects |
+| `mixed-content` | an `http://` page on an `https://` site, which browsers block |
+| `not-http` | not an `http://` or `https://` URL |
+| `host-not-allowed` | outside `allowed_hosts` (`webpage_view_plus` views only) |
+| `unsandboxed-upload` | a core `webpage_view` framing an upload unsandboxed, as CKAN; `migrate` fixes it |
+
+It fetches each URL once per run, with the same guards as the form's check (public addresses
+only, headers only), whatever `frameability_check` is set to. Uploads and CKAN's own pages
+aren't fetched. Options: `--dataset NAME`, `--all` (every view, not just broken ones), `--json`,
+`--timeout SECONDS` (per page, default 10), `--no-store`. It exits with status 1 when any view
+has a problem, so it fits a cron job that mails its output:
+
+    0 4 * * 1  ckan -c /etc/ckan/default/ckan.ini webpageviewplus check-views
+
+It also saves each `webpage_view_plus` view's answer, which with `frameability_check` on decides
+which views show the "doesn't allow" card.
 
 
 ## Privacy and telemetry
@@ -362,7 +404,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.allowed_hosts` | empty (any) | Allow-list of hosts an external page URL may point to |
 | `ckanext.webpageviewplus.formats` | `html htm` | Resource formats the view is offered for |
 | `ckanext.webpageviewplus.controls` | `open fullscreen reload share` | Buttons in the control bar; empty hides it |
-| `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing. Makes CKAN request editor-typed URLs, see above |
+| `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing, check pages when views are saved, and show a card for those that refuse. Makes CKAN request editor-typed URLs, see above |
 | `ckanext.webpageviewplus.color_scheme` | `auto` | `light` or `dark`: the colour scheme framed pages see (Firefox only so far) |
 | `ckanext.webpageviewplus.narrow_width` | `576` | View width, in px, below which aspect and viewport heights become 80% of the screen; `0` turns it off |
 | `ckanext.webpageviewplus.privacy_profile` | `default` | `eu` puts the consent card on frames running as `external` |
@@ -379,6 +421,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | Command | Does |
 | --- | --- |
 | `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME]` | Convert `webpage_view` views, see above |
+| `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see above (cron) |
 | `ckan webpageviewplus purge-stats` | Delete view counts and reported hosts older than the retention period (cron) |
 | `ckan webpageviewplus stats-summary [--limit N]` | Site-wide view counts, busiest first |
 | `ckan webpageviewplus connections [--limit N]` | Hosts uploaded pages were seen contacting, site-wide |

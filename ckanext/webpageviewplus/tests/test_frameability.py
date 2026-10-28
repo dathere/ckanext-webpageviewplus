@@ -1,3 +1,5 @@
+import time
+
 import pytest
 import requests
 import responses
@@ -135,6 +137,50 @@ def test_too_many_redirects_is_unknown(dns):
     )
     assert fa.check("https://pages.example.com/a", CKAN)[0] == fa.UNKNOWN
     assert len(responses.calls) == fa.MAX_REDIRECTS + 1
+
+
+@responses.activate
+@pytest.mark.parametrize(
+    "status,problem", [(200, ""), (404, "gone"), (410, "gone"), (500, "http-error"), (403, "http-error")]
+)
+def test_probe_reports_status(dns, status, problem):
+    dns["pages.example.com"] = ["93.184.216.34"]
+    responses.get("https://pages.example.com/a", status=status,
+                  headers={"X-Frame-Options": "DENY"})
+    result = fa.probe("https://pages.example.com/a", CKAN)
+    assert (result.status, result.problem) == (status, problem)
+    assert result.verdict == fa.BLOCKED
+
+
+@responses.activate
+def test_probe_private_and_unreachable(dns):
+    dns["internal.example.com"] = ["10.0.0.5"]
+    dns["pages.example.com"] = ["93.184.216.34"]
+    responses.get("https://pages.example.com/a", body=requests.ConnectionError("refused"))
+    assert fa.probe("https://internal.example.com/", CKAN).problem == "private"
+    assert fa.probe("https://pages.example.com/a", CKAN).problem == "unreachable"
+
+
+@responses.activate
+def test_probe_deadline_passed_fetches_nothing(dns):
+    dns["pages.example.com"] = ["93.184.216.34"]
+    responses.get("https://pages.example.com/a")
+    result = fa.probe("https://pages.example.com/a", CKAN, deadline=time.monotonic() - 1)
+    assert result == fa.Probe(fa.UNKNOWN, problem="unreachable")
+    assert len(responses.calls) == 0
+
+
+def test_probe_timeout_bounded_by_deadline(dns, monkeypatch):
+    dns["pages.example.com"] = ["93.184.216.34"]
+    seen = {}
+
+    def get(url, **kwargs):
+        seen["timeout"] = kwargs["timeout"]
+        raise requests.Timeout()
+
+    monkeypatch.setattr(fa.requests, "get", get)
+    fa.probe("https://pages.example.com/a", CKAN, deadline=time.monotonic() + 2)
+    assert 0 < seen["timeout"] <= 2
 
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")

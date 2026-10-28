@@ -1,6 +1,19 @@
 {% asset 'webpageviewplus/webpageviewplus-css' %}
 {% asset 'webpageviewplus/webpageviewplus-js' %}
-{% if frame %}
+{% if frame and refused %}
+  {# A page browsers won't show here: a card instead of a blank frame. #}
+  <div class="webpageviewplus-card webpageviewplus-refused" data-reason="{{ refused }}">
+    <p class="webpageviewplus-card-title">{{ frame.title }}</p>
+    {% if refused == 'mixed' %}
+      <p>{{ _("This page can't be shown here: its address starts with http://, and browsers block those inside https:// sites.") }}</p>
+    {% else %}
+      <p>{{ _("{host} doesn't allow its pages to be shown inside other sites.").format(host=refused_host) }}</p>
+    {% endif %}
+    {% if 'open' in controls %}
+      <a class="btn btn-sm btn-outline-secondary" href="{{ open_url }}" target="_blank" rel="noopener noreferrer">{{ _('Open in new tab') }}</a>
+    {% endif %}
+  </div>
+{% elif frame %}
   {% set desc_id = ('webpageviewplus-desc-' ~ resource_view.id) if resource_view and resource_view.id and resource_view.description else none %}
   {# No skip link in the form's preview, which has no view id to key it on. #}
   {% set after_id = ('webpageviewplus-after-' ~ resource_view.id) if resource_view and resource_view.id else none %}

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import time
 from typing import Optional
 
 import click
@@ -7,7 +9,7 @@ import click
 import ckan.model as model
 from ckan.lib.uploader import get_resource_uploader
 
-from ckanext.webpageviewplus import content, frame, settings
+from ckanext.webpageviewplus import content, frame, frameability, health, settings
 
 SCHEMATIC_MARKER = b"qsv-schematic-source"
 # Stop scanning large uploads after this many bytes.
@@ -221,6 +223,120 @@ def connections_summary(limit: int):
     click.echo("host\tresources\treports")
     for row in rows:
         click.echo("{}\t{}\t{}".format(row["host"], row["resources"], row["reports"]))
+
+
+VIEW_TYPES = ("webpage_view_plus", "webpage_view")
+
+
+def assess(
+    view: model.ResourceView,
+    resource: model.Resource,
+    probes: dict[str, frameability.Probe],
+    timeout: float,
+    store: bool = True,
+) -> dict[str, str]:
+    """One view's problem ("" if none) and detail. Pages are fetched once
+    per URL per run (``probes``), only when public, as in the form's check."""
+    config = view.config or {}
+    page_url = config.get("page_url") or ""
+    url = page_url or resource.url or ""
+    plus = view.view_type == "webpage_view_plus"
+
+    def result(problem: str = "", detail: str = "") -> dict[str, str]:
+        return {"problem": problem, "detail": detail, "url": url}
+
+    if not page_url and resource.url_type == "upload":
+        if plus:
+            return result(detail="upload")
+        return result(
+            "unsandboxed-upload",
+            "an upload framed without a sandbox, on CKAN's own origin; "
+            "`ckan webpageviewplus migrate` fixes it",
+        )
+    if not frame.is_http_url(url):
+        return result("not-http", "only http:// and https:// pages can be framed")
+    if frame.is_ckan_host(url, settings.ckan_hosts()):
+        return result(detail="a page on this site, not fetched")
+    allowed = settings.allowed_hosts()
+    if plus and allowed and frame.url_host(url) not in allowed:
+        return result("host-not-allowed", "not in ckanext.webpageviewplus.allowed_hosts")
+    if health.mixed_content(url):
+        return result("mixed-content", "http:// page on an https:// site: browsers block it")
+    if url not in probes:
+        probes[url] = frameability.probe(
+            url, frameability.ckan_identity(settings.site_url()),
+            time.monotonic() + timeout)
+    probe = probes[url]
+    if plus and store and probe.problem != "private":
+        health.store(view.id, url, probe)
+    if probe.problem == "private":
+        return result(detail="not fetched: not a public address")
+    if probe.problem == "unreachable":
+        return result("unreachable", "no answer (network error, timeout or too many redirects)")
+    if probe.problem:
+        return result(probe.problem, "HTTP {}".format(probe.status))
+    if probe.verdict == frameability.BLOCKED:
+        return result("refuses-embedding", probe.reason)
+    return result()
+
+
+@webpageviewplus.command("check-views")
+@click.option("--dataset", help="Only this dataset (name or id).")
+@click.option("--all", "show_all", is_flag=True, help="List every view, not only broken ones.")
+@click.option("--json", "as_json", is_flag=True, help="JSON instead of tab-separated text.")
+@click.option(
+    "--timeout", default=10.0, show_default=True,
+    help="Seconds per page, redirects included.")
+@click.option(
+    "--no-store", is_flag=True,
+    help="Don't save the results (they decide which views show the "
+    "can't-be-embedded card).")
+def check_views(
+    dataset: Optional[str], show_all: bool, as_json: bool, timeout: float, no_store: bool
+):
+    """Find web page views that can't show their page.
+
+    Checks webpage_view_plus and core webpage_view views: pages that are
+    gone, unreachable, refuse to be framed or are http:// on an https://
+    site, and uploads core frames unsandboxed. Exits with status 1 if any
+    view has a problem, so it can run from cron. Results for
+    webpage_view_plus views are saved: with frameability_check on, a view
+    whose page refuses to be framed shows a card instead of a blank frame.
+    """
+    query = (
+        model.Session.query(model.ResourceView, model.Resource, model.Package)
+        .join(model.Resource, model.Resource.id == model.ResourceView.resource_id)
+        .join(model.Package, model.Package.id == model.Resource.package_id)
+        .filter(model.ResourceView.view_type.in_(VIEW_TYPES))
+        .filter(model.Resource.state == "active", model.Package.state == "active")
+        .order_by(model.Package.name, model.Resource.position, model.ResourceView.order)
+    )
+    if dataset:
+        query = query.filter(
+            (model.Package.name == dataset) | (model.Package.id == dataset))
+    probes: dict[str, frameability.Probe] = {}
+    rows = []
+    for view, resource, package in query:
+        row = assess(view, resource, probes, timeout, store=not no_store)
+        row.update(
+            dataset=package.name, resource_id=resource.id, view_id=view.id,
+            view_type=view.view_type)
+        rows.append(row)
+    broken = [r for r in rows if r["problem"]]
+    shown = rows if show_all else broken
+    if as_json:
+        click.echo(json.dumps(shown, indent=2))
+    else:
+        if shown:
+            click.echo("problem\tview_type\tdataset\tview_id\turl\tdetail")
+        for r in shown:
+            click.echo("\t".join((
+                r["problem"] or "ok", r["view_type"], r["dataset"], r["view_id"],
+                r["url"], r["detail"])))
+        click.echo("{} view(s) checked, {} with problems.".format(len(rows), len(broken)),
+                   err=True)
+    if broken:
+        raise SystemExit(1)
 
 
 def get_commands():

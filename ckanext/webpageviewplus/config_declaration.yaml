@@ -57,8 +57,11 @@ groups:
         description: |
           Warn editors, as they type a page URL, when that page refuses to be
           framed (X-Frame-Options or CSP frame-ancestors). It never blocks
-          saving. Off by default: turning it on makes the CKAN server request
-          URLs editors type, only those resolving to public addresses.
+          saving. Saving a view checks its page and stores the answer, and a
+          view whose page refuses framing then shows a card instead of a
+          blank frame (rendering never fetches). Off by default: turning it
+          on makes the CKAN server request URLs editors type, only those
+          resolving to public addresses.
 
       - key: ckanext.webpageviewplus.editor_can_loosen
         default: false

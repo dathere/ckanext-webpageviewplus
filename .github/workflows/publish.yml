@@ -37,7 +37,7 @@ jobs:
       run: |
         unzip -Z1 dist/*.whl > files.txt
         m=ckanext/webpageviewplus/migration/webpage_view_plus
-        for f in alembic.ini env.py script.py.mako versions/35c91ad0b38c_view_counts.py versions/929956801471_connections.py config_declaration.yaml; do
+        for f in alembic.ini env.py script.py.mako versions/35c91ad0b38c_view_counts.py versions/929956801471_connections.py versions/1b2e58efd947_frameability.py config_declaration.yaml; do
           case $f in config_declaration.yaml) p=ckanext/webpageviewplus/$f;; *) p=$m/$f;; esac
           grep -qx "$p" files.txt || { echo "missing from wheel: $p"; exit 1; }
         done

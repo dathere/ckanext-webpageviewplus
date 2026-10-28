@@ -11,6 +11,7 @@ from ckanext.webpageviewplus import (
     events,
     frame,
     frameability,
+    health,
     settings,
     stats,
 )
@@ -59,6 +60,28 @@ def webpageviewplus_frameability(
     if result.get("verdict") == "blocked":
         events.emit("frameability_blocked", host=frame.url_host(url))
     return result
+
+
+# Saving a view checks its page (with frameability_check on), so rendering
+# only reads the stored result and visitors never make CKAN fetch anything.
+
+
+@toolkit.chained_action
+def resource_view_create(
+    original: Any, context: Context, data_dict: dict[str, Any]
+) -> dict[str, Any]:
+    view = original(context, data_dict)
+    health.after_save(view)
+    return view
+
+
+@toolkit.chained_action
+def resource_view_update(
+    original: Any, context: Context, data_dict: dict[str, Any]
+) -> dict[str, Any]:
+    view = original(context, data_dict)
+    health.after_save(view)
+    return view
 
 
 def _counted_view(data_dict: dict[str, Any]):

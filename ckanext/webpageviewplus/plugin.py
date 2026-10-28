@@ -17,6 +17,7 @@ from ckanext.webpageviewplus import (
     content,
     downloads,
     events,
+    health,
     stats,
     frame,
     settings,
@@ -95,6 +96,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             "webpageviewplus_frameability": actions.webpageviewplus_frameability,
             "webpageviewplus_view_stats_show": actions.webpageviewplus_view_stats_show,
             "webpageviewplus_connections_show": actions.webpageviewplus_connections_show,
+            "resource_view_create": actions.resource_view_create,
+            "resource_view_update": actions.resource_view_update,
         }
 
     # IAuthFunctions
@@ -262,19 +265,27 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             endpoint = request.endpoint
             g.webpageviewplus_vary_held_back = True
         third_party = not is_upload and not frame.is_ckan_host(url, ckan_hosts)
-        consent = third_party and (
+        # A third-party page browsers won't show here (http on an https site,
+        # or its stored check found it refusing to be framed) gets a card
+        # instead of a blank frame. Only from what's already known: rendering
+        # never fetches anything (health.py).
+        refused = health.refused(resource_view.get("id"), url) if third_party else None
+        if refused:
+            events.emit("frame_refused", reason=refused, host=frame.url_host(url))
+        consent = third_party and not refused and (
             gpc
             or settings.consent_gate()
             or toolkit.asbool(resource_view.get("consent_gate"))
             or (settings.privacy_profile() == "eu" and built.preset == "external")
         )
-        held_back = "consent" if consent else ("save-data" if save_data else None)
+        held_back = "consent" if consent else (
+            "save-data" if save_data and not refused else None)
         # Opt-in view counting: impressions at render (not in the view form
         # or its preview), the rest by beacon. Rendered for every reader so a
         # cached page stays right; GPC browsers and bots are dropped here and
         # at the beacon.
         count_url = None
-        if stats.countable(resource_view) and resource_view.get("id"):
+        if stats.countable(resource_view) and resource_view.get("id") and not refused:
             count_url = toolkit.url_for(
                 "webpageviewplus_beacon.count", view_id=resource_view["id"])
             if endpoint and not endpoint.endswith(("edit_view", "new_view")) \
@@ -311,6 +322,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             deferred_src=open_url if preconnect else built.src,
             load_size=load_size,
             frame_error=None,
+            refused=refused,
+            refused_host=frame.url_host(url),
             open_url=open_url,
             controls=settings.controls(),
             show_controls=not toolkit.asbool(resource_view.get("hide_controls")),

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### New
+
+- A card instead of a blank frame for pages browsers won't show: `http://` pages on an
+  `https://` site, and, with `frameability_check` on, pages that refuse to be framed. Saving a
+  view checks its page and stores the answer; showing it only reads that, so visitors never make
+  CKAN fetch anything. Needs `ckan db upgrade -p webpage_view_plus` (a new table).
+- `ckan webpageviewplus check-views` lists `webpage_view_plus` and core `webpage_view` views
+  whose page is gone, unreachable, refuses framing or is blocked as mixed content, and exits
+  with status 1 if any are, for cron.
+
 ### Viewing
 
 - Browsers without CSS `aspect-ratio` (before Chrome 88, Firefox 89, Safari 15) or `clamp()`

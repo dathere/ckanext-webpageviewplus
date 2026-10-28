@@ -19,6 +19,7 @@ import logging
 import re
 import socket
 import time
+from dataclasses import dataclass
 from typing import Any, Mapping, Optional
 from urllib.parse import urljoin, urlsplit
 
@@ -161,28 +162,52 @@ def _public(url: str) -> bool:
     return True
 
 
-def _fetch(url: str, ckan: tuple[str, list[str], Optional[int]]) -> tuple[str, str]:
+@dataclass(frozen=True)
+class Probe:
+    """What fetching a page found. ``problem`` is "" when the page answered
+    below 400, else "gone" (404, 410), "http-error" (any other 4xx/5xx),
+    "unreachable" (network failure, timeout, too many redirects) or
+    "private" (not a public address, never fetched)."""
+
+    verdict: str
+    reason: str = ""
+    problem: str = ""
+    status: Optional[int] = None
+
+
+def probe(
+    url: str, ckan: tuple[str, list[str], Optional[int]], deadline: Optional[float] = None
+) -> Probe:
+    """Fetch ``url``'s headers (no body) and judge them. ``deadline`` is a
+    time.monotonic() value bounding the whole check, redirects included."""
     try:
-        return _fetch_unguarded(url, ckan)
+        return _probe(url, ckan, deadline)
     except Exception:  # malformed redirects etc.: one answer for every failure
         log.debug("webpageviewplus: frameability check failed", exc_info=True)
-        return UNKNOWN, ""
+        return Probe(UNKNOWN, problem="unreachable")
 
 
-def _fetch_unguarded(url: str, ckan: tuple[str, list[str], Optional[int]]) -> tuple[str, str]:
+def _probe(
+    url: str, ckan: tuple[str, list[str], Optional[int]], deadline: Optional[float]
+) -> Probe:
     for _ in range(MAX_REDIRECTS + 1):
         if not _public(url):
-            return UNKNOWN, ""
+            return Probe(UNKNOWN, problem="private")
+        timeout: float = TIMEOUT
+        if deadline is not None:
+            timeout = min(timeout, deadline - time.monotonic())
+            if timeout <= 0:
+                return Probe(UNKNOWN, problem="unreachable")
         try:
             response = requests.get(
                 url,
                 stream=True,
-                timeout=TIMEOUT,
+                timeout=timeout,
                 allow_redirects=False,
                 headers={"User-Agent": USER_AGENT},
             )
         except requests.RequestException:
-            return UNKNOWN, ""
+            return Probe(UNKNOWN, problem="unreachable")
         try:
             location = response.headers.get("Location")
             if response.is_redirect and location:
@@ -192,10 +217,24 @@ def _fetch_unguarded(url: str, ckan: tuple[str, list[str], Optional[int]]) -> tu
             # CSP separates several policies, each of them enforced.
             csp = response.headers.get("Content-Security-Policy")
             page_scheme = urlsplit(url).scheme.lower()
-            return verdict(response.headers, [csp] if csp else [], ckan, page_scheme)
+            result, reason = verdict(response.headers, [csp] if csp else [], ckan, page_scheme)
+            status = response.status_code
+            problem = ""
+            if status in (404, 410):
+                problem = "gone"
+            elif status >= 400:
+                problem = "http-error"
+            return Probe(result, reason, problem, status)
         finally:
             response.close()
-    return UNKNOWN, ""
+    return Probe(UNKNOWN, problem="unreachable")
+
+
+def _fetch(url: str, ckan: tuple[str, list[str], Optional[int]]) -> tuple[str, str]:
+    # The form's check: every failure is the same "unknown", so editors can't
+    # use it to probe which hosts or ports exist.
+    result = probe(url, ckan)
+    return result.verdict, result.reason
 
 
 def check(url: str, ckan: tuple[str, list[str], Optional[int]]) -> tuple[str, str]:
