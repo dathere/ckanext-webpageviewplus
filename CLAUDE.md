@@ -28,8 +28,9 @@ order now being built:
 4. Chromium-only extras behind settings. Done: `credentialless` (a site list of presets, applied
    at the end of `build_frame` to the preset the frame runs as, third-party pages only: uploads
    and CKAN's own pages load and reload through CKAN, which needs the visitor's session). It's
-   ignored outside Chromium, so it must never count toward the invariant. `csp` (CSP Embedded Enforcement) is undecided: in
-   Chromium it blocks any page whose server doesn't opt in.
+   ignored outside Chromium, so it must never count toward the invariant. `csp` (CSP Embedded
+   Enforcement) is deferred: in Chromium it blocks any page whose server doesn't opt in. If a site
+   asks, build a cross-browser setting adding directives to the CSP on served HTML uploads instead.
 
 ## The security model (read before touching frame, validator, content or download code)
 
