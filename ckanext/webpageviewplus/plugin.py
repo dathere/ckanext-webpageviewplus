@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
 from ckan.common import CKANConfig
+from ckan.lib.plugins import DefaultTranslation
 from ckan.types import Context
 from flask import Blueprint, Response, g, has_request_context, request
 
@@ -44,7 +45,7 @@ def vary_held_back(response: Response) -> Response:
 
 
 @toolkit.blanket.config_declarations
-class WebpageviewplusPlugin(plugins.SingletonPlugin):
+class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
     """Resource view that embeds a web page in an <iframe>, with a security
     preset per view. Runs beside CKAN core's ``webpage_view``."""
 
@@ -56,6 +57,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IActions)
     plugins.implements(plugins.IAuthFunctions)
     plugins.implements(plugins.IResourceView, inherit=True)
+    # Translations in ckanext/webpageviewplus/i18n (DefaultTranslation).
+    plugins.implements(plugins.ITranslation)
 
     # IConfigurer
 

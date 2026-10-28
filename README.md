@@ -45,7 +45,12 @@ origin](#deploying-a-content-origin).
 3. Add `webpage_view_plus` to `ckan.plugins` in your CKAN config file (by default
    `/etc/ckan/default/ckan.ini`). Keep `webpage_view` enabled until you've migrated.
 
-4. Restart CKAN. Settings are checked at startup, and an unsafe combination stops CKAN with a
+4. Create the plugin's tables (used only by opt-in view counting and connection reports, but
+   run it anyway so turning those on later just works). Run it again after every upgrade:
+
+       ckan -c /etc/ckan/default/ckan.ini db upgrade -p webpage_view_plus
+
+5. Restart CKAN. Settings are checked at startup, and an unsafe combination stops CKAN with a
    message naming the key.
 
 
@@ -77,8 +82,37 @@ qsv Data Schematics from the release after 27.0.1 do it on their own, and the vi
 their viewport and scroll requests (see the qsv wiki, Visualization#embedding). Only messages
 from the view's own frame are accepted.
 
-**Control bar.** Under each view: Open in new tab, Fullscreen and Reload. A site chooses the
-buttons with `ckanext.webpageviewplus.controls`, and editors can hide the bar per view.
+**Control bar.** Under each view: Open in new tab, Fullscreen, Reload and Share. A site chooses
+the buttons with `ckanext.webpageviewplus.controls`, and editors can hide the bar per view.
+
+- **Open in new tab** and **Reload** go through CKAN's download URL for uploads, so a private
+  upload's signed link never goes stale.
+- **Fullscreen** becomes **Expand** where the browser has no element fullscreen (iPhone
+  Safari): the view fills the screen in place, with Close and Esc to leave. While fullscreen, a
+  view that's wider than tall turns an Android phone sideways.
+- **Share** opens the browser's share sheet with the CKAN page's URL (never the framed page's),
+  where `navigator.share` exists, desktops included.
+
+**Theme.** `ckanext.webpageviewplus.color_scheme = light` (or `dark`) makes framed pages see
+that as the visitor's colour preference, so a qsv schematic matches the portal. Only Firefox
+honours it for these frames so far; the default, `auto`, leaves it to the visitor's OS.
+
+
+## Accessibility, phones and tablets
+
+- A **skip link** jumps past each frame to its controls, a polite **live region** announces
+  "*title* loaded", focus outlines and 24 px targets (44 px on touch screens) work in Windows
+  High Contrast too, and axe-core runs on every view in the browser tests.
+- **Reflow:** at 320 px wide (400% zoom), every frame is at least 600 px tall, and a view that
+  hides its bar still offers Open in new tab.
+- **Responsive height:** below `narrow_width` (576 px of view width by default), views sized by
+  aspect ratio or share of the window take 80% of the screen's height. Fixed and auto heights
+  don't change.
+- **Tap to interact:** on a touch screen, a frame taller than half the screen gets a "Tap to
+  interact" overlay, so a swipe scrolls the page instead of getting stuck in the frame. It comes
+  back once the frame has scrolled out of view.
+- **Load on tap:** when the browser asks to save data (`Save-Data: on`), a card with the
+  resource's size and a Load button stands in for the page until the reader taps it.
 
 ### Uploaded HTML downloads are sandboxed
 
@@ -178,6 +212,52 @@ limit: a host whose DNS answer changes between the check and the connection (DNS
 isn't caught, so keep internal services behind authentication as well.
 
 
+## Privacy and telemetry
+
+By default the extension sends no telemetry and adds no tracking. Every frame's `allow` list
+denies ad and tracking features (Topics, Attribution Reporting, FLEDGE), and its
+`referrerpolicy` keeps the dataset's URL from third-party pages.
+
+- **Consent card.** A third-party page can wait behind a card ("This view loads content from
+  *host*") until the reader asks, so nothing is requested from that host before. It's on with
+  `consent_gate` (for the site, or per view), with `privacy_profile = eu` for frames running as
+  `external`, and whenever the browser sends Global Privacy Control (`Sec-GPC: 1`). Uploads and
+  CKAN's own pages never get it. View pages send `Vary: Save-Data, Sec-GPC`.
+- **For a site's own analytics,** each view fires DOM events that bubble from its wrapper:
+  `webpageviewplus:loaded`, `webpageviewplus:expanded` and `webpageviewplus:failed` (a load the
+  view started, Load or Reload, that took over 15 s). The extension sends them nowhere.
+- **Server logs** for admins, on the `ckanext.webpageviewplus.events` logger, with structured
+  fields and nothing about the visitor: `view_rendered` (preset, notices),
+  `same_origin_refused`, `signature_refused` and `frameability_blocked`.
+
+### Opt-in view counting
+
+Off unless a sysadmin sets `view_counting = true` (which requires an http(s)
+`privacy_policy_url`), and then only for views whose editors tick "Count visits". A counted view
+says "This view counts visits", linking to the privacy policy.
+
+- **What's counted:** impressions when the view is rendered, then one beacon per page load
+  saying whether the view was seen (half on screen for a second), loaded, used (Load, the bar's
+  buttons, tapping through) or failed. Only per-view daily totals are stored: no IP, user, user
+  agent or referrer. Browsers sending Global Privacy Control, and obvious bots, aren't counted.
+- **Where to see them:** the view's edit form (last 30 days), the
+  `webpageviewplus_view_stats_show` action (for anyone who can edit the resource), and
+  `ckan webpageviewplus stats-summary`.
+- **Retention:** run `ckan webpageviewplus purge-stats` daily from cron; it deletes totals
+  older than `view_counting_retention_days` (365).
+- Anyone can post to the beacon endpoint, so totals can be inflated: treat them as indicative.
+
+### What uploaded pages contact
+
+With `connection_reports = true` (off by default: each report request is a database write) and
+a content origin, uploaded pages are served with a `Content-Security-Policy-Report-Only`
+header, which never blocks anything. Browsers report each fetch from another host (map tiles, a
+CDN) back to the content origin, and CKAN keeps just the hosts per resource. Read them with the
+`webpageviewplus_connections_show` action or `ckan webpageviewplus connections`;
+`show_connections = true` also lists them under the view as "This page connects to". Anyone can
+post a report, so the list is a hint, not proof.
+
+
 ## Migrating from webpage_view
 
 `ckan webpageviewplus migrate` converts `webpage_view` views in place, keeping their id, title,
@@ -215,8 +295,32 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.site_aliases` | empty | Other hosts this CKAN is reachable under; treated as CKAN's own |
 | `ckanext.webpageviewplus.allowed_hosts` | empty (any) | Allow-list of hosts an external page URL may point to |
 | `ckanext.webpageviewplus.formats` | `html htm` | Resource formats the view is offered for |
-| `ckanext.webpageviewplus.controls` | `open fullscreen reload` | Buttons in the control bar; empty hides it |
-| `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing. Makes CKAN request editor-typed URLs, see below |
+| `ckanext.webpageviewplus.controls` | `open fullscreen reload share` | Buttons in the control bar; empty hides it |
+| `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing. Makes CKAN request editor-typed URLs, see above |
+| `ckanext.webpageviewplus.color_scheme` | `auto` | `light` or `dark`: the colour scheme framed pages see (Firefox only so far) |
+| `ckanext.webpageviewplus.narrow_width` | `576` | View width, in px, below which aspect and viewport heights become 80% of the screen; `0` turns it off |
+| `ckanext.webpageviewplus.privacy_profile` | `default` | `eu` puts the consent card on frames running as `external` |
+| `ckanext.webpageviewplus.consent_gate` | `false` | Consent card on every third-party view (editors can also turn it on per view) |
+| `ckanext.webpageviewplus.view_counting` | `false` | Let editors turn on view counting per view |
+| `ckanext.webpageviewplus.view_counting_retention_days` | `365` | Days of daily totals (and reported hosts) `purge-stats` keeps |
+| `ckanext.webpageviewplus.privacy_policy_url` | empty | Linked from "This view counts visits"; required with `view_counting` |
+| `ckanext.webpageviewplus.connection_reports` | `false` | Report which hosts uploaded pages contact (needs a content origin) |
+| `ckanext.webpageviewplus.show_connections` | `false` | Show those hosts under the view |
+
+
+## Commands and API
+
+| Command | Does |
+| --- | --- |
+| `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME]` | Convert `webpage_view` views, see above |
+| `ckan webpageviewplus purge-stats` | Delete view counts and reported hosts older than the retention period (cron) |
+| `ckan webpageviewplus stats-summary [--limit N]` | Site-wide view counts, busiest first |
+| `ckan webpageviewplus connections [--limit N]` | Hosts uploaded pages were seen contacting, site-wide |
+
+API actions: `webpageviewplus_frameability` (`url`, `resource_id`; for those who may add views),
+`webpageviewplus_view_stats_show` (`id` of a view, optional `days`) and
+`webpageviewplus_connections_show` (`id` of a resource), both for those who may update the
+resource.
 
 
 ## Developer installation
@@ -238,7 +342,11 @@ To run the tests, do:
 
 `test.ini` inherits from `/srv/app/src/ckan/test-core.ini`, the path in the
 `ckan/ckan-dev` Docker images used by CI. Elsewhere, edit its `use = config:` line
-to point at your CKAN checkout's `test-core.ini`.
+to point at your CKAN checkout's `test-core.ini`. The tests create the plugin's tables
+themselves (CKAN's fixtures drop them when they reset the test database).
+
+`browser_tests/` drives a running CKAN with Playwright in Chromium, Firefox and WebKit; see
+`.github/workflows/test.yml` for how CI starts and seeds one.
 
 
 ## Releasing a new version of ckanext-webpageviewplus
@@ -267,11 +375,14 @@ If ckanext-webpageviewplus should be available on PyPI you can follow these step
        git push
 
 6. Tag the new release of the project on GitHub with the version number from
-   the `setup.py` file. For example if the version number in `setup.py` is
-   0.0.1 then do:
+   `pyproject.toml`. For example if the version number is 0.1.0 then do:
 
-       git tag 0.0.1
+       git tag 0.1.0
        git push --tags
+
+Before releasing, refresh the translation template (`python setup.py extract_messages`,
+which writes `ckanext/webpageviewplus/i18n/ckanext-webpageviewplus.pot`) and add new entries
+to `CHANGELOG.md`.
 
 ## License
 

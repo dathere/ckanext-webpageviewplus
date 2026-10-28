@@ -1,6 +1,6 @@
 include README.md
 include LICENSE
 include requirements.txt
-recursive-include ckanext/webpageviewplus *.html *.json *.js *.less *.css *.mo *.yml *.yaml
+recursive-include ckanext/webpageviewplus *.html *.json *.js *.less *.css *.mo *.po *.pot *.yml *.yaml
 recursive-include ckanext/webpageviewplus/migration *.ini *.py *.mako
 recursive-include ckanext/webpageviewplus/public *.*
