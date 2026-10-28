@@ -71,27 +71,32 @@
     var shield = wrapper && wrapper.querySelector("[data-webpageviewplus-shield]");
     if (!shield || !coarse || !window.IntersectionObserver) return;
     var iframe = state.iframe;
-    function place() {
-      shield.style.top = iframe.offsetTop + "px";
-      shield.style.height = iframe.offsetHeight + "px";
-    }
-    function arm() {
-      if (!coarse.matches || iframe.offsetHeight <= window.innerHeight / 2) return;
-      place();
-      shield.hidden = false;
+    // The reader tapped through; cleared once the frame leaves the viewport.
+    var dismissed = false;
+    function update() {
+      var eligible = coarse.matches && iframe.offsetHeight > window.innerHeight / 2;
+      if (eligible && !dismissed) {
+        shield.style.top = iframe.offsetTop + "px";
+        shield.style.height = iframe.offsetHeight + "px";
+      }
+      shield.hidden = !eligible || dismissed;
     }
     shield.addEventListener("click", function () {
-      shield.hidden = true;
+      dismissed = true;
+      update();
     });
     new IntersectionObserver(function (entries) {
-      if (!entries[entries.length - 1].isIntersecting) arm();
+      if (!entries[entries.length - 1].isIntersecting) {
+        dismissed = false;
+        update();
+      }
     }).observe(iframe);
-    if (window.ResizeObserver) {
-      new ResizeObserver(function () {
-        if (!shield.hidden) place();
-      }).observe(iframe);
-    }
-    arm();
+    // Eligibility changes with the frame's height and the window's (e.g. a
+    // phone turned sideways).
+    if (window.ResizeObserver) new ResizeObserver(update).observe(iframe);
+    window.addEventListener("resize", update);
+    if (coarse.addEventListener) coarse.addEventListener("change", update);
+    update();
   }
 
   // The view's live region says when its page has loaded. A frame that

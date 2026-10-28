@@ -188,3 +188,31 @@ def test_no_shield_with_a_mouse(page, view_urls):
     page.goto(view_urls["Interactive fixed 700"])
     page.locator('[data-webpageviewplus-action="reload"]').wait_for()
     expect(page.locator(SHIELD)).to_be_hidden()
+
+
+def test_shield_follows_threshold_but_not_after_a_tap(touch_page, view_urls):
+    """Turning the phone sideways makes a 300px frame taller than half the
+    screen; turning it back takes the shield away. A tap is remembered
+    across resizes until the frame leaves the viewport."""
+    page = touch_page
+    page.goto(view_urls["Interactive fixed 300"])
+    _coarse(page)
+    page.locator('[data-webpageviewplus-action="reload"]').wait_for()
+    page.locator(FRAME).scroll_into_view_if_needed()
+    shield = page.locator(SHIELD)
+    expect(shield).to_be_hidden()
+
+    page.set_viewport_size({"width": 844, "height": 390})
+    page.locator(FRAME).scroll_into_view_if_needed()
+    expect(shield).to_be_visible()
+    page.set_viewport_size({"width": 390, "height": 844})
+    expect(shield).to_be_hidden()
+
+    page.set_viewport_size({"width": 844, "height": 390})
+    page.locator(FRAME).scroll_into_view_if_needed()
+    expect(shield).to_be_visible()
+    shield.tap()
+    expect(shield).to_be_hidden()
+    page.set_viewport_size({"width": 845, "height": 391})
+    page.wait_for_timeout(300)
+    expect(shield).to_be_hidden()
