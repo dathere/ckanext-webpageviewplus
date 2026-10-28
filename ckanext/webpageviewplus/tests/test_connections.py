@@ -58,6 +58,7 @@ def _hosts(resource):
     (_reports("inline", "eval", "data", "https://usercontent.example.net/a.js"), []),
     (_reports("javascript:alert(1)", "https://%65vil.example/", "https://a@b.example/"), []),
     (b"not json", []),
+    (_reports("https://[", "https://cdn.example.org/x.js", "http://[::1"), ["cdn.example.org"]),
     (_reports(*["https://h{}.example.com/".format(i) for i in range(50)]),
      ["h{}.example.com".format(i) for i in range(connections.MAX_HOSTS)]),
 ])
@@ -102,6 +103,33 @@ class TestReports:
         assert app.post(path, data=_reports("https://cdn.example.org/x.js"), status=404,
                         headers={"Content-Type": "application/reports+json"}).status_code == 404
         assert _hosts(resource) == []
+
+    def test_malformed_report_is_a_quiet_204(self, app):
+        """Same answer whether or not the resource exists, and the valid
+        entries still count."""
+        _, resource = _upload()
+        body = _reports("https://[", "https://cdn.example.org/x.js")
+        for rid in (resource["id"], "nope"):
+            report = "{}/webpageviewplus/report/{}".format(CONTENT, rid)
+            assert _post(app, report, body).status_code == 204
+        assert _hosts(resource) == ["cdn.example.org"]
+
+    def test_purge_keeps_recent_hosts(self, app):
+        import datetime
+        from ckan import model
+
+        _, resource = _upload()
+        old = datetime.date.today() - datetime.timedelta(days=400)
+        with model.meta.engine.begin() as connection:
+            connection.execute(connections.table.insert(), [
+                {"resource_id": resource["id"], "host": "stale.example", "reports": 3,
+                 "last_seen": old},
+                {"resource_id": resource["id"], "host": "refreshed.example", "reports": 1,
+                 "last_seen": old},
+            ])
+        connections.record(resource["id"], ["refreshed.example", "recent.example"])
+        assert connections.purge(365) >= 1
+        assert sorted(_hosts(resource)) == ["recent.example", "refreshed.example"]
 
     def test_unknown_resource_and_oversized_body(self, app):
         report = "{}/webpageviewplus/report/nope".format(CONTENT)

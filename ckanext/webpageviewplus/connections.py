@@ -82,11 +82,16 @@ def hosts_in(body: bytes, own_host: str) -> list[str]:
     for url in _blocked_urls(payload):
         if not isinstance(url, str):
             continue
-        parts = urlsplit(url.strip())
-        scheme = SCHEMES.get(parts.scheme.lower())
-        if not scheme:
+        try:
+            parts = urlsplit(url.strip())
+            scheme = SCHEMES.get(parts.scheme.lower())
+            if not scheme:
+                continue
+            host = frame.url_host(parts._replace(scheme=scheme).geturl())
+        except ValueError:
+            # A malformed URL (e.g. "https://[") is skipped, never an error:
+            # a 500 for real resources only would reveal which exist.
             continue
-        host = frame.url_host(parts._replace(scheme=scheme).geturl())
         if host and host != own_host and host not in hosts:
             hosts.append(host)
         if len(hosts) >= MAX_HOSTS:
