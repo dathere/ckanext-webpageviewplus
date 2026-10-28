@@ -20,6 +20,18 @@ def _open(page, view_urls, title):
     # The fixture prints the viewport height once the parent has sent it,
     # so by then both sides of the protocol are running.
     child.locator("#viewport").filter(has_text="px").wait_for()
+    view = page.locator(FRAME)
+    if view.get_attribute("data-height-mode") == "auto":
+        # Its height reports are async too: wait until the view has applied
+        # the content height the fixture measures, within the view's bounds.
+        content = child.locator("body").evaluate(
+            "b => { const s = getComputedStyle(b); return Math.ceil(b.offsetHeight"
+            " + parseFloat(s.marginTop) + parseFloat(s.marginBottom)); }"
+        )
+        low = int(view.get_attribute("data-min-height"))
+        high = int(view.get_attribute("data-max-height"))
+        expected = min(max(content, low), high)
+        _wait_height(page, expected - 1, expected + 1)
     return child
 
 
