@@ -60,7 +60,7 @@ def test_fullscreen(page, view_urls):
     open_view(page, view_urls, "Interactive fixed 300")
     button = page.locator('[data-webpageviewplus-action="fullscreen"]')
     if not page.evaluate("document.fullscreenEnabled"):
-        assert button.is_hidden()
+        expect(button).to_have_text("Expand")  # tested in test_phones.py
         pytest.skip("no element fullscreen in this browser")
     assert button.get_attribute("aria-pressed") == "false"
 

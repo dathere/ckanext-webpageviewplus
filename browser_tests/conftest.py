@@ -59,6 +59,14 @@ def browser(request, playwright):
 @pytest.fixture
 def page(browser):
     context = browser.new_context(viewport={"width": 1280, "height": 800})
+    # The dev site's Flask debug toolbar covers controls on narrow screens.
+    context.add_init_script("""
+        if (window.top === window) document.addEventListener("DOMContentLoaded", () => {
+            const s = document.createElement("style");
+            s.textContent = "#flDebug, #flDebugToolbarHandle { display: none !important; }";
+            document.head.append(s);
+        });
+    """)
     page = context.new_page()
     page.errors = []
     page.on("pageerror", lambda error: page.errors.append(str(error)))

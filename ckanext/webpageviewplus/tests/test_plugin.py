@@ -454,6 +454,26 @@ class TestControlBar:
         assert 'role="toolbar"' not in body
         assert "Open in new tab" not in body
 
+    def test_expand_fallback_and_close(self, app):
+        body = _render(app, {})
+        assert 'data-webpageviewplus-action="fullscreen" data-expand-label="Expand"' in body
+        assert 'data-webpageviewplus-action="close" hidden>Close</button>' in body
+
+    def test_share_sends_the_ckan_page(self, app):
+        body = _render(app, {})
+        match = re.search(
+            r'data-webpageviewplus-action="share" data-share-url="([^"]+)" '
+            r'data-share-title="Report" hidden>Share</button>', body)
+        assert match
+        url = match.group(1).replace("&amp;", "&")
+        assert url.startswith("http") and "/resource/" in url and "view_id=" in url
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.controls", "open reload")
+    def test_share_and_expand_follow_the_site_list(self, app):
+        body = _render(app, {})
+        assert 'data-webpageviewplus-action="share"' not in body
+        assert 'data-webpageviewplus-action="close"' not in body
+
     def test_one_open_link_with_bar(self, app):
         body = _render(app, {})
         assert body.count("Open in new tab") == 1

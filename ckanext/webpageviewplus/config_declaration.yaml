@@ -116,11 +116,14 @@ groups:
           may point to. Empty allows any host.
 
       - key: ckanext.webpageviewplus.controls
-        default: open fullscreen reload
+        default: open fullscreen reload share
         type: list
         description: |
           Buttons in the control bar under each view, from: open (in a new
-          tab), fullscreen, reload. Empty hides the bar on every view.
+          tab), fullscreen (Expand where the browser has no element
+          fullscreen, e.g. iPhone Safari), reload, share (the CKAN page's
+          URL, via the browser's share sheet; shown only where
+          navigator.share exists). Empty hides the bar on every view.
 
       - key: ckanext.webpageviewplus.color_scheme
         default: auto

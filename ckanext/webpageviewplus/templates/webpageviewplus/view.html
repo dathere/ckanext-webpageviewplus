@@ -38,10 +38,18 @@
         {% endif %}
         {# Shown by the script once it knows they work. #}
         {% if 'fullscreen' in controls %}
-          <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-action="fullscreen" aria-pressed="false" hidden>{{ _('Fullscreen') }}</button>
+          {# Without element fullscreen (iPhone Safari) the script relabels it
+             Expand: the view then fills the viewport in place. #}
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-action="fullscreen" data-expand-label="{{ _('Expand') }}" aria-pressed="false" hidden>{{ _('Fullscreen') }}</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-action="close" hidden>{{ _('Close') }}</button>
         {% endif %}
         {% if 'reload' in controls %}
           <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-action="reload" data-reload-url="{{ open_url }}" hidden>{{ _('Reload') }}</button>
+        {% endif %}
+        {# Shares the CKAN page, not the frame's URL. Shown where
+           navigator.share exists. #}
+        {% if 'share' in controls and share_url %}
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-action="share" data-share-url="{{ share_url }}" data-share-title="{{ frame.title }}" hidden>{{ _('Share') }}</button>
         {% endif %}
       </div>
     {% elif 'open' in controls %}

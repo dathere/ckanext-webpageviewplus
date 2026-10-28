@@ -156,20 +156,98 @@
     return null;
   }
 
+  var lockedOrientation = false;
+
   function toggleFullscreen(wrapper) {
     if (document.fullscreenElement === wrapper) {
       document.exitFullscreen();
-    } else if (wrapper.requestFullscreen) {
-      wrapper.requestFullscreen();
+      return;
     }
+    // Measured before fullscreen, which makes every frame screen-shaped.
+    var rect = wrapper.querySelector(".webpageviewplus-frame").getBoundingClientRect();
+    wrapper.setAttribute("data-wide", String(rect.width > rect.height));
+    wrapper.requestFullscreen();
   }
 
   function onFullscreenChange() {
+    var full = document.fullscreenElement;
     var buttons = document.querySelectorAll('[data-webpageviewplus-action="fullscreen"]');
     for (var i = 0; i < buttons.length; i++) {
-      var wrapper = buttons[i].closest(".webpageviewplus");
-      buttons[i].setAttribute(
-        "aria-pressed", String(document.fullscreenElement === wrapper));
+      if (buttons[i].hasAttribute("aria-pressed")) {
+        buttons[i].setAttribute(
+          "aria-pressed", String(full === buttons[i].closest(".webpageviewplus")));
+      }
+    }
+    // Wide views turn the phone sideways (Android; iOS has no lock).
+    var orientation = window.screen && screen.orientation;
+    if (full && full.classList.contains("webpageviewplus") &&
+        full.getAttribute("data-wide") === "true" && orientation && orientation.lock) {
+      orientation.lock("landscape").then(function () {
+        lockedOrientation = true;
+      }, function () {});
+    } else if (!full && lockedOrientation) {
+      lockedOrientation = false;
+      try { orientation.unlock(); } catch (e) { /* not supported */ }
+    }
+  }
+
+  // Expand: where there's no element fullscreen (iPhone Safari), the view
+  // fills the viewport in place. The frame isn't moved, which would reload it.
+  var expanded = null;
+
+  function expand(wrapper, opener) {
+    if (expanded) return;
+    var iframe = wrapper.querySelector(".webpageviewplus-frame");
+    expanded = {wrapper: wrapper, opener: opener};
+    wrapper.classList.add("webpageviewplus-expanded");
+    wrapper.setAttribute("role", "dialog");
+    wrapper.setAttribute("aria-modal", "true");
+    wrapper.setAttribute("aria-label", iframe ? iframe.title : "");
+    document.documentElement.classList.add("webpageviewplus-noscroll");
+    var close = wrapper.querySelector('[data-webpageviewplus-action="close"]');
+    if (close) {
+      close.hidden = false;
+      close.focus();
+    }
+  }
+
+  function collapse() {
+    if (!expanded) return;
+    var wrapper = expanded.wrapper;
+    var opener = expanded.opener;
+    expanded = null;
+    wrapper.classList.remove("webpageviewplus-expanded");
+    wrapper.removeAttribute("role");
+    wrapper.removeAttribute("aria-modal");
+    wrapper.removeAttribute("aria-label");
+    document.documentElement.classList.remove("webpageviewplus-noscroll");
+    var close = wrapper.querySelector('[data-webpageviewplus-action="close"]');
+    if (close) close.hidden = true;
+    if (opener) opener.focus();
+  }
+
+  function onControl(event) {
+    var target = event.currentTarget;
+    var wrapper = target.closest(".webpageviewplus");
+    if (!wrapper) return;
+    var action = target.getAttribute("data-webpageviewplus-action");
+    if (action === "fullscreen") {
+      if (document.fullscreenEnabled) toggleFullscreen(wrapper);
+      else expand(wrapper, target);
+    } else if (action === "close") {
+      collapse();
+    } else if (action === "share") {
+      navigator.share({
+        title: target.getAttribute("data-share-title") || undefined,
+        url: target.getAttribute("data-share-url")
+      }).catch(function () { /* cancelled */ });
+    } else if (action === "reload") {
+      var state = stateForWrapper(wrapper);
+      var url = target.getAttribute("data-reload-url");
+      if (state && url) {
+        state.height = null;
+        state.iframe.src = url;
+      }
     }
   }
 
@@ -178,26 +256,27 @@
     for (var i = 0; i < buttons.length; i++) {
       var button = buttons[i];
       var action = button.getAttribute("data-webpageviewplus-action");
-      // iPhone Safari has no element fullscreen: leave the button hidden.
-      if (action === "fullscreen" && !document.fullscreenEnabled) continue;
-      button.hidden = false;
-      button.addEventListener("click", function (event) {
-        var target = event.currentTarget;
-        var wrapper = target.closest(".webpageviewplus");
-        if (!wrapper) return;
-        if (target.getAttribute("data-webpageviewplus-action") === "fullscreen") {
-          toggleFullscreen(wrapper);
-          return;
-        }
-        var state = stateForWrapper(wrapper);
-        var url = target.getAttribute("data-reload-url");
-        if (state && url) {
-          state.height = null;
-          state.iframe.src = url;
-        }
-      });
+      if (action === "share" && !navigator.share) continue;
+      if (action === "fullscreen" && !document.fullscreenEnabled) {
+        // It opens a dialog rather than toggling.
+        button.textContent = button.getAttribute("data-expand-label");
+        button.removeAttribute("aria-pressed");
+        button.setAttribute("aria-haspopup", "dialog");
+      }
+      button.addEventListener("click", onControl);
+      // Close appears only while expanded.
+      if (action !== "close") button.hidden = false;
     }
     document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("keydown", function (event) {
+      if (expanded && event.key === "Escape") collapse();
+    });
+    // Keep keyboard focus inside the expanded view.
+    document.addEventListener("focusin", function (event) {
+      if (!expanded || expanded.wrapper.contains(event.target)) return;
+      var close = expanded.wrapper.querySelector('[data-webpageviewplus-action="close"]');
+      if (close) close.focus();
+    });
   }
 
   // View form: warn as the editor types a page URL that refuses framing.

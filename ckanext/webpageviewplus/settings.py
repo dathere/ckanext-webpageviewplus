@@ -60,7 +60,7 @@ def allowed_hosts() -> list[str]:
     return [h for h in _hosts_setting("allowed_hosts") if h]
 
 
-CONTROLS = ("open", "fullscreen", "reload")
+CONTROLS = ("open", "fullscreen", "reload", "share")
 
 
 def controls() -> list[str]:

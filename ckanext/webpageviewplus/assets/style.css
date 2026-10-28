@@ -80,14 +80,14 @@
 /* Reflow (WCAG 1.4.10): at a 320px width, which is 400% zoom on a
    1280px screen, content framed in a short box turns into a small nested
    scroll area, so every height mode gets a tall floor. 600px matches
-   FALLBACK_HEIGHT in frame.py. Not in fullscreen, where the frame fills the
-   screen instead. */
+   FALLBACK_HEIGHT in frame.py. Not in fullscreen or Expand, where the frame
+   fills the screen instead. */
 .webpageviewplus-narrow-open {
   display: none;
 }
 
 @media (max-width: 320px) {
-  .webpageviewplus:not(:fullscreen) .webpageviewplus-frame {
+  .webpageviewplus:not(:fullscreen):not(.webpageviewplus-expanded) .webpageviewplus-frame {
     min-height: 600px;
   }
 
@@ -119,4 +119,33 @@
   flex: 1;
   height: auto !important;
   aspect-ratio: auto !important;
+}
+
+/* Expand, the fallback where there's no element fullscreen (iPhone
+   Safari): the view fills the viewport in place. dvh keeps it clear of the
+   address bar; the safe-area insets are 0 unless the site's viewport meta
+   has viewport-fit=cover. No transition. */
+.webpageviewplus-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  margin: 0;
+  padding: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right))
+    max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+  background: Canvas;
+}
+
+.webpageviewplus-expanded .webpageviewplus-frame {
+  flex: 1;
+  height: auto !important;
+  aspect-ratio: auto !important;
+}
+
+.webpageviewplus-noscroll,
+.webpageviewplus-noscroll body {
+  overflow: hidden;
 }

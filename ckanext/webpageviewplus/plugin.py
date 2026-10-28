@@ -190,9 +190,22 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             title=resource_view.get("title") or toolkit._("Embedded web page"),
             credentialless_presets=settings.credentialless_presets(),
         )
+        # Share sends the CKAN page showing this view (none in the form's
+        # preview, which has no view id yet).
+        share_url = None
+        if resource_view.get("id"):
+            package = data_dict.get("package") or {}
+            share_url = toolkit.url_for(
+                "{}_resource.read".format(package.get("type") or "dataset"),
+                id=package.get("name") or resource.get("package_id"),
+                resource_id=resource.get("id"),
+                view_id=resource_view["id"],
+                qualified=True,
+            )
         return dict(
             form_vars,
             frame=built,
+            share_url=share_url,
             frame_error=None,
             open_url=open_url,
             controls=settings.controls(),
