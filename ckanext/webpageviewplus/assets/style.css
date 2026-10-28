@@ -21,6 +21,7 @@
 }
 
 .webpageviewplus-controls .btn:focus-visible,
+.webpageviewplus-card [data-webpageviewplus-load]:focus-visible,
 .webpageviewplus-narrow-open:focus-visible,
 .webpageviewplus-skip:focus-visible {
   outline: 3px solid currentColor;
@@ -92,6 +93,22 @@
   aspect-ratio: auto !important;
 }
 
+/* Load on tap (Save-Data): the card stands in for the frame. */
+.webpageviewplus-card {
+  padding: 1rem;
+  border: 1px dashed currentColor;
+  border-radius: 4px;
+}
+
+.webpageviewplus-card-title {
+  margin: 0 0 0.25rem;
+  font-weight: bold;
+}
+
+.webpageviewplus-card [data-webpageviewplus-load] {
+  min-height: 24px;
+}
+
 /* Tap to interact: over the frame (the script sets its top and height),
    so a swipe scrolls the page instead of the framed page. */
 .webpageviewplus-shield {
@@ -151,6 +168,7 @@
 
 @media (pointer: coarse) {
   .webpageviewplus-controls .btn,
+  .webpageviewplus-card [data-webpageviewplus-load],
   .webpageviewplus-narrow-open {
     min-height: 44px;
     min-width: 44px;

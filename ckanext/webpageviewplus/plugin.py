@@ -7,6 +7,7 @@ import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
 from ckan.common import CKANConfig
 from ckan.types import Context
+from flask import Blueprint, Response, g, has_request_context, request
 
 from ckanext.webpageviewplus import (
     actions,
@@ -23,6 +24,18 @@ ignore_empty = toolkit.get_validator("ignore_empty")
 ignore_missing = toolkit.get_validator("ignore_missing")
 boolean_validator = toolkit.get_validator("boolean_validator")
 unicode_safe = toolkit.get_validator("unicode_safe")
+
+
+# Pages that render a view vary by Save-Data (load on tap), so a cache
+# mustn't serve one reader's card or frame to another.
+vary = Blueprint("webpageviewplus_vary", __name__)
+
+
+@vary.after_app_request
+def vary_save_data(response: Response) -> Response:
+    if g.get("webpageviewplus_vary_save_data"):
+        response.vary.add("Save-Data")
+    return response
 
 
 @toolkit.blanket.config_declarations
@@ -56,7 +69,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
     def get_blueprint(self):
         # The content route is always registered; it answers only on the
         # content origin's host, and only when one is configured.
-        return [downloads.hardening, content.content]
+        return [downloads.hardening, content.content, vary]
 
     # IActions
 
@@ -202,10 +215,23 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
                 view_id=resource_view["id"],
                 qualified=True,
             )
+        # Load on tap: only when the browser asks to save data. The page then
+        # varies by that header, which caches must know (vary_save_data).
+        load_on_tap = False
+        if has_request_context():
+            load_on_tap = request.headers.get("Save-Data", "").strip().lower() == "on"
+            g.webpageviewplus_vary_save_data = True
+        try:
+            size = int(resource.get("size") or 0)
+        except (TypeError, ValueError):
+            size = 0
+        load_size = toolkit.h.localised_filesize(size) if size > 0 else None
         return dict(
             form_vars,
             frame=built,
             share_url=share_url,
+            load_on_tap=load_on_tap,
+            load_size=load_size,
             frame_error=None,
             open_url=open_url,
             controls=settings.controls(),

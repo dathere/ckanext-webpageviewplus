@@ -3,11 +3,13 @@ fullscreen, as on iPhone Safari), Share, and the landscape lock in
 fullscreen. Browser APIs a desktop engine has (or lacks) are replaced by
 init scripts in the top window only.
 """
+import re
+
 import pytest
 from axe_playwright_python.sync_playwright import Axe
 from playwright.sync_api import expect
 
-from wvp_helpers import FRAME, click_in_frame, open_view
+from wvp_helpers import FRAME, click_in_frame, open_view, wait_content_height
 
 NARROW = {"width": 320, "height": 200}
 NO_FULLSCREEN = """
@@ -216,3 +218,22 @@ def test_shield_follows_threshold_but_not_after_a_tap(touch_page, view_urls):
     page.set_viewport_size({"width": 845, "height": 391})
     page.wait_for_timeout(300)
     expect(shield).to_be_hidden()
+
+
+def test_load_on_tap_with_save_data(page, view_urls):
+    """With Save-Data: on, a card stands in for the frame until the reader
+    asks; the loaded frame then works like any other (here: auto height)."""
+    page.set_extra_http_headers({"Save-Data": "on"})
+    page.goto(view_urls["Interactive auto"])
+    card = page.locator("[data-webpageviewplus-card]")
+    expect(card).to_be_visible()
+    assert page.locator(FRAME).count() == 0
+    load = page.locator("[data-webpageviewplus-load]")
+    expect(load).to_have_text(re.compile(r"^Load \(.+\)$"))
+
+    load.click()
+    expect(card).to_have_count(0)
+    child = page.frame_locator(FRAME)
+    child.locator("#viewport").filter(has_text="px").wait_for()
+    wait_content_height(page, child)
+    expect(page.locator(FRAME)).to_be_focused()

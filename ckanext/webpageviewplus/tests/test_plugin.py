@@ -543,6 +543,38 @@ class TestModernExtras:
     def test_color_scheme_off_by_default(self, app):
         assert "color-scheme" not in _render(app, {})
 
+    def _page(self, app, headers=None, **resource_fields):
+        dataset = factories.Dataset()
+        resource = factories.Resource(
+            package_id=dataset["id"], url="https://pages.example.com/a.html",
+            **resource_fields)
+        _view(factories.Sysadmin(), resource["id"])
+        return app.get(
+            url_for("{}_resource.read".format(dataset["type"]), id=dataset["name"],
+                    resource_id=resource["id"]),
+            headers=headers or {})
+
+    def test_frame_without_save_data(self, app):
+        response = self._page(app)
+        assert "<iframe" in response.body
+        assert "data-webpageviewplus-card" not in response.body
+        assert "Save-Data" in response.headers.get("Vary", "")
+
+    def test_load_on_tap_with_save_data(self, app):
+        response = self._page(app, headers={"Save-Data": "on"}, size=5 * 1024 * 1024)
+        body = response.body
+        assert "data-webpageviewplus-card" in body
+        assert re.search(r"data-webpageviewplus-load>Load \([^)]+\)</button>", body)
+        # The frame waits in a template, so it isn't loaded.
+        template = body[body.index("<template data-webpageviewplus-stage>"):]
+        assert template.index("<iframe") < template.index("</template>")
+        assert body.count("<iframe") == 1
+        assert "Save-Data" in response.headers.get("Vary", "")
+
+    def test_load_on_tap_without_size(self, app):
+        body = self._page(app, headers={"Save-Data": "on"}).body
+        assert "data-webpageviewplus-load>Load</button>" in body
+
     def test_narrow_width_default(self, app):
         assert '<div class="webpageviewplus" data-narrow-width="576">' in _render(app, {})
 

@@ -7,8 +7,9 @@
   <div class="webpageviewplus"{% if narrow_width %} data-narrow-width="{{ narrow_width }}"{% endif %}>
     {# Warms the connection before the (lazy) frame needs it. Frame
        navigation isn't CORS, so no crossorigin. #}
-    {% if preconnect %}<link rel="preconnect" href="{{ preconnect }}">{% endif %}
+    {% if preconnect and not load_on_tap %}<link rel="preconnect" href="{{ preconnect }}">{% endif %}
     {% if after_id %}<a class="webpageviewplus-skip" href="#{{ after_id }}">{{ _('Skip embedded content') }}</a>{% endif %}
+    {% set stage %}
     {# Touch screens, frames taller than half the screen: lets the page scroll
        past the frame until the reader taps it. Shown by the script. #}
     <button type="button" class="webpageviewplus-shield" data-webpageviewplus-shield
@@ -29,6 +30,21 @@
             data-min-height="{{ frame.min_height }}"
             data-max-height="{{ frame.max_height }}"
             {% if desc_id %}aria-describedby="{{ desc_id }}"{% endif %}></iframe>
+    {% endset %}
+    {% if load_on_tap %}
+      {# The browser asked to save data: a card instead of the page, which
+         the script loads from the template on request. #}
+      <div class="webpageviewplus-card" data-webpageviewplus-card>
+        <p class="webpageviewplus-card-title">{{ frame.title }}</p>
+        <p class="text-muted">{{ _('Not loaded, to save data.') }}</p>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-load>
+          {%- if load_size %}{{ _('Load ({size})').format(size=load_size) }}{% else %}{{ _('Load') }}{% endif -%}
+        </button>
+      </div>
+      <template data-webpageviewplus-stage>{{ stage }}</template>
+    {% else %}
+      {{ stage }}
+    {% endif %}
     {% if desc_id %}<p id="{{ desc_id }}" class="visually-hidden">{{ resource_view.description }}</p>{% endif %}
     {# The skip link lands here: past the frame, before the control bar, so
        the next Tab reaches Open in new tab. #}

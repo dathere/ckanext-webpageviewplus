@@ -37,16 +37,18 @@ order now being built:
    the suite, and reflow: at 320px wide (400% zoom) every frame gets a 600px floor, and a view
    that hides its bar still shows Open in new tab unless the site's `controls` drops `open`.
    Reveal scrolling is always instant, so reduced motion needs nothing.
-7. Modern extras done: `<link rel="preconnect">` to the content origin (set where an upload is
+7. Done. Modern extras: `<link rel="preconnect">` to the content origin (set where an upload is
    moved onto it), and `color_scheme` (default `auto`; `light`/`dark` add CSS `color-scheme` to
    the iframe, which only Firefox passes on to cross-origin frames). `fetchpriority` isn't
-   built: it isn't valid on iframes. Phones and tablets, started: Expand, Share, the landscape
-   lock and tap to interact are done. Decided, not built: load on tap only for `Save-Data: on`
-   (with `Vary: Save-Data`, the resource size in the label, no thumbnail). Done: responsive
-   height, a site-wide rule: below `narrow_width` (default 576px of view width; 0 is off),
-   aspect and viewport views use 80svh. The script toggles `webpageviewplus-narrow` from the
-   wrapper's `data-narrow-width`, since a container query can't read a setting and no inline
-   `<style>` is allowed.
+   built: it isn't valid on iframes. Phones and tablets: Expand, Share, the landscape lock, tap
+   to interact, responsive height and load on tap.
+   - Responsive height is a site-wide rule: below `narrow_width` (default 576px of view width;
+     0 is off), aspect and viewport views use 80svh. The script toggles `webpageviewplus-narrow`
+     from the wrapper's `data-narrow-width`, since a container query can't read a setting and no
+     inline `<style>` is allowed.
+   - Load on tap: only for `Save-Data: on`. The shield and frame wait in a `<template>` behind a
+     card with the resource's size in its Load button, and every page rendering a view gets
+     `Vary: Save-Data` (`plugin.vary`).
 8. Telemetry and opt-in view counting.
 
 ## The security model (read before touching frame, validator, content or download code)

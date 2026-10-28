@@ -370,12 +370,33 @@
     run();
   }
 
+  // Load on tap: the frame waits in a <template> until the reader asks.
+  function setupLoadOnTap() {
+    var buttons = document.querySelectorAll("[data-webpageviewplus-load]");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener("click", function (event) {
+        var card = event.currentTarget.closest("[data-webpageviewplus-card]");
+        var wrapper = card && card.closest(".webpageviewplus");
+        var stage = wrapper && wrapper.querySelector("template[data-webpageviewplus-stage]");
+        if (!stage) return;
+        card.parentNode.replaceChild(stage.content.cloneNode(true), card);
+        stage.parentNode.removeChild(stage);
+        var iframe = wrapper.querySelector("iframe.webpageviewplus-frame");
+        if (!iframe) return;
+        setup(iframe);
+        iframe.focus();
+      });
+    }
+    return buttons.length;
+  }
+
   function init() {
     setupFrameabilityCheck();
     var nodes = document.querySelectorAll("iframe.webpageviewplus-frame");
     for (var i = 0; i < nodes.length; i++) setup(nodes[i]);
     setupControls();
-    if (!frames.length) return;
+    var deferred = setupLoadOnTap();
+    if (!frames.length && !deferred) return;
     window.addEventListener("message", onMessage);
     window.addEventListener("resize", onWindowResize);
   }
