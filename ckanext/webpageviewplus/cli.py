@@ -231,11 +231,12 @@ ACTIVE_CONTENT = ("html", "htm", "xhtml", "svg", "xml")
 
 def _active_content(resource: model.Resource) -> bool:
     """Whether an upload looks like HTML, SVG or XML, which run scripts."""
+    from ckanext.webpageviewplus import downloads
+
     fmt = (resource.format or "").lower()
-    mimetype = (resource.mimetype or "").lower()
     ext = (resource.url or "").rpartition(".")[2].lower()
     return (fmt in ACTIVE_CONTENT or ext in ACTIVE_CONTENT
-            or any(t in mimetype for t in ("html", "svg", "xml")))
+            or downloads.is_active_type(resource.mimetype or ""))
 
 
 def assess(
@@ -259,7 +260,9 @@ def assess(
         # Core frames uploads unsandboxed, but with harden_downloads (the
         # default) HTML downloads carry a CSP sandbox, so they can't run as
         # CKAN.
-        if not plus and not settings.harden_downloads() and _active_content(resource):
+        # A content origin takes HTML uploads off CKAN's origin either way.
+        if not plus and not settings.harden_downloads() and _active_content(resource) \
+                and not content.serves(content.resource_dict(resource)):
             return result(
                 "unsandboxed-upload",
                 "uploaded HTML framed without a sandbox, on CKAN's own origin; "

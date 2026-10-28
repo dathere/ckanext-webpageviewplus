@@ -500,13 +500,16 @@
       fetch(status.getAttribute("data-api") + query, {credentials: "same-origin"})
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (body) {
-          if (request !== current || !body || !body.success) return;
+          if (request !== current || input.value.trim() !== url || !body || !body.success) return;
           show(body.result);
         })
         .catch(function () {});
     }
     input.addEventListener("input", function () {
       clearTimeout(timer);
+      // An answer for the previous URL must not be shown or applied.
+      current++;
+      show(null);
       timer = setTimeout(run, 400);
     });
     run();

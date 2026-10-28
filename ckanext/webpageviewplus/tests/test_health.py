@@ -320,3 +320,20 @@ class TestCheckViewsRules:
         result = self._run(cli, dataset)
         assert result.exit_code == 1
         assert "unsandboxed-upload\twebpage_view\t" in result.output
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.harden_downloads", "false")
+    def test_core_upload_spreadsheet_not_active(self, cli, probes):
+        dataset = factories.Dataset()
+        r = factories.Resource(
+            package_id=dataset["id"], url="data.xlsx", url_type="upload", format="XLSX",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        factories.ResourceView(resource_id=r["id"], view_type="webpage_view")
+        assert self._run(cli, dataset).exit_code == 0
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.harden_downloads", "false")
+    def test_core_upload_on_content_origin(self, cli, probes, monkeypatch):
+        from ckanext.webpageviewplus import content
+        monkeypatch.setattr(content, "serves", lambda resource: True)
+        dataset = factories.Dataset()
+        self._core_upload(dataset)
+        assert self._run(cli, dataset).exit_code == 0
