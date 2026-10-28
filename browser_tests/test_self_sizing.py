@@ -79,13 +79,15 @@ def test_messages_from_other_frames_ignored(page, view_urls, title):
     # A second copy of the page, same src and sandbox, so its messages
     # carry the origin the view trusts: only event.source tells them apart.
     # It's narrow, so the heights it reports (on load and shortly after)
-    # differ from the view's. Every height the view takes is recorded,
-    # because the view's own reports would quickly undo a wrong resize.
+    # differ from the view's. Every height the script sets is recorded,
+    # because the view's own reports would quickly undo a wrong resize (a
+    # MutationObserver sees each assignment; a ResizeObserver could miss one
+    # undone within the same frame).
     page.evaluate("""() => {
         const view = document.querySelector('%s');
         window.wvpHeights = [];
-        new ResizeObserver(() => wvpHeights.push(
-            Math.round(view.getBoundingClientRect().height))).observe(view);
+        new MutationObserver(() => wvpHeights.push(parseFloat(view.style.height)))
+            .observe(view, {attributes: true, attributeFilter: ['style']});
         const f = document.createElement('iframe');
         f.id = 'foreign';
         f.style.width = '100px';

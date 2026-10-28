@@ -204,12 +204,10 @@ the dev site (a `wvp-browser` dataset; `wvp-demo` is left alone), then run from 
 
 ```sh
 docker exec ckan-docker-ckan-dev-1 python /srv/app/src_extensions/ckanext-webpageviewplus/browser_tests/seed.py
-uv run --with playwright --with pytest --no-project --env-file <file> pytest -p no:cacheprovider browser_tests
+WVP_BROWSERS="chromium firefox" WVP_CHROMIUM_CHANNEL=chrome WVP_FIREFOX_CHANNEL=moz-firefox \
+  uv run --with playwright --with pytest --no-project pytest -p no:cacheprovider browser_tests
 ```
 
-- The env file sets `WVP_BROWSERS="chromium firefox"`, `WVP_CHROMIUM_CHANNEL=chrome` and
-  `WVP_FIREFOX_CHANNEL=moz-firefox`. Settings go in a file because a `VAR=…` prefix (or a leading
-  `cd`) stops the command matching the sandbox exclusion in `.claude/settings.local.json`.
 - On this Mac, Playwright's own Firefox build exits with "Could not find profile folder", so use
   the installed Firefox (`moz-firefox`), and WebKit hangs on every request to the dev site.
   WebKit runs in CI only.
