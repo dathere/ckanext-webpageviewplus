@@ -193,4 +193,28 @@ path in every `ckan/ckan-dev` image. That's why CI runs it without rewriting.
 
 `.github/workflows/test.yml` runs the suite on a CKAN 2.10 / 2.11 matrix in `ckan/ckan-dev` images,
 with throwaway Postgres, Solr and Redis services. `pytest-ckan` comes from `dev-requirements.txt`.
-The spec also plans a Playwright suite (Chromium, Firefox, WebKit), which isn't set up yet.
+A second job, `browser`, runs `browser_tests/` (Playwright) in Chromium, Firefox and WebKit
+against a real CKAN 2.11 started with `browser_tests/ci.ini` (CKAN on `localhost:5000`, content
+origin `127.0.0.1:5000`) and seeded by `browser_tests/seed.py`.
+
+### Browser tests locally
+
+`browser_tests/` has its own `pytest.ini`, so the CKAN options in `pyproject.toml` don't apply. Seed
+the dev site (a `wvp-browser` dataset; `wvp-demo` is left alone), then run from the repo root:
+
+```sh
+docker exec ckan-docker-ckan-dev-1 python /srv/app/src_extensions/ckanext-webpageviewplus/browser_tests/seed.py
+uv run --with playwright --with pytest --no-project --env-file <file> pytest -p no:cacheprovider browser_tests
+```
+
+- The env file sets `WVP_BROWSERS="chromium firefox"`, `WVP_CHROMIUM_CHANNEL=chrome` and
+  `WVP_FIREFOX_CHANNEL=moz-firefox`. Settings go in a file because a `VAR=…` prefix (or a leading
+  `cd`) stops the command matching the sandbox exclusion in `.claude/settings.local.json`.
+- On this Mac, Playwright's own Firefox build exits with "Could not find profile folder", so use
+  the installed Firefox (`moz-firefox`), and WebKit hangs on every request to the dev site.
+  WebKit runs in CI only.
+- Always pass `--no-project`: without it `uv run` creates `.venv` and `uv.lock` in the repo.
+- Click buttons inside frames from the frame's own script (`locator.evaluate("b => b.click()")`):
+  stock Firefox over WebDriver BiDi drops synthesized clicks into cross-origin frames.
+- To check a negative test isn't vacuous, break the check in `webpageviewplus.js` (the dev site
+  serves edits live), run it, and restore the file. `git diff` on it must be empty before a commit.

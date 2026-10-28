@@ -51,3 +51,62 @@ jobs:
     - name: Run tests
       run: pytest --ckan-ini=test.ini --cov=ckanext.webpageviewplus --disable-warnings ckanext/webpageviewplus
 
+  browser:
+    # A real CKAN served on localhost with a content origin on 127.0.0.1,
+    # driven by Playwright in Chromium, Firefox and WebKit (browser_tests/).
+    name: Browsers (CKAN 2.11)
+    runs-on: ubuntu-latest
+    container:
+      image: ckan/ckan-dev:2.11
+      options: --user root
+    services:
+      solr:
+        image: ckan/ckan-solr:2.11-solr9
+      postgres:
+        image: ckan/ckan-postgres-dev:2.11
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+          image: redis:3
+    env:
+      CKAN_SQLALCHEMY_URL: postgresql://ckan_default:pass@postgres/ckan_test
+      CKAN_DATASTORE_WRITE_URL: postgresql://datastore_write:pass@postgres/datastore_test
+      CKAN_DATASTORE_READ_URL: postgresql://datastore_read:pass@postgres/datastore_test
+      CKAN_SOLR_URL: http://solr:8983/solr/ckan
+      CKAN_REDIS_URL: redis://redis:6379/1
+      CKAN_INI: browser_tests/ci.ini
+      WVP_BASE_URL: http://localhost:5000
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install requirements
+      run: |
+        pip install -r requirements.txt
+        pip install -e .
+        pip install pytest playwright
+        python -m playwright install --with-deps chromium firefox webkit
+    - name: Start CKAN with seeded data
+      run: |
+        ckan -c "$CKAN_INI" db init
+        python browser_tests/seed.py
+        nohup setsid ckan -c "$CKAN_INI" run -H 0.0.0.0 -p 5000 -r -t > /tmp/ckan.log 2>&1 &
+        python - <<'EOF' || { cat /tmp/ckan.log; exit 1; }
+        import os, time, urllib.request
+        url = os.environ["WVP_BASE_URL"] + "/api/3/action/status_show"
+        for _ in range(60):
+            try:
+                urllib.request.urlopen(url, timeout=5)
+                break
+            except Exception:
+                time.sleep(2)
+        else:
+            raise SystemExit("CKAN did not start")
+        EOF
+    - name: Run browser tests
+      run: pytest -p no:cacheprovider browser_tests
+    - name: CKAN log
+      if: failure()
+      run: tail -200 /tmp/ckan.log
+
