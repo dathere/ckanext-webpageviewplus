@@ -18,7 +18,7 @@ order now being built:
    per-view form, `ckan webpageviewplus migrate`.
 2. Done (filesystem uploads): content-origin route, signed URLs. Not yet: cloud-storage
    redirects.
-3. Next: self-sizing (generic `webpageviewplus:resize` message + qsv adapter), control bar,
+3. Done: self-sizing (generic `webpageviewplus:resize` message + qsv adapter), control bar,
    frameability check. **Target the qsv release after 27.0.1**: its schematics send
    `qsvVizHeight` themselves when framed (qsv PR #4949). Never inject a height reporter into
    uploaded HTML; older schematics just keep a fixed fallback height. The qsv protocol is in the
@@ -31,6 +31,11 @@ order now being built:
    ignored outside Chromium, so it must never count toward the invariant. `csp` (CSP Embedded
    Enforcement) is deferred: in Chromium it blocks any page whose server doesn't opt in. If a site
    asks, build a cross-browser setting adding directives to the CSP on served HTML uploads instead.
+5. Next: the Playwright suite (Chromium, Firefox, WebKit), starting with self-sizing and the qsv
+   protocol on the `wvp-demo` fixture views.
+6. Accessibility (skip link, live region, focus, contrast, axe-core in the suite).
+7. Remaining modern extras (theme follows CKAN, preconnect, fetchpriority), then Phones and tablets.
+8. Telemetry and opt-in view counting.
 
 ## The security model (read before touching frame, validator, content or download code)
 
