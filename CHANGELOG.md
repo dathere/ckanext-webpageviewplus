@@ -7,6 +7,8 @@
 - Browsers without CSS `aspect-ratio` (before Chrome 88, Firefox 89, Safari 15) or `clamp()`
   showed aspect-ratio and share-of-window views at the default iframe height (150 px). They now
   get 600 px.
+- Safari before 16.4 (including iOS) ignored the narrow-screen height and the 320 px reflow
+  floor, because those rules named `:fullscreen`. They now apply from Safari 14.1.
 
 ## 0.1.0 (2026-10-28)
 

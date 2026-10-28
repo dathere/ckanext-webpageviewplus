@@ -183,6 +183,25 @@
   }
 }
 
+/* Safari before 16.4 knows only :-webkit-full-screen, so it drops the two
+   rules above that name :fullscreen. It also lacks the unprefixed
+   fullscreen API the script uses, so views never go fullscreen there, and
+   the same rules without that selector are safe. */
+@supports not selector(:fullscreen) {
+  .webpageviewplus-narrow:not(.webpageviewplus-expanded)
+    .webpageviewplus-frame:is([data-height-mode="aspect"], [data-height-mode="viewport"]) {
+    height: 80vh !important;
+    height: 80svh !important;
+    aspect-ratio: auto !important;
+  }
+
+  @media (max-width: 320px) {
+    .webpageviewplus:not(.webpageviewplus-expanded) .webpageviewplus-frame {
+      min-height: 600px;
+    }
+  }
+}
+
 @media (pointer: coarse) {
   .webpageviewplus-controls .btn,
   .webpageviewplus-card [data-webpageviewplus-load],

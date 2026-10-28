@@ -70,12 +70,12 @@ In older browsers, a view still shows its page, with less around it:
 | Lazy loading | Chrome 77 (Sep 2019), Firefox 121 (Dec 2023), Safari 16.4 (Mar 2023) | frames load with the page |
 | `referrerpolicy` | Chrome 51 (May 2016), Firefox 50 (Nov 2016), Safari 14 (Sep 2020) | the browser's default applies, which in those versions can send the dataset page's URL to the framed site |
 | Fullscreen | Chrome 71 (Dec 2018), Firefox 64 (Dec 2018), Safari 16.4 (Mar 2023) | the button becomes Expand, which fills the window in place (as on iPhone) |
-| Share | Chrome 89 (Mar 2021) on Windows and ChromeOS, 128 (Aug 2024) on macOS and Linux; Chrome for Android 61 (Sep 2017); Edge 93 (Sep 2021); Firefox for Android 79 (Jul 2020), not desktop Firefox; Safari 12.1 (Mar 2019; iOS 12.2) | no Share button |
-| Responsive height on narrow screens | Chrome 88 (Jan 2021), Firefox 78 (Jun 2020), Safari 14 (Sep 2020) | heights don't change on narrow screens |
+| Share | Chrome 89 (Mar 2021) on Windows and ChromeOS, 128 (Aug 2024) on macOS and Linux; Chrome for Android 61 (Sep 2017); Edge 81 (Apr 2020) on Windows, 93 (Sep 2021) elsewhere; Firefox for Android 79 (Jul 2020), not desktop Firefox; Safari 12.1 (Mar 2019; iOS 12.2) | no Share button |
+| Responsive height on narrow screens | Chrome 88 (Jan 2021), Firefox 78 (Jun 2020), Safari 14.1 (Apr 2021; iOS 14.5) | heights don't change on narrow screens |
 | Tap to interact | Safari 12.1 (Mar 2019; iOS 12.2) | no overlay; swipes over the frame scroll the frame |
 | Windows High Contrast styles | Chrome 89 (Mar 2021), Firefox 89 (Jun 2021) | the default focus styles |
 
-For reference, the current versions as of October 2026 are Chrome 157, Edge 155, Firefox 159
+For reference, the current versions as of October 2026 are Chrome 157, Edge 156, Firefox 159
 and Safari 27 (macOS and iOS). Minimum versions and dates are from MDN's
 [browser-compat-data](https://github.com/mdn/browser-compat-data).
 
@@ -85,7 +85,8 @@ sandbox and attributes, but:
 - the bar shows only Open in new tab, if the site's `controls` include it;
 - views held back by the consent card or Save-Data can't be loaded in place (Open in new tab
   still works when the bar includes it);
-- nothing is counted.
+- with view counting on, impressions are still counted (on the server), but not seen, loaded,
+  used or failed.
 
 ## Installation
 
