@@ -361,3 +361,35 @@ def test_counting_beacon(page, view_urls):
     page.evaluate(hide)
     page.wait_for_timeout(300)
     assert len(page.evaluate("wvpBeacons")) == 1
+
+
+def test_counting_load_is_engagement(page, view_urls):
+    """Load (here behind Save-Data) counts as using the view, and the frame
+    it inserts as loaded."""
+    url = view_urls["Counted fixed 300"]
+    view_id = url.rsplit("view_id=", 1)[1]
+    page.add_init_script("""
+        if (window.top === window) {
+            new MutationObserver((records, observer) => {
+                const view = document.querySelector('.webpageviewplus');
+                if (!view) return;
+                observer.disconnect();
+                if (!view.hasAttribute('data-count-url'))
+                    view.setAttribute('data-count-url', '/webpageviewplus/count/%s');
+            }).observe(document, {childList: true, subtree: true});
+            window.wvpBeacons = [];
+            const send = navigator.sendBeacon.bind(navigator);
+            navigator.sendBeacon = (u, b) => { wvpBeacons.push(String(b)); return send(u, b); };
+        }
+    """ % view_id)
+    page.set_extra_http_headers({"Save-Data": "on"})
+    page.goto(url)
+    page.locator("[data-webpageviewplus-load]").click()
+    page.frame_locator(FRAME).locator("#viewport").filter(has_text="px").wait_for()
+    page.evaluate("""() => {
+        Object.defineProperty(document, 'visibilityState', {get: () => 'hidden', configurable: true});
+        document.dispatchEvent(new Event('visibilitychange'));
+    }""")
+    page.wait_for_function("() => wvpBeacons.length === 1")
+    body = dict(p.split("=") for p in page.evaluate("wvpBeacons[0]").split("&"))
+    assert body["engaged"] == "1" and body["loaded"] == "1"

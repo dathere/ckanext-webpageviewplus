@@ -167,9 +167,13 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             "can_set_advanced": v.can_set_advanced(context),
             "frameability_check": settings.frameability_check(),
             "view_counting": settings.view_counting(),
+            # Only the view's edit form shows them.
             "view_counts": (
                 stats.totals_or_none(resource_view["id"], 30)
-                if settings.view_counting() and resource_view.get("id") else None
+                if settings.view_counting() and resource_view.get("id")
+                and has_request_context()
+                and (request.endpoint or "").endswith("edit_view")
+                else None
             ),
         }
 

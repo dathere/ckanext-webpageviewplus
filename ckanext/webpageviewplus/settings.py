@@ -94,7 +94,8 @@ def view_counting() -> bool:
 
 
 def view_counting_retention_days() -> int:
-    return int(_get("view_counting_retention_days") or 365)
+    value = _get("view_counting_retention_days")
+    return 365 if value in (None, "") else int(value)
 
 
 def privacy_policy_url() -> str:

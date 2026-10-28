@@ -76,6 +76,13 @@ class TestCounting:
             "impressions": 1, "seen": 1, "loaded": 1, "engaged": 0, "failed": 0}
         assert result["days"][0]["day"] == datetime.date.today().isoformat()
 
+    def test_readers_pages_query_no_totals(self, app, monkeypatch):
+        calls = []
+        monkeypatch.setattr(stats, "totals_or_none", lambda *a: calls.append(a))
+        _, dataset, resource, _ = _counted()
+        _read(app, dataset, resource)
+        assert calls == []
+
     def test_flags_other_than_1_ignored(self, app):
         sysadmin, _, _, view = _counted()
         _beacon(app, view, seen=5, loaded="yes", engaged=-1, failed=1)
@@ -146,6 +153,7 @@ def test_off_for_the_site_counts_nothing(app):
     ({"view_counting": "true", "privacy_policy_url": ""}, "privacy_policy_url"),
     ({"view_counting": "true", "privacy_policy_url": "javascript:alert(1)"}, "privacy_policy_url"),
     ({"view_counting_retention_days": "0"}, "view_counting_retention_days"),
+    ({"view_counting_retention_days": 0}, "view_counting_retention_days"),
 ])
 def test_counting_settings_checked_at_startup(monkeypatch, values, match):
     from ckan.exceptions import CkanConfigurationException

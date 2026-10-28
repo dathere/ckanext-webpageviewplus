@@ -452,9 +452,13 @@
     wrapper.addEventListener("webpageviewplus:loaded", function () { flags.loaded = 1; });
     wrapper.addEventListener("webpageviewplus:failed", function () { flags.failed = 1; });
     wrapper.addEventListener("webpageviewplus:expanded", function () { flags.engaged = 1; });
+    var frame = wrapper.querySelector(".webpageviewplus-frame");
+    if (frame && loadedEarly && loadedEarly.has(frame)) flags.loaded = 1;
+    // Any deliberate use: open, the bar's buttons, Load, tapping through.
     wrapper.addEventListener("click", function (event) {
       if (event.target.closest(
-        ".webpageviewplus-controls a, .webpageviewplus-narrow-open, [data-webpageviewplus-shield]")) {
+        ".webpageviewplus-controls a, .webpageviewplus-narrow-open, [data-webpageviewplus-shield]," +
+        " [data-webpageviewplus-action], [data-webpageviewplus-load]")) {
         flags.engaged = 1;
       }
     });
@@ -493,6 +497,19 @@
     if (!frames.length && !deferred) return;
     window.addEventListener("message", onMessage);
     window.addEventListener("resize", onWindowResize);
+  }
+
+  // Frames that finish loading after this script runs but before init (on
+  // DOMContentLoaded) would otherwise go unnoticed: load doesn't bubble, but
+  // a capturing listener on the document sees it. Earlier loads stay unseen.
+  var loadedEarly = window.WeakSet ? new WeakSet() : null;
+  if (loadedEarly) {
+    document.addEventListener("load", function (event) {
+      var target = event.target;
+      if (target && target.classList && target.classList.contains("webpageviewplus-frame")) {
+        loadedEarly.add(target);
+      }
+    }, true);
   }
 
   if (document.readyState === "loading") {
