@@ -1,4 +1,4 @@
-[![Tests](https://github.com/dathere/ckanext-webpageviewplus/workflows/Tests/badge.svg?branch=main)](https://github.com/dathere/ckanext-webpageviewplus/actions)
+[![Tests](https://github.com/dathere/ckanext-webpageviewplus/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/dathere/ckanext-webpageviewplus/actions)
 
 # ckanext-webpageviewplus
 
@@ -12,8 +12,8 @@ runs beside `webpage_view` while you migrate.
 origin, so anyone who opens it runs its scripts as CKAN, with their login. Stock
 `webpage_view` frames it the same way, unsandboxed. This plugin:
 
-- sandboxes every frame it renders, so pages on CKAN's own host never run scripts with CKAN's
-  origin;
+- never lets a frame run scripts with CKAN's origin: uploads and CKAN's own pages are always
+  sandboxed, and unsandboxed `external` frames need a content origin;
 - adds a CSP `sandbox` header to HTML, SVG and XML that CKAN itself serves (resource downloads
   and the resource proxy), see [Downloads](#uploaded-html-downloads-are-sandboxed);
 - with a content origin, moves uploaded HTML off CKAN's origin entirely.
@@ -27,8 +27,8 @@ origin, so anyone who opens it runs its scripts as CKAN, with their login. Stock
 | 2.10            | yes         |
 | 2.11            | yes         |
 
-A content origin (optional) needs a second domain, which must not be a subdomain of CKAN's,
-pointed at the same CKAN through your reverse proxy. See [Deploying a content
+A content origin (optional) needs a second, separately registered domain (not a subdomain or
+sibling of CKAN's), pointed at the same CKAN through your reverse proxy. See [Deploying a content
 origin](#deploying-a-content-origin).
 
 
@@ -102,19 +102,19 @@ honours it for these frames so far; the default, `auto`, leaves it to the visito
 
 - A **skip link** jumps past each frame to its controls, a polite **live region** announces
   "*title* loaded", focus outlines and 24 px targets (44 px on touch screens) work in Windows
-  High Contrast too, and axe-core runs on every view in the browser tests.
+  High Contrast too, and axe-core checks the extension's markup in the browser tests.
 - **Reflow:** at 320 px wide (400% zoom), every frame is at least 600 px tall, and a view that
-  hides its bar still offers Open in new tab.
+  hides its bar still offers Open in new tab (unless the site's `controls` drops `open`).
 - **Responsive height:** below `narrow_width` (576 px of view width by default), views sized by
   aspect ratio or share of the window take 80% of the screen's height. Fixed and auto heights
   don't change.
 - **Tap to interact:** on a touch screen, a frame taller than half the screen gets a "Tap to
   interact" overlay, so a swipe scrolls the page instead of getting stuck in the frame. It comes
   back once the frame has scrolled out of view.
-- **Load on tap:** when the browser asks to save data (`Save-Data: on`), a card with the
-  resource's size and a Load button stands in for the page until the reader taps it.
+- **Load on tap:** when the browser asks to save data (`Save-Data: on`), a card with a Load
+  button (and the resource's size, when CKAN knows it) stands in for the page until the reader taps it.
 
-### Uploaded HTML downloads are sandboxed
+## Uploaded HTML downloads are sandboxed
 
 With this plugin enabled, HTML, SVG and XML from CKAN's resource downloads and the resource
 proxy get a `Content-Security-Policy: sandbox` header without `allow-same-origin`. Pages still
@@ -331,6 +331,9 @@ API actions: `webpageviewplus_frameability` (`url`, `resource_id`; for those who
 resource.
 
 
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+
+
 ## Developer installation
 
 To install ckanext-webpageviewplus for development, activate your CKAN virtualenv and
@@ -359,38 +362,29 @@ themselves (CKAN's fixtures drop them when they reset the test database).
 
 ## Releasing a new version of ckanext-webpageviewplus
 
-If ckanext-webpageviewplus should be available on PyPI you can follow these steps to publish a new version:
+1. Refresh the translation template (`python setup.py extract_messages`, which writes
+   `ckanext/webpageviewplus/i18n/ckanext-webpageviewplus.pot`).
 
-1. Update the version number in the `pyproject.toml` file. See [PEP 440](http://legacy.python.org/dev/peps/pep-0440/#public-version-identifiers) for how to choose version numbers.
+2. Update the version number in `pyproject.toml` (see
+   [PEP 440](https://peps.python.org/pep-0440/)), and date the release in
+   [CHANGELOG.md](CHANGELOG.md).
 
-2. Make sure you have the latest version of necessary packages:
+3. Build the distributions and check them:
 
-    pip install --upgrade setuptools wheel twine
-
-3. Create a source and binary distributions of the new version:
-
-       python -m build && twine check dist/*
+       pip install --upgrade build twine
+       rm -rf dist && python -m build && twine check dist/*
 
    Fix any errors you get.
 
-4. Upload the source distribution to PyPI:
-
-       twine upload dist/*
-
-5. Commit any outstanding changes:
+4. Commit, tag with the version from `pyproject.toml`, and push:
 
        git commit -a
-       git push
-
-6. Tag the new release of the project on GitHub with the version number from
-   `pyproject.toml`. For example if the version number is 0.1.0 then do:
-
        git tag 0.1.0
-       git push --tags
+       git push && git push --tags
 
-Before releasing, refresh the translation template (`python setup.py extract_messages`,
-which writes `ckanext/webpageviewplus/i18n/ckanext-webpageviewplus.pot`) and add new entries
-to `CHANGELOG.md`.
+5. Upload to PyPI:
+
+       twine upload dist/*
 
 ## License
 
