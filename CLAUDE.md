@@ -49,7 +49,21 @@ order now being built:
    - Load on tap: only for `Save-Data: on`. The shield and frame wait in a `<template>` behind a
      card with the resource's size in its Load button, and every page rendering a view gets
      `Vary: Save-Data` (`plugin.vary`).
-8. Telemetry and opt-in view counting.
+8. Telemetry and opt-in view counting. Started: slice 1 done (no database).
+   - Consent gate: the held-back card (`held_back` = `consent` or `save-data`) shows "This view
+     loads content from <host>" for third-party pages only, when `consent_gate` (site or per
+     view) is on, `privacy_profile = eu` and the frame runs as `external`, or the browser sends
+     `Sec-GPC: 1`. View pages send `Vary: Save-Data, Sec-GPC` (`plugin.vary`).
+   - DOM events `webpageviewplus:loaded|expanded|failed` bubble from the wrapper. `failed` is
+     only a timeout on loads the script starts (Load, Reload): the first load may finish before
+     the script runs. `data-load-timeout` on the wrapper is a test hook.
+   - `events.emit` logs structured events (`view_rendered`, `same_origin_refused`,
+     `signature_refused`, `frameability_blocked`) on `ckanext.webpageviewplus.events`, with
+     fields in `record.webpageviewplus` and nothing about the viewer. Tests use the
+     `events_log` fixture (`tests/conftest.py`).
+   - Next, each needing a decision first: opt-in view counting (needs tables via an alembic
+     migration), then CSP report-only on the content origin with a "This page connects to"
+     disclosure.
 
 ## The security model (read before touching frame, validator, content or download code)
 

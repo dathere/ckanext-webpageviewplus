@@ -14,6 +14,7 @@ from ckanext.webpageviewplus import (
     cli,
     content,
     downloads,
+    events,
     frame,
     settings,
     validators as v,
@@ -26,15 +27,17 @@ boolean_validator = toolkit.get_validator("boolean_validator")
 unicode_safe = toolkit.get_validator("unicode_safe")
 
 
-# Pages that render a view vary by Save-Data (load on tap), so a cache
-# mustn't serve one reader's card or frame to another.
+# Pages that render a view vary by Save-Data (load on tap) and Sec-GPC (the
+# consent card), so a cache mustn't serve one reader's card or frame to
+# another.
 vary = Blueprint("webpageviewplus_vary", __name__)
 
 
 @vary.after_app_request
-def vary_save_data(response: Response) -> Response:
-    if g.get("webpageviewplus_vary_save_data"):
+def vary_held_back(response: Response) -> Response:
+    if g.get("webpageviewplus_vary_held_back"):
         response.vary.add("Save-Data")
+        response.vary.add("Sec-GPC")
     return response
 
 
@@ -111,6 +114,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
                     ignore_empty, unicode_safe, v.referrer_policy_validator
                 ],
                 "hide_controls": [ignore_missing, boolean_validator],
+                "consent_gate": [ignore_missing, boolean_validator],
                 "__after": [v.view_after_validator],
             },
             "iframed": False,
@@ -215,12 +219,32 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
                 view_id=resource_view["id"],
                 qualified=True,
             )
-        # Load on tap: only when the browser asks to save data. The page then
-        # varies by that header, which caches must know (vary_save_data).
-        load_on_tap = False
+        # Held back behind a card until the reader asks: a third-party page
+        # when consent is needed (site or view setting, the eu profile on an
+        # external frame, or the browser's Global Privacy Control), or any
+        # page when the browser asks to save data. Both come from request
+        # headers, so the page varies by them (vary_held_back).
+        save_data = gpc = False
+        endpoint = None
         if has_request_context():
-            load_on_tap = request.headers.get("Save-Data", "").strip().lower() == "on"
-            g.webpageviewplus_vary_save_data = True
+            save_data = request.headers.get("Save-Data", "").strip().lower() == "on"
+            gpc = request.headers.get("Sec-GPC", "").strip() == "1"
+            endpoint = request.endpoint
+            g.webpageviewplus_vary_held_back = True
+        third_party = not is_upload and not frame.is_ckan_host(url, ckan_hosts)
+        consent = third_party and (
+            gpc
+            or settings.consent_gate()
+            or toolkit.asbool(resource_view.get("consent_gate"))
+            or (settings.privacy_profile() == "eu" and built.preset == "external")
+        )
+        held_back = "consent" if consent else ("save-data" if save_data else None)
+        events.emit(
+            "view_rendered", preset=built.preset, requested_preset=preset,
+            notices=",".join(built.notices) or "-", endpoint=endpoint,
+        )
+        if "same_origin_fallback" in built.notices:
+            events.emit("same_origin_refused", resource_id=resource.get("id"))
         try:
             size = int(resource.get("size") or 0)
         except (TypeError, ValueError):
@@ -230,7 +254,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             form_vars,
             frame=built,
             share_url=share_url,
-            load_on_tap=load_on_tap,
+            held_back=held_back,
+            consent_host=frame.url_host(built.src),
             # A content-origin URL's signature may expire before the reader
             # taps Load, so a held-back upload loads through CKAN's download
             # URL, which re-checks access and redirects to a fresh one.

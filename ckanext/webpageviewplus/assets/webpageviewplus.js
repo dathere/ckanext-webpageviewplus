@@ -48,7 +48,8 @@
       auto: iframe.getAttribute("data-height-mode") === "auto",
       min: intAttr(iframe, "data-min-height", 0),
       max: intAttr(iframe, "data-max-height", 100000),
-      height: null
+      height: null,
+      timer: null
     };
     frames.push(state);
     // A schematic asks for the viewport once, on its load, which can happen
@@ -56,12 +57,44 @@
     // finishes loading (its listeners are in place by then) and now. It's
     // just window.innerHeight, harmless to any page.
     iframe.addEventListener("load", function () {
+      clearTimeout(state.timer);
+      state.timer = null;
       replyViewport(state);
       announceLoaded(iframe);
+      fire(iframe, "loaded");
     });
-    if (!inserted) replyViewport(state);
+    if (inserted) watchLoad(state);
+    else replyViewport(state);
     setupNarrow(state);
     setupShield(state);
+  }
+
+  // DOM events a site's own analytics can listen for (they bubble from the
+  // view's wrapper). The extension sends them nowhere itself.
+  function fire(node, name) {
+    var wrapper = node.closest(".webpageviewplus");
+    if (!wrapper || typeof window.CustomEvent !== "function") return;
+    var iframe = wrapper.querySelector(".webpageviewplus-frame");
+    wrapper.dispatchEvent(new CustomEvent("webpageviewplus:" + name, {
+      bubbles: true,
+      detail: {title: iframe ? iframe.title : ""}
+    }));
+  }
+
+  // "failed": a load this script started (Load, Reload) that hasn't
+  // finished in time. A cross-origin frame's error page still fires load,
+  // and the first load may have finished before this script ran, so that's
+  // all the parent page can tell.
+  var LOAD_TIMEOUT = 15000;
+
+  function watchLoad(state) {
+    clearTimeout(state.timer);
+    var wrapper = state.iframe.closest(".webpageviewplus");
+    var timeout = wrapper ? intAttr(wrapper, "data-load-timeout", LOAD_TIMEOUT) : LOAD_TIMEOUT;
+    state.timer = setTimeout(function () {
+      state.timer = null;
+      fire(state.iframe, "failed");
+    }, timeout);
   }
 
   // Responsive height: the breakpoint is a site setting, which a container
@@ -238,6 +271,7 @@
           "aria-pressed", String(full === buttons[i].closest(".webpageviewplus")));
       }
     }
+    if (full && full.classList.contains("webpageviewplus")) fire(full, "expanded");
     // Wide views turn the phone sideways (Android; iOS has no lock).
     var orientation = window.screen && screen.orientation;
     if (full && full.classList.contains("webpageviewplus") &&
@@ -264,6 +298,7 @@
     wrapper.setAttribute("aria-modal", "true");
     wrapper.setAttribute("aria-label", iframe ? iframe.title : "");
     document.documentElement.classList.add("webpageviewplus-noscroll");
+    fire(wrapper, "expanded");
     var close = wrapper.querySelector('[data-webpageviewplus-action="close"]');
     if (close) {
       close.hidden = false;
@@ -307,6 +342,7 @@
       if (state && url) {
         state.height = null;
         state.iframe.src = url;
+        watchLoad(state);
       }
     }
   }

@@ -78,6 +78,17 @@ def color_scheme() -> str:
     return (_get("color_scheme") or "").strip().lower()
 
 
+PRIVACY_PROFILES = ("default", "eu")
+
+
+def privacy_profile() -> str:
+    return (_get("privacy_profile") or "default").strip().lower()
+
+
+def consent_gate() -> bool:
+    return toolkit.asbool(_get("consent_gate"))
+
+
 def credentialless_presets() -> list[str]:
     return toolkit.aslist(_get("credentialless"))
 
@@ -222,6 +233,10 @@ def check() -> None:
     origin = content_origin()
     if origin:
         _check_content_origin(origin)
+    if privacy_profile() not in PRIVACY_PROFILES:
+        raise CkanConfigurationException(
+            PREFIX + "privacy_profile: must be one of " + " ".join(PRIVACY_PROFILES)
+        )
     if narrow_width() < 0:
         raise CkanConfigurationException(
             PREFIX + "narrow_width: must be 0 (off) or a width in px"

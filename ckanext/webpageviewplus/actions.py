@@ -5,7 +5,7 @@ from typing import Any
 import ckan.plugins.toolkit as toolkit
 from ckan.types import Context
 
-from ckanext.webpageviewplus import frame, frameability, settings
+from ckanext.webpageviewplus import events, frame, frameability, settings
 
 
 def frameability_auth(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:
@@ -47,4 +47,7 @@ def webpageviewplus_frameability(
     if allowed and frame.url_host(url) not in allowed:
         return {"verdict": "skipped", "reason": "host not allowed"}
     identity = frameability.ckan_identity(settings.site_url())
-    return frameability.summary(frameability.check(url, identity))
+    result = frameability.summary(frameability.check(url, identity))
+    if result.get("verdict") == "blocked":
+        events.emit("frameability_blocked", host=frame.url_host(url))
+    return result

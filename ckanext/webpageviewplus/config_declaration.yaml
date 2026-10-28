@@ -125,6 +125,22 @@ groups:
           URL, via the browser's share sheet; shown only where
           navigator.share exists). Empty hides the bar on every view.
 
+      - key: ckanext.webpageviewplus.privacy_profile
+        default: default
+        description: |
+          default, or eu: with eu, views of third-party pages that run as the
+          external preset show a consent card ("This view loads content from
+          <host>") before anything is requested from that host.
+
+      - key: ckanext.webpageviewplus.consent_gate
+        default: false
+        type: bool
+        description: |
+          Show the consent card on every view of a third-party page, whatever
+          the preset. Editors can also turn it on per view. Uploads and
+          CKAN's own pages never get it. A browser sending Global Privacy
+          Control (Sec-GPC: 1) gets it on every third-party view regardless.
+
       - key: ckanext.webpageviewplus.narrow_width
         default: 576
         type: int

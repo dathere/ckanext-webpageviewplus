@@ -26,7 +26,7 @@ import ckan.model as model
 import ckan.plugins.toolkit as toolkit
 from ckan.lib.uploader import ResourceUpload, get_resource_uploader
 
-from ckanext.webpageviewplus import frame, settings
+from ckanext.webpageviewplus import events, frame, settings
 
 log = logging.getLogger(__name__)
 
@@ -159,6 +159,7 @@ def serve(resource_id: str, filename: str):
     if private and not signature_valid(
         resource_id, request.args.get("w", ""), request.args.get("s", "")
     ):
+        events.emit("signature_refused", resource_id=resource_id)
         abort(404)  # not 403: don't confirm that a private resource exists
 
     try:

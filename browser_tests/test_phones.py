@@ -267,3 +267,44 @@ def test_fullscreen_permission_survives_download_redirect(page, view_urls, how, 
     child.locator("#viewport").filter(has_text="px").wait_for()
     assert "/webpageviewplus/content/" in page.frames[1].url
     assert child.locator("body").evaluate("() => document.fullscreenEnabled")
+
+
+RECORD_EVENTS = """
+if (window.top === window) {
+  window.wvpEvents = [];
+  for (const name of ["loaded", "expanded", "failed"]) {
+    document.addEventListener("webpageviewplus:" + name,
+      e => wvpEvents.push([name, e.detail.title, e.target.className]));
+  }
+}
+"""
+
+
+def test_dom_events(page, view_urls):
+    """loaded and expanded bubble from the view's wrapper for a site's own
+    analytics; the extension sends them nowhere."""
+    page.add_init_script(RECORD_EVENTS)
+    page.add_init_script(NO_FULLSCREEN)
+    open_view(page, view_urls, "Interactive fixed 300")
+    page.evaluate("wvpEvents.length = 0")
+    page.locator('[data-webpageviewplus-action="reload"]').click()
+    page.wait_for_function("() => wvpEvents.some(e => e[0] === 'loaded')")
+    page.locator(EXPAND).click()
+    page.wait_for_function("() => wvpEvents.some(e => e[0] === 'expanded')")
+    events = page.evaluate("wvpEvents")
+    assert ["loaded", "Interactive fixed 300", "webpageviewplus"] in [
+        [n, t, c.split()[0]] for n, t, c in events]
+    assert not any(e[0] == "failed" for e in events)
+
+
+def test_failed_event_on_a_slow_load(page, view_urls):
+    """failed: a load the script started (here Load) that outlasts the
+    timeout. The timeout is shortened through the wrapper's test hook."""
+    page.add_init_script(RECORD_EVENTS)
+    page.set_extra_http_headers({"Save-Data": "on"})
+    page.goto(view_urls["Interactive fixed 300"])
+    page.evaluate("document.querySelector('.webpageviewplus').setAttribute('data-load-timeout', '1')")
+    page.locator("[data-webpageviewplus-load]").click()
+    page.wait_for_function("() => wvpEvents.some(e => e[0] === 'failed')")
+    # It still loads in the end, and says so.
+    page.wait_for_function("() => wvpEvents.some(e => e[0] === 'loaded')")

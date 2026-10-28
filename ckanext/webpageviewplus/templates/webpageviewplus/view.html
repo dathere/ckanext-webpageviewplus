@@ -7,7 +7,7 @@
   <div class="webpageviewplus"{% if narrow_width %} data-narrow-width="{{ narrow_width }}"{% endif %}>
     {# Warms the connection before the (lazy) frame needs it. Frame
        navigation isn't CORS, so no crossorigin. #}
-    {% if preconnect and not load_on_tap %}<link rel="preconnect" href="{{ preconnect }}">{% endif %}
+    {% if preconnect and not held_back %}<link rel="preconnect" href="{{ preconnect }}">{% endif %}
     {% if after_id %}<a class="webpageviewplus-skip" href="#{{ after_id }}">{{ _('Skip embedded content') }}</a>{% endif %}
     {% set stage %}
     {# Touch screens, frames taller than half the screen: lets the page scroll
@@ -16,7 +16,7 @@
             aria-label="{{ _('Interact with {title}').format(title=frame.title) }}" hidden><span>{{ _('Tap to interact') }}</span></button>
     <iframe class="webpageviewplus-frame"
             title="{{ frame.title }}"
-            src="{{ deferred_src if load_on_tap else frame.src }}"
+            src="{{ deferred_src if held_back else frame.src }}"
             {% if frame.sandbox is not none %}sandbox="{{ frame.sandbox }}"{% endif %}
             allow="{{ frame.allow }}"
             referrerpolicy="{{ frame.referrerpolicy }}"
@@ -31,12 +31,17 @@
             data-max-height="{{ frame.max_height }}"
             {% if desc_id %}aria-describedby="{{ desc_id }}"{% endif %}></iframe>
     {% endset %}
-    {% if load_on_tap %}
-      {# The browser asked to save data: a card instead of the page, which
-         the script loads from the template on request. #}
-      <div class="webpageviewplus-card" data-webpageviewplus-card>
+    {% if held_back %}
+      {# Consent (a third-party page) or Save-Data: a card instead of the
+         page, which the script loads from the template on request. Nothing
+         is requested from the page's host until then. #}
+      <div class="webpageviewplus-card" data-webpageviewplus-card data-reason="{{ held_back }}">
         <p class="webpageviewplus-card-title">{{ frame.title }}</p>
-        <p class="text-muted">{{ _('Not loaded, to save data.') }}</p>
+        {% if held_back == 'consent' %}
+          <p>{{ _('This view loads content from {host}.').format(host=consent_host) }}</p>
+        {% else %}
+          <p class="text-muted">{{ _('Not loaded, to save data.') }}</p>
+        {% endif %}
         <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-load>
           {%- if load_size %}{{ _('Load ({size})').format(size=load_size) }}{% else %}{{ _('Load') }}{% endif -%}
         </button>

@@ -649,3 +649,78 @@ def test_negative_narrow_width_stops_startup(monkeypatch):
     )
     with pytest.raises(CkanConfigurationException, match="narrow_width"):
         settings.check()
+
+
+def _privacy_page(app, view_fields=None, headers=None, **resource_fields):
+    dataset = factories.Dataset()
+    resource_fields.setdefault("url", "https://pages.example.com/a.html")
+    resource = factories.Resource(package_id=dataset["id"], **resource_fields)
+    _view(factories.Sysadmin(), resource["id"], **(view_fields or {}))
+    return app.get(
+        url_for("{}_resource.read".format(dataset["type"]), id=dataset["name"],
+                resource_id=resource["id"]),
+        headers=headers or {})
+
+
+CONSENT = "This view loads content from pages.example.com."
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestConsentGate:
+    def test_off_by_default(self, app):
+        response = _privacy_page(app)
+        assert CONSENT not in response.body
+        assert "<iframe" in response.body
+        assert {"Save-Data", "Sec-GPC"} <= set(
+            v.strip() for v in response.headers.get("Vary", "").split(","))
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.consent_gate", "true")
+    def test_site_setting(self, app):
+        body = _privacy_page(app).body
+        assert CONSENT in body
+        assert 'data-webpageviewplus-card data-reason="consent"' in body
+        # Nothing is requested from the host before consent.
+        stage = body[body.index("<template data-webpageviewplus-stage>"):]
+        assert body.count("<iframe") == 1 and stage.index("<iframe") < stage.index("</template>")
+
+    def test_per_view(self, app):
+        assert CONSENT in _privacy_page(app, {"consent_gate": "true"}).body
+
+    def test_global_privacy_control(self, app):
+        assert CONSENT in _privacy_page(app, headers={"Sec-GPC": "1"}).body
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.privacy_profile", "eu")
+    def test_eu_profile_gates_external_frames(self, app, content_origin):
+        assert CONSENT in _privacy_page(app, {"preset": "external"}).body
+        assert CONSENT not in _privacy_page(app, {"preset": "interactive"}).body
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.consent_gate", "true")
+    def test_never_for_ckans_own_pages(self, app):
+        body = _privacy_page(app, headers={"Sec-GPC": "1"},
+                             url="http://test.ckan.net/page.html").body
+        assert "data-webpageviewplus-card" not in body
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+def test_render_event_has_no_viewer_details(app, events_log, caplog):
+    _privacy_page(app, {"preset": "strict"}, headers={"User-Agent": "probe-agent"})
+    records = [e for e in events_log() if e["event"] == "view_rendered"]
+    assert records and records[-1]["preset"] == "strict"
+    assert set(records[-1]) == {"event", "preset", "requested_preset", "notices", "endpoint"}
+    assert "probe-agent" not in caplog.text and "127.0.0.1" not in caplog.text
+
+
+def test_unknown_privacy_profile_stops_startup(monkeypatch):
+    from ckan.exceptions import CkanConfigurationException
+    from ckanext.webpageviewplus import settings
+
+    real_get = settings._get
+    monkeypatch.setattr(
+        settings, "_get", lambda key: "us" if key == "privacy_profile" else real_get(key)
+    )
+    with pytest.raises(CkanConfigurationException, match="privacy_profile"):
+        settings.check()

@@ -122,11 +122,13 @@ class TestContentRoute:
         assert _get(app, url).status_code == 200
         assert _get(app, _content_url(resource), status=404).status_code == 404
 
-    def test_tampered_signature_refused(self, app):
+    def test_tampered_signature_refused(self, app, events_log):
         resource = _upload(_private_dataset())
         url = _content_url(resource, private=True)
         bad = url[:-4] + ("0000" if not url.endswith("0000") else "1111")
         assert _get(app, bad, status=404).status_code == 404
+        refused = [e for e in events_log() if e["event"] == "signature_refused"]
+        assert refused == [{"event": "signature_refused", "resource_id": resource["id"]}]
 
     def test_signature_for_another_resource_refused(self, app):
         dataset = _private_dataset()
