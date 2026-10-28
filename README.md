@@ -18,6 +18,22 @@ origin, so anyone who opens it runs its scripts as CKAN, with their login. Stock
   and the resource proxy), see [Downloads](#uploaded-html-downloads-are-sandboxed);
 - with a content origin, moves uploaded HTML off CKAN's origin entirely.
 
+**Compared with `webpage_view`:**
+
+| | `webpage_view` (CKAN core) | `webpage_view_plus` |
+| --- | --- | --- |
+| Sandbox | none: framed pages run with their own origin, uploads with CKAN's | a preset per view (`strict`, `interactive`, `external`, `data-schematic`), enforced on save and on render |
+| Uploaded HTML | runs as CKAN, in the view and from its download link | sandboxed, or served from a separate content origin |
+| Page URL | any text, unchecked | http(s) only, optional host allow-list; CKAN's own hosts can't be framed unsandboxed |
+| Browser features | not set | `allow` list that denies ad and tracking features; `referrerpolicy`; optional `credentialless` |
+| Height | 600 px for other sites; pages under CKAN's URL sized to their content (by reading into the unsandboxed frame) | fixed, share of the window, aspect ratio, or auto (the page reports its height; qsv Data Schematics do it natively) |
+| Loading | immediate | lazy; load on tap under Save-Data; optional consent card for third-party pages |
+| Controls | CKAN's Fullscreen (the view on its own page) and Embed links | the same, plus a bar under the view: Open in new tab, Fullscreen (or Expand on iPhone), Reload, Share |
+| Accessibility | generic "Webpage view" title | the view's title as accessible name, skip link, live region, reflow at 400% zoom |
+| Editor help | none | optional warning when a page refuses to be framed |
+| Telemetry | none | none by default; opt-in view counting and connection reports |
+| Moving over | n/a | `ckan webpageviewplus migrate` converts existing views in place |
+
 
 ## Requirements
 
