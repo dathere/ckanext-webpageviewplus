@@ -79,6 +79,10 @@
     return state.origin !== "" && event.origin === state.origin;
   }
 
+  // Browsers with scroll anchoring already keep the reader's place when a
+  // frame above them changes height; scrolling as well would double it.
+  var ANCHORS = !!(window.CSS && CSS.supports && CSS.supports("overflow-anchor", "auto"));
+
   function resize(state, value) {
     if (!state.auto) return;
     var height = Math.ceil(Number(value));
@@ -89,8 +93,14 @@
     var before = rect.height;
     state.height = height;
     state.iframe.style.height = height + "px";
-    // Keep the reader's place when a frame above them changes height.
-    if (rect.bottom <= 0) window.scrollBy(0, height - before);
+    // Keep the reader's place when a frame above them changes height. Measure
+    // what was rendered: CSS (the narrow-screen floor) can override the value.
+    if (!ANCHORS && rect.bottom <= 0) {
+      window.scrollBy({
+        top: state.iframe.getBoundingClientRect().height - before,
+        behavior: "instant"
+      });
+    }
   }
 
   function replyViewport(state) {
