@@ -152,6 +152,12 @@ workers work, and the browser keeps them apart from CKAN's pages, cookies and AP
                proxy_set_header Host $host;        # required, see below
                proxy_set_header X-Forwarded-Proto $scheme;
            }
+           # only needed with connection_reports = true
+           location /webpageviewplus/report/ {
+               proxy_pass http://127.0.0.1:5000;
+               proxy_set_header Host $host;
+               proxy_set_header X-Forwarded-Proto $scheme;
+           }
            location / { return 404; }
        }
 
@@ -255,7 +261,9 @@ header, which never blocks anything. Browsers report each fetch from another hos
 CDN) back to the content origin, and CKAN keeps just the hosts per resource. Read them with the
 `webpageviewplus_connections_show` action or `ckan webpageviewplus connections`;
 `show_connections = true` also lists them under the view as "This page connects to". Anyone can
-post a report, so the list is a hint, not proof.
+post a report, so the list is a hint, not proof. Reports are posted to
+`/webpageviewplus/report/` on the content origin, so its proxy must pass that path to CKAN
+too (see the nginx example above).
 
 
 ## Migrating from webpage_view
