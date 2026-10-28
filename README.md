@@ -48,6 +48,41 @@ sibling of CKAN's), pointed at the same CKAN through your reverse proxy. See [De
 origin](#deploying-a-content-origin).
 
 
+## Browser support
+
+**Supported: Chrome and Edge 88+, Firefox 89+ and Safari 15+ (macOS, iOS and iPadOS)**, all
+from 2021. In these, every view lays out as configured. A few extras (lazy loading, element
+fullscreen, Share) need newer versions and fall back as shown below. The browser tests run in
+current Chromium, Firefox and WebKit. Internet Explorer isn't supported.
+
+**The protection works in every browser still in use.** It rests on the iframe `sandbox`
+attribute (Chrome 5, Firefox 17, Safari 5) and the CSP `sandbox` header on downloads (Chrome
+25, Firefox 50, Safari 7), not on the script or newer features. The one exception is the
+optional `credentialless` setting, which only Chromium 110+ applies. Other browsers ignore
+it, and the rest of the protection doesn't depend on it.
+
+In older browsers, a view still shows its page, with less around it:
+
+| Feature | Needs | Without it |
+| --- | --- | --- |
+| Aspect-ratio height | Chrome 88, Firefox 89, Safari 15 | the frame is the browser's default iframe height (150 px); use a fixed height for readers on old browsers |
+| Share-of-window height | Chrome 79, Firefox 75, Safari 13.1 | the same |
+| Lazy loading | Chrome 77, Firefox 121, Safari 16.4 | frames load with the page |
+| `referrerpolicy` | Chrome 51, Firefox 50, Safari 14 | the browser's default applies, which in those versions can send the dataset page's URL to the framed site |
+| Fullscreen | Chrome 71, Firefox 64, Safari 16.4 | the button becomes Expand, which fills the window in place (as on iPhone) |
+| Share | the Web Share API | no Share button |
+| Responsive height on narrow screens | Chrome 88, Firefox 78, Safari 14 | heights don't change on narrow screens |
+| Tap to interact | Safari 12.1 (iOS 12.2) | no overlay; swipes over the frame scroll the frame |
+| Windows High Contrast styles | Chrome 89, Firefox 89 | the default focus styles |
+
+**Without JavaScript** (turned off, or the script blocked), frames still render with their
+sandbox and attributes, but:
+- auto-height frames keep their fallback height (600 px, within `min_height`/`max_height`);
+- the bar shows only Open in new tab, if the site's `controls` include it;
+- views held back by the consent card or Save-Data can't be loaded in place (Open in new tab
+  still works when the bar includes it);
+- nothing is counted.
+
 ## Installation
 
 1. Activate your CKAN virtual environment, for example:
