@@ -136,8 +136,12 @@ class TestRefusedCard:
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.frameability_check", "true")
     def test_uploads_and_own_pages_never_checked(self, app, probes):
-        _page(app, page_url="", url="https://test.ckan.net/other/page.html")
-        _page(app, page_url="https://test.ckan.net/about")
+        from ckan.plugins.toolkit import config
+        # The configured site URL: CI's ckan-dev image overrides test.ini's.
+        site = config.get("ckan.site_url").rstrip("/")
+        _page(app, page_url="", url="page.html", url_type="upload")
+        _page(app, page_url="", url=site + "/other/page.html")
+        _page(app, page_url=site + "/about")
         assert probes["calls"] == []
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.frameability_check", "true")
@@ -149,8 +153,8 @@ class TestRefusedCard:
         assert view["id"]
         assert "<iframe" in body
 
-    def test_mixed_content_card(self, app, probes, ckan_config, monkeypatch):
-        monkeypatch.setitem(ckan_config, "ckan.site_url", "https://test.ckan.net")
+    def test_mixed_content_card(self, app, probes, monkeypatch):
+        monkeypatch.setattr(health.settings, "site_url", lambda: "https://test.ckan.net")
         _, body = _page(app, page_url="http://pages.example.com/a.html")
         assert MIXED in body
         assert "<iframe" not in body
@@ -251,8 +255,8 @@ class TestCheckViews:
 @pytest.mark.usefixtures("non_clean_db", "with_plugins", "counts_table")
 class TestMixedContent:
     @pytest.fixture(autouse=True)
-    def https_site(self, ckan_config, monkeypatch):
-        monkeypatch.setitem(ckan_config, "ckan.site_url", "https://test.ckan.net")
+    def https_site(self, monkeypatch):
+        monkeypatch.setattr(health.settings, "site_url", lambda: "https://test.ckan.net")
 
     def test_http_page_on_own_host(self, app, probes):
         _, body = _page(app, page_url="http://test.ckan.net/about")
