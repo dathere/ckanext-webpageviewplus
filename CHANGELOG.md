@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-10-28)
 
 The first release: a drop-in replacement for CKAN's `webpage_view` (CKAN 2.10 and 2.11). The
 design spec's Decisions table records where it departs from the spec.

@@ -40,7 +40,9 @@ origin](#deploying-a-content-origin).
 
 2. Install the extension:
 
-       pip install git+https://github.com/dathere/ckanext-webpageviewplus.git
+       pip install ckanext-webpageviewplus
+
+   (or, for unreleased changes, `pip install git+https://github.com/dathere/ckanext-webpageviewplus.git`)
 
 3. Add `webpage_view_plus` to `ckan.plugins` in your CKAN config file (by default
    `/etc/ckan/default/ckan.ini`). Keep `webpage_view` enabled until you've migrated.
