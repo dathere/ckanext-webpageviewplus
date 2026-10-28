@@ -419,6 +419,99 @@
   }
 
   // Load on tap: the frame waits in a <template> until the reader asks.
+  // View form: a well-known service's page (YouTube, Datawrapper...) gets
+  // an offer to use its embed address and the settings its embed needs.
+  function setupServiceSuggest() {
+    var status = document.querySelector("[data-webpageviewplus-service]");
+    var input = document.getElementById("field-page_url");
+    if (!status || !input || !window.fetch || !window.JSON) return;
+    var preset = document.getElementById("field-preset");
+    var heightMode = document.getElementById("field-height_mode");
+    var heightValue = document.getElementById("field-height_value");
+    var names = {};
+    try { names = JSON.parse(status.getAttribute("data-preset-names")) || {}; } catch (e) {}
+    var timer = null;
+    var current = 0;
+    var applied = null;
+
+    function fill(template, values) {
+      return template.replace(/\{(\w+)\}/g, function (match, key) {
+        return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : match;
+      });
+    }
+    function inUse(found) {
+      return input.value.trim() === found.embed_url &&
+        (!preset || preset.value === found.preset) &&
+        (!heightMode || heightMode.value === found.height_mode) &&
+        (!heightValue || heightValue.value === found.height_value);
+    }
+    function setValue(el, value) {
+      if (!el) return;
+      el.value = value;
+      el.dispatchEvent(new Event("change", {bubbles: true}));
+    }
+    function show(found) {
+      status.textContent = "";
+      status.classList.remove("alert", "alert-info", "alert-warning");
+      if (!found) return;
+      var host = "";
+      try { host = new URL(found.embed_url).host; } catch (e) {}
+      var values = {service: found.service, preset: names[found.preset] || found.preset, host: host};
+      var problem = found.problem && status.getAttribute(
+        "data-" + found.problem.replace(/_/g, "-"));
+      if (problem) {
+        status.textContent = fill(problem, values);
+        status.classList.add("alert", "alert-warning");
+        return;
+      }
+      if (inUse(found)) {
+        if (applied === found.service) {
+          status.textContent = fill(status.getAttribute("data-applied"), values);
+          status.classList.add("alert", "alert-info");
+        }
+        return;
+      }
+      var text = document.createElement("span");
+      text.textContent = fill(status.getAttribute("data-found"), values) + " ";
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn btn-sm btn-primary";
+      button.textContent = status.getAttribute("data-apply");
+      button.addEventListener("click", function () {
+        applied = found.service;
+        setValue(preset, found.preset);
+        setValue(heightMode, found.height_mode);
+        setValue(heightValue, found.height_value);
+        input.value = found.embed_url;
+        input.dispatchEvent(new Event("input", {bubbles: true}));
+        show(found);
+        input.focus();
+      });
+      status.appendChild(text);
+      status.appendChild(button);
+      status.classList.add("alert", "alert-info");
+    }
+    function run() {
+      var url = input.value.trim();
+      var request = ++current;
+      if (!url) { show(null); return; }
+      var query = "?resource_id=" + encodeURIComponent(status.getAttribute("data-resource-id")) +
+        "&url=" + encodeURIComponent(url);
+      fetch(status.getAttribute("data-api") + query, {credentials: "same-origin"})
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (body) {
+          if (request !== current || !body || !body.success) return;
+          show(body.result);
+        })
+        .catch(function () {});
+    }
+    input.addEventListener("input", function () {
+      clearTimeout(timer);
+      timer = setTimeout(run, 400);
+    });
+    run();
+  }
+
   function setupLoadOnTap() {
     var buttons = document.querySelectorAll("[data-webpageviewplus-load]");
     for (var i = 0; i < buttons.length; i++) {
@@ -488,6 +581,7 @@
 
   function init() {
     setupFrameabilityCheck();
+    setupServiceSuggest();
     var nodes = document.querySelectorAll("iframe.webpageviewplus-frame");
     for (var i = 0; i < nodes.length; i++) setup(nodes[i]);
     setupControls();

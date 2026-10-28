@@ -18,6 +18,7 @@ import ipaddress
 import logging
 import re
 import socket
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional
@@ -141,38 +142,72 @@ def _resolve(host: str, port: int) -> list[str]:
     return [info[4][0] for info in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)]
 
 
-def _public(url: str) -> bool:
-    """Whether every address the URL's host resolves to is public."""
+def _resolve_within(host: str, port: int, timeout: Optional[float]) -> list[str]:
+    """_resolve, giving up after ``timeout`` seconds: getaddrinfo can't be
+    interrupted, so it runs in a daemon thread that's left to finish."""
+    if timeout is None:
+        return _resolve(host, port)
+    if timeout <= 0:
+        raise OSError("deadline passed")
+    result: dict[str, Any] = {}
+
+    def run() -> None:
+        try:
+            result["addresses"] = _resolve(host, port)
+        except Exception as e:  # handed back to the caller below
+            result["error"] = e
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    thread.join(timeout)
+    if "addresses" in result:
+        return result["addresses"]
+    raise OSError("lookup failed or timed out") from result.get("error")
+
+
+def _address_kind(url: str, deadline: Optional[float] = None) -> str:
+    """"public" if every address the URL's host resolves to is public,
+    "unresolved" if it doesn't resolve (or not before ``deadline``), else
+    "private"."""
     if not frame.is_http_url(url):
-        return False
+        return "private"
     parts = urlsplit(url)
     try:
         port = parts.port or (443 if parts.scheme.lower() == "https" else 80)
-        addresses = _resolve(parts.hostname or "", port)
+        timeout = None if deadline is None else deadline - time.monotonic()
+        addresses = _resolve_within(parts.hostname or "", port, timeout)
     except (OSError, ValueError, UnicodeError):
-        return False
+        return "unresolved"
     if not addresses:
-        return False
+        return "unresolved"
     for address in addresses:
         try:
             if not ipaddress.ip_address(address.split("%")[0]).is_global:
-                return False
+                return "private"
         except ValueError:
-            return False
-    return True
+            return "private"
+    return "public"
+
+
+def _public(url: str) -> bool:
+    """Whether every address the URL's host resolves to is public."""
+    return _address_kind(url) == "public"
 
 
 @dataclass(frozen=True)
 class Probe:
     """What fetching a page found. ``problem`` is "" when the page answered
     below 400, else "gone" (404, 410), "http-error" (any other 4xx/5xx),
-    "unreachable" (network failure, timeout, too many redirects) or
-    "private" (not a public address, never fetched)."""
+    "unreachable" (no DNS answer, network failure, timeout, too many
+    redirects) or "private" (not a public address, never fetched)."""
 
     verdict: str
     reason: str = ""
     problem: str = ""
     status: Optional[int] = None
+    # Every URL requested, redirects included (http:// in a redirect chain
+    # is blocked as mixed content on an https:// site, like the first URL).
+    urls: tuple[str, ...] = ()
 
 
 def probe(
@@ -190,14 +225,18 @@ def probe(
 def _probe(
     url: str, ckan: tuple[str, list[str], Optional[int]], deadline: Optional[float]
 ) -> Probe:
+    urls: list[str] = []
     for _ in range(MAX_REDIRECTS + 1):
-        if not _public(url):
-            return Probe(UNKNOWN, problem="private")
+        urls.append(url)
+        kind = _address_kind(url, deadline)
+        if kind != "public":
+            problem = "private" if kind == "private" else "unreachable"
+            return Probe(UNKNOWN, problem=problem, urls=tuple(urls))
         timeout: float = TIMEOUT
         if deadline is not None:
             timeout = min(timeout, deadline - time.monotonic())
             if timeout <= 0:
-                return Probe(UNKNOWN, problem="unreachable")
+                return Probe(UNKNOWN, problem="unreachable", urls=tuple(urls))
         try:
             response = requests.get(
                 url,
@@ -207,7 +246,7 @@ def _probe(
                 headers={"User-Agent": USER_AGENT},
             )
         except requests.RequestException:
-            return Probe(UNKNOWN, problem="unreachable")
+            return Probe(UNKNOWN, problem="unreachable", urls=tuple(urls))
         try:
             location = response.headers.get("Location")
             if response.is_redirect and location:
@@ -224,10 +263,10 @@ def _probe(
                 problem = "gone"
             elif status >= 400:
                 problem = "http-error"
-            return Probe(result, reason, problem, status)
+            return Probe(result, reason, problem, status, tuple(urls))
         finally:
             response.close()
-    return Probe(UNKNOWN, problem="unreachable")
+    return Probe(UNKNOWN, problem="unreachable", urls=tuple(urls))
 
 
 def _fetch(url: str, ckan: tuple[str, list[str], Optional[int]]) -> tuple[str, str]:

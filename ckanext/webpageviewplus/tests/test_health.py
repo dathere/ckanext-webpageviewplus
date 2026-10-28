@@ -15,7 +15,7 @@ PAGE = "https://pages.example.com/a.html"
 BLOCKED = fa.Probe(fa.BLOCKED, "X-Frame-Options: DENY", "", 200)
 FINE = fa.Probe(fa.FRAMEABLE, "", "", 200)
 REFUSED = "pages.example.com doesn't allow its pages to be shown inside other sites."
-MIXED = "browsers block those inside https:// sites"
+MIXED = "served over http://, which browsers block inside https:// sites"
 
 
 def _view(resource_id, **fields):
@@ -244,3 +244,75 @@ class TestCheckViews:
         assert result.exit_code == 0, result.output
         assert "not a public address" in result.output
         assert health.stored(view["id"], PAGE) is None
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins", "counts_table")
+class TestMixedContent:
+    @pytest.fixture(autouse=True)
+    def https_site(self, ckan_config, monkeypatch):
+        monkeypatch.setitem(ckan_config, "ckan.site_url", "https://test.ckan.net")
+
+    def test_http_page_on_own_host(self, app, probes):
+        _, body = _page(app, page_url="http://test.ckan.net/about")
+        assert MIXED in body
+        assert "<iframe" not in body
+
+    def test_classify_redirect_chain(self):
+        hop = fa.Probe(fa.FRAMEABLE, urls=(PAGE, "http://pages.example.com/b"))
+        assert health.classify(hop).problem == "mixed-content"
+        assert health.classify(FINE).problem == ""
+        first_http = fa.Probe(fa.FRAMEABLE, urls=("http://x.example/",))
+        assert health.classify(first_http).problem == ""  # judged on the URL itself
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.frameability_check", "true")
+    def test_stored_redirect_to_http(self, app, probes):
+        probes[PAGE] = fa.Probe(fa.FRAMEABLE, "", "", 200, (PAGE, "http://pages.example.com/b"))
+        view, body = _page(app)
+        assert health.stored(view["id"], PAGE)["problem"] == "mixed-content"
+        assert MIXED in body
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view webpage_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins", "counts_table")
+class TestCheckViewsRules:
+    def _run(self, cli, dataset, *args):
+        return cli.invoke(
+            ckan, ["webpageviewplus", "check-views", "--dataset", dataset["name"], *args])
+
+    def test_unknown_host_is_unreachable(self, cli, probes):
+        dataset = factories.Dataset()
+        _view(factories.Resource(package_id=dataset["id"], url=PAGE)["id"])
+        probes[PAGE] = fa.Probe(fa.UNKNOWN, problem="unreachable")
+        result = self._run(cli, dataset)
+        assert result.exit_code == 1
+        assert "unreachable\twebpage_view_plus" in result.output
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.allowed_hosts", "pages.example.com")
+    def test_allowed_hosts_only_for_page_url(self, cli, probes):
+        dataset = factories.Dataset()
+        r = factories.Resource(package_id=dataset["id"], url="https://other.example.com/")
+        _view(r["id"])
+        result = self._run(cli, dataset)
+        assert result.exit_code == 0, result.output
+        assert probes["calls"][-1] == "https://other.example.com/"
+
+    def _core_upload(self, dataset):
+        r = factories.Resource(package_id=dataset["id"], url="page.html",
+                               url_type="upload", format="HTML")
+        factories.ResourceView(resource_id=r["id"], view_type="webpage_view")
+
+    def test_core_upload_fine_with_hardened_downloads(self, cli, probes):
+        dataset = factories.Dataset()
+        self._core_upload(dataset)
+        assert self._run(cli, dataset).exit_code == 0
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.harden_downloads", "false")
+    def test_core_upload_without_hardening(self, cli, probes):
+        dataset = factories.Dataset()
+        self._core_upload(dataset)
+        result = self._run(cli, dataset)
+        assert result.exit_code == 1
+        assert "unsandboxed-upload\twebpage_view\t" in result.output

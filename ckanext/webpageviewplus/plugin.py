@@ -94,6 +94,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
     def get_actions(self):
         return {
             "webpageviewplus_frameability": actions.webpageviewplus_frameability,
+            "webpageviewplus_service_suggest": actions.webpageviewplus_service_suggest,
             "webpageviewplus_view_stats_show": actions.webpageviewplus_view_stats_show,
             "webpageviewplus_connections_show": actions.webpageviewplus_connections_show,
             "resource_view_create": actions.resource_view_create,
@@ -105,6 +106,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
     def get_auth_functions(self):
         return {
             "webpageviewplus_frameability": actions.frameability_auth,
+            "webpageviewplus_service_suggest": actions.frameability_auth,
             "webpageviewplus_view_stats_show": actions.view_stats_auth,
             "webpageviewplus_connections_show": actions.connections_auth,
         }
@@ -265,11 +267,12 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             endpoint = request.endpoint
             g.webpageviewplus_vary_held_back = True
         third_party = not is_upload and not frame.is_ckan_host(url, ckan_hosts)
-        # A third-party page browsers won't show here (http on an https site,
-        # or its stored check found it refusing to be framed) gets a card
+        # A page browsers won't show here (http on an https site, or a
+        # third-party page its stored check found refusing framing) gets a card
         # instead of a blank frame. Only from what's already known: rendering
         # never fetches anything (health.py).
-        refused = health.refused(resource_view.get("id"), url) if third_party else None
+        refused = None if is_upload else health.refused(
+            resource_view.get("id"), url, third_party)
         if refused:
             events.emit("frame_refused", reason=refused, host=frame.url_host(url))
         consent = third_party and not refused and (

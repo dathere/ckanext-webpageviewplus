@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
+import dataclasses
+from typing import Any, Optional
 
 import ckan.model as model
 import ckan.plugins.toolkit as toolkit
@@ -12,6 +13,7 @@ from ckanext.webpageviewplus import (
     frame,
     frameability,
     health,
+    services,
     settings,
     stats,
 )
@@ -60,6 +62,37 @@ def webpageviewplus_frameability(
     if result.get("verdict") == "blocked":
         events.emit("frameability_blocked", host=frame.url_host(url))
     return result
+
+
+@toolkit.side_effect_free
+def webpageviewplus_service_suggest(
+    context: Context, data_dict: dict[str, Any]
+) -> Optional[dict[str, Any]]:
+    """Embed settings for a well-known service's page (YouTube, Vimeo,
+    Datawrapper, Flourish, Observable, Tableau Public). Fetches nothing.
+
+    :param url: the page URL an editor typed
+    :param resource_id: the resource the view is for (for authorization)
+    :returns: ``None``, or ``{"service", "embed_url", "preset",
+        "height_mode", "height_value", "problem"}``, where ``problem`` is
+        ``""`` or why the settings won't work on this site:
+        ``"preset_not_allowed"``, ``"needs_content_origin"`` or
+        ``"host_not_allowed"``.
+    """
+    toolkit.check_access("webpageviewplus_service_suggest", context, data_dict)
+    found = services.suggest(toolkit.get_or_bust(data_dict, "url"))
+    if found is None:
+        return None
+    problem = ""
+    allowed = settings.allowed_hosts()
+    if found.preset not in settings.allowed_presets():
+        problem = "preset_not_allowed"
+    elif frame.PRESETS[found.preset].needs_content_origin \
+            and not settings.isolating_content_origin():
+        problem = "needs_content_origin"
+    elif allowed and frame.url_host(found.embed_url) not in allowed:
+        problem = "host_not_allowed"
+    return dict(dataclasses.asdict(found), problem=problem)
 
 
 # Saving a view checks its page (with frameability_check on), so rendering

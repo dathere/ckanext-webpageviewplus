@@ -11,6 +11,9 @@
 - `ckan webpageviewplus check-views` lists `webpage_view_plus` and core `webpage_view` views
   whose page is gone, unreachable, refuses framing or is blocked as mixed content, and exits
   with status 1 if any are, for cron.
+- The view form recognises YouTube, Vimeo, Datawrapper, Flourish, Observable and Tableau Public
+  links and offers each service's embed address, preset and height, or says why it won't work
+  on the site (YouTube, Vimeo, Observable and Tableau Public need a content origin).
 
 ### Viewing
 

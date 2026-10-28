@@ -1,0 +1,166 @@
+import pytest
+
+from ckan.plugins import toolkit
+from ckan.plugins.toolkit import url_for
+from ckan.tests import factories, helpers
+
+from ckanext.webpageviewplus import frame, services
+
+YT = "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"
+
+
+@pytest.mark.parametrize(
+    "url,service,embed",
+    [
+        ("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "YouTube", YT),
+        ("https://youtube.com/watch?v=dQw4w9WgXcQ&list=x", "YouTube", YT),
+        ("https://m.youtube.com/watch?v=dQw4w9WgXcQ", "YouTube", YT),
+        ("https://youtu.be/dQw4w9WgXcQ", "YouTube", YT),
+        ("https://youtu.be/dQw4w9WgXcQ?t=90", "YouTube", YT + "?start=90"),
+        ("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1m30s", "YouTube", YT + "?start=90"),
+        ("https://www.youtube.com/shorts/dQw4w9WgXcQ", "YouTube", YT),
+        ("https://www.youtube.com/embed/dQw4w9WgXcQ", "YouTube", YT),
+        (YT, "YouTube", YT),
+        ("https://vimeo.com/76979871", "Vimeo", "https://player.vimeo.com/video/76979871"),
+        ("https://vimeo.com/76979871/abc123", "Vimeo",
+         "https://player.vimeo.com/video/76979871?h=abc123"),
+        ("https://player.vimeo.com/video/76979871?h=abc123&autoplay=1", "Vimeo",
+         "https://player.vimeo.com/video/76979871?h=abc123"),
+        ("https://datawrapper.dwcdn.net/XSj9X/5/", "Datawrapper",
+         "https://datawrapper.dwcdn.net/XSj9X/"),
+        ("https://www.datawrapper.de/_/XSj9X/", "Datawrapper",
+         "https://datawrapper.dwcdn.net/XSj9X/"),
+        ("https://public.flourish.studio/visualisation/11597006/", "Flourish",
+         "https://flo.uri.sh/visualisation/11597006/embed"),
+        ("https://flo.uri.sh/visualisation/11597006/embed", "Flourish",
+         "https://flo.uri.sh/visualisation/11597006/embed"),
+        ("https://observablehq.com/@d3/bar-chart", "Observable",
+         "https://observablehq.com/embed/@d3/bar-chart"),
+        ("https://observablehq.com/embed/@d3/bar-chart?cells=chart", "Observable",
+         "https://observablehq.com/embed/@d3/bar-chart?cells=chart"),
+        ("https://public.tableau.com/app/profile/tableau.docs.team/viz/RegionalSampleWorkbook/Storms",
+         "Tableau Public",
+         "https://public.tableau.com/views/RegionalSampleWorkbook/Storms?:showVizHome=no&:embed=true"),
+        ("https://public.tableau.com/views/RegionalSampleWorkbook/Storms?:language=en-US",
+         "Tableau Public",
+         "https://public.tableau.com/views/RegionalSampleWorkbook/Storms?:showVizHome=no&:embed=true"),
+    ],
+)
+def test_recognised(url, service, embed):
+    found = services.suggest(url)
+    assert (found.service, found.embed_url) == (service, embed)
+    assert found.preset in frame.PRESETS
+    assert frame.is_http_url(found.embed_url)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "",
+        "https://example.com/watch?v=dQw4w9WgXcQ",
+        "https://www.youtube.com/watch?v=tooshort",
+        "https://www.youtube.com/channel/UC123",
+        "https://www.youtube.com.evil.example/watch?v=dQw4w9WgXcQ",
+        "https://user@www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "https://www.youtube.com:8443/watch?v=dQw4w9WgXcQ",
+        "https://www.youtube.com:99999/watch?v=dQw4w9WgXcQ",
+        "javascript:alert(1)//youtu.be/dQw4w9WgXcQ",
+        "https://vimeo.com/channels/staffpicks",
+        "https://datawrapper.dwcdn.net/<x>/",
+        "https://observablehq.com/@d3",
+        "https://public.tableau.com/app/profile/someone",
+    ],
+)
+def test_not_recognised(url):
+    assert services.suggest(url) is None
+
+
+def test_embed_urls_carry_no_input_text():
+    # Only validated ids reach the embed URL.
+    found = services.suggest("https://vimeo.com/76979871/x\"><script>")
+    assert found is None or "<" not in found.embed_url
+
+
+def test_video_settings():
+    found = services.suggest("https://youtu.be/dQw4w9WgXcQ")
+    assert (found.preset, found.height_mode, found.height_value) == ("external", "aspect", "16/9")
+    assert services.suggest("https://datawrapper.dwcdn.net/XSj9X/").preset == "interactive"
+
+
+def test_suggested_heights_are_valid():
+    for url in ("https://youtu.be/dQw4w9WgXcQ", "https://datawrapper.dwcdn.net/XSj9X/",
+                "https://public.tableau.com/views/A/B"):
+        found = services.suggest(url)
+        assert frame.height_value_valid(found.height_mode, found.height_value)
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestAction:
+    def _call(self, user, **data):
+        return helpers.call_action(
+            "webpageviewplus_service_suggest",
+            context={"user": user["name"] if user else "", "ignore_auth": False},
+            **data,
+        )
+
+    def _resource(self):
+        return factories.Resource(url="https://pages.example.com/a.html")
+
+    def test_needs_permission_on_the_resource(self):
+        dataset = factories.Dataset(owner_org=factories.Organization()["id"])
+        resource = factories.Resource(package_id=dataset["id"], url="https://x.example/")
+        with pytest.raises(toolkit.NotAuthorized):
+            self._call(factories.User(), resource_id=resource["id"], url="https://youtu.be/dQw4w9WgXcQ")
+
+    def test_unknown_page(self):
+        assert self._call(factories.Sysadmin(), resource_id=self._resource()["id"],
+                          url="https://pages.example.com/") is None
+
+    def test_needs_content_origin_without_isolation(self):
+        result = self._call(factories.Sysadmin(), resource_id=self._resource()["id"],
+                            url="https://youtu.be/dQw4w9WgXcQ")
+        assert result["embed_url"] == YT
+        assert result["problem"] == "needs_content_origin"
+
+    def test_sandboxed_services_work_anywhere(self):
+        result = self._call(factories.Sysadmin(), resource_id=self._resource()["id"],
+                            url="https://datawrapper.dwcdn.net/XSj9X/")
+        assert result["problem"] == ""
+
+    def test_works_with_isolation(self, monkeypatch):
+        from ckanext.webpageviewplus import settings
+        monkeypatch.setattr(settings, "isolating_content_origin",
+                            lambda: "https://usercontent.example.net")
+        result = self._call(factories.Sysadmin(), resource_id=self._resource()["id"],
+                            url="https://youtu.be/dQw4w9WgXcQ")
+        assert result["problem"] == ""
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "strict interactive")
+    def test_preset_not_allowed(self, monkeypatch):
+        from ckanext.webpageviewplus import settings
+        monkeypatch.setattr(settings, "isolating_content_origin",
+                            lambda: "https://usercontent.example.net")
+        result = self._call(factories.Sysadmin(), resource_id=self._resource()["id"],
+                            url="https://youtu.be/dQw4w9WgXcQ")
+        assert result["problem"] == "preset_not_allowed"
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.allowed_hosts", "pages.example.com")
+    def test_host_not_allowed(self):
+        result = self._call(factories.Sysadmin(), resource_id=self._resource()["id"],
+                            url="https://datawrapper.dwcdn.net/XSj9X/")
+        assert result["problem"] == "host_not_allowed"
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+def test_form_has_suggestion_region(app):
+    sysadmin = factories.SysadminWithToken()
+    dataset = factories.Dataset()
+    resource = factories.Resource(package_id=dataset["id"], url="https://x.example/")
+    url = url_for("{}_resource.edit_view".format(dataset["type"]), id=dataset["name"],
+                  resource_id=resource["id"], view_type="webpage_view_plus")
+    body = app.get(url, headers={"Authorization": sysadmin["token"]}).body
+    assert "data-webpageviewplus-service" in body
+    assert "webpageviewplus_service_suggest" in body
+    assert 'data-preset-names="{&#34;' in body

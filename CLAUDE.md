@@ -170,6 +170,14 @@ order now being built:
   every failure must stay the same "unknown" verdict. The header rules follow browsers:
   `frame-ancestors` overrides `X-Frame-Options`, `ALLOW-FROM` is ignored, and `SAMEORIGIN` and
   `'self'` count as blocked.
+- `services.py`: well-known services (pure, no CKAN imports). `suggest(url)` maps a pasted page
+  URL to a `Suggestion` (embed URL, preset, height); only validated ids reach the embed URL.
+  The `webpageviewplus_service_suggest` action (no fetch; `frameability_auth`) adds `problem`
+  (`preset_not_allowed`, `needs_content_origin`, `host_not_allowed`), and the form script
+  offers "Use them", which fills page_url, preset and height. Nothing is rewritten at render.
+  Each service's preset comes from loading a real embed in Chrome under each sandbox:
+  Datawrapper and Flourish work in `interactive`; YouTube, Vimeo, Observable and Tableau
+  Public need `allow-same-origin`, hence `external`. Re-check that way before adding one.
 - `health.py`: views whose page can't be shown. **Rendering never fetches**: with
   `frameability_check` on, `resource_view_create`/`_update` are chained (`actions.py`) to probe
   the page once after the save (`health.after_save`, `SAVE_SECONDS` overall via

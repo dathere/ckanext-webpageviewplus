@@ -31,7 +31,7 @@ origin, so anyone who opens it runs its scripts as CKAN, with their login. Stock
 | Controls | CKAN's Fullscreen (the view on its own page) and Embed links | the same, plus a bar under the view: Open in new tab, Fullscreen (or Expand on iPhone), Reload, Share |
 | Accessibility | generic "Webpage view" title | the view's title as accessible name, skip link, live region, reflow at 400% zoom |
 | Pages that can't be shown | a blank frame | a card saying why, with Open in new tab: http:// pages on an https:// site, and (optional) pages that refuse to be framed |
-| Editor help | none | optional warning when a page refuses to be framed |
+| Editor help | none | paste a YouTube, Vimeo, Datawrapper, Flourish, Observable or Tableau Public link and the form offers its embed address and settings; optional warning when a page refuses to be framed |
 | Finding broken views | none | `ckan webpageviewplus check-views` lists views (core's too) whose page is gone, unreachable or refuses framing |
 | Telemetry | none | none by default; opt-in view counting and connection reports |
 | Moving over | n/a | `ckan webpageviewplus migrate` converts existing views in place |
@@ -134,6 +134,24 @@ Every frame gets `loading="lazy"`, a `referrerpolicy`, the view's title as its a
 name, and an `allow` list that always denies ad and tracking features. Editors pick the preset
 and height (fixed, share of the window, aspect ratio, auto). Sysadmins can also set sandbox
 tokens, allowed features and the referrer policy per view.
+
+**Well-known services.** Paste a YouTube, Vimeo, Datawrapper, Flourish, Observable or Tableau
+Public link as the page URL and the form offers the service's embed address, with the preset and
+height its embed needs ("Use them"). Nothing is changed until the editor accepts, and what's
+saved is what's shown. Each embed was checked in Chrome under each preset:
+
+| Service | Recognised links | Preset | Height |
+| --- | --- | --- | --- |
+| YouTube | `youtube.com/watch?v=`, `youtu.be/`, `/shorts/`, `/embed/` (a `t=` start time is kept) | `external` (`youtube-nocookie.com`) | 16/9 |
+| Vimeo | `vimeo.com/<id>`, unlisted `vimeo.com/<id>/<hash>`, `player.vimeo.com/video/<id>` | `external` | 16/9 |
+| Datawrapper | `datawrapper.dwcdn.net/<id>/`, `datawrapper.de/_/<id>/` | `interactive` | 500 px |
+| Flourish | `public.flourish.studio/visualisation/<id>/`, `flo.uri.sh/...` | `interactive` | 600 px |
+| Observable | `observablehq.com/@user/notebook`, `/d/<id>`, `/embed/...` | `external` | 600 px |
+| Tableau Public | `public.tableau.com/app/profile/.../viz/<workbook>/<sheet>`, `/views/...` | `external` | 800 px |
+
+YouTube, Vimeo, Observable and Tableau Public fail inside a sandbox without
+`allow-same-origin`, so they need `external`, and so a content origin. On a site without one,
+the form says so instead of offering settings that won't play.
 
 **Auto height.** With height "Auto", the frame takes the height the page reports, clamped to
 `min_height`/`max_height`; until it reports one, it keeps a fixed fallback height. Any page can
@@ -274,7 +292,8 @@ URL changed, or that was never checked, shows its frame as before. Pages that co
 checked show their frame too. Keep answers current with `check-views` (below) from cron.
 
 An `http://` page on an `https://` site gets a card too, whatever this setting: browsers block
-it as mixed content. That needs no fetch.
+it as mixed content. That needs no fetch. With the setting on, so does a page whose stored check
+found it redirecting to `http://`.
 
 **It makes your CKAN server request URLs that editors type**, so it's off by default. If you
 enable it, the server:
@@ -300,11 +319,11 @@ and lists the ones that can't show their page:
 | `refuses-embedding` | the page's `X-Frame-Options` or CSP `frame-ancestors` refuses your CKAN |
 | `gone` | the page answers 404 or 410 |
 | `http-error` | any other 4xx or 5xx answer |
-| `unreachable` | no answer: network error, timeout or more than three redirects |
-| `mixed-content` | an `http://` page on an `https://` site, which browsers block |
+| `unreachable` | no answer: unknown host, network error, timeout or more than three redirects |
+| `mixed-content` | an `http://` page on an `https://` site, or one redirecting to `http://`, which browsers block |
 | `not-http` | not an `http://` or `https://` URL |
-| `host-not-allowed` | outside `allowed_hosts` (`webpage_view_plus` views only) |
-| `unsandboxed-upload` | a core `webpage_view` framing an upload unsandboxed, as CKAN; `migrate` fixes it |
+| `host-not-allowed` | a page URL outside `allowed_hosts` (`webpage_view_plus` views only) |
+| `unsandboxed-upload` | with `harden_downloads = false`, a core `webpage_view` framing uploaded HTML, SVG or XML unsandboxed, as CKAN; `migrate` fixes it |
 
 It fetches each URL once per run, with the same guards as the form's check (public addresses
 only, headers only), whatever `frameability_check` is set to. Uploads and CKAN's own pages
@@ -426,7 +445,8 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckan webpageviewplus stats-summary [--limit N]` | Site-wide view counts, busiest first |
 | `ckan webpageviewplus connections [--limit N]` | Hosts uploaded pages were seen contacting, site-wide |
 
-API actions: `webpageviewplus_frameability` (`url`, `resource_id`; for those who may add views),
+API actions: `webpageviewplus_frameability` and `webpageviewplus_service_suggest` (`url`,
+`resource_id`; for those who may add views; the second fetches nothing),
 `webpageviewplus_view_stats_show` (`id` of a view, optional `days`) and
 `webpageviewplus_connections_show` (`id` of a resource), both for those who may update the
 resource.

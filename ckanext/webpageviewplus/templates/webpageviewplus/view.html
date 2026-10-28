@@ -5,7 +5,7 @@
   <div class="webpageviewplus-card webpageviewplus-refused" data-reason="{{ refused }}">
     <p class="webpageviewplus-card-title">{{ frame.title }}</p>
     {% if refused == 'mixed' %}
-      <p>{{ _("This page can't be shown here: its address starts with http://, and browsers block those inside https:// sites.") }}</p>
+      <p>{{ _("This page can't be shown here: it's served over http://, which browsers block inside https:// sites.") }}</p>
     {% else %}
       <p>{{ _("{host} doesn't allow its pages to be shown inside other sites.").format(host=refused_host) }}</p>
     {% endif %}

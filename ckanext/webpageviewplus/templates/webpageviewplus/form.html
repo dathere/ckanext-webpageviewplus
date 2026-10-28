@@ -13,9 +13,30 @@
   'auto': _('Auto'),
 } %}
 
+{% set preset_names = {
+  'strict': _('Strict'),
+  'interactive': _('Interactive'),
+  'external': _('External'),
+  'data-schematic': _('Data Schematic'),
+} %}
+
+{% asset 'webpageviewplus/webpageviewplus-js' %}
 {{ form.input('page_url', id='field-page_url', label=_('Web Page url'), placeholder=_('eg. http://example.com  (if blank uses resource url)'), value=data.page_url, error=errors.page_url, classes=['control-full', 'control-large']) }}
+{# Well-known services (YouTube, Datawrapper...): offers the embed address
+   and the settings the embed needs. Filled in by the script. #}
+<div class="webpageviewplus-service" role="status" aria-live="polite"
+     data-webpageviewplus-service
+     data-api="{{ h.url_for('api.action', ver=3, logic_function='webpageviewplus_service_suggest') }}"
+     data-resource-id="{{ resource.id }}"
+     data-preset-names="{{ preset_names | tojson | forceescape }}"
+     data-found="{{ _('This is a {service} page. Use its embed address and the settings its embed needs?') }}"
+     {# TRANSLATORS: a button accepting the suggested embed address and settings. #}
+     data-apply="{{ _('Use them') }}"
+     data-applied="{{ _('Using the embed address and settings for {service}. Save the view to keep them.') }}"
+     data-needs-content-origin="{{ _('{service} only works with the {preset} preset, which this site runs as Interactive until it serves uploads from a separate content origin, so it won\'t play here yet.') }}"
+     data-preset-not-allowed="{{ _('{service} only works with the {preset} preset, which this site doesn\'t allow.') }}"
+     data-host-not-allowed="{{ _('{service} embeds come from {host}, which isn\'t on this site\'s list of allowed hosts.') }}"></div>
 {% if frameability_check %}
-  {% asset 'webpageviewplus/webpageviewplus-js' %}
   <div class="webpageviewplus-frameability" role="status" aria-live="polite"
        data-webpageviewplus-frameability
        data-api="{{ h.url_for('api.action', ver=3, logic_function='webpageviewplus_frameability') }}"

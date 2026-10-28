@@ -8,6 +8,7 @@ only for the URL it was taken for.
 """
 from __future__ import annotations
 
+import dataclasses
 import datetime
 import logging
 import time
@@ -43,15 +44,16 @@ table = sa.Table(
 
 def third_party_url(page_url: str, resource_url: str, url_type: str) -> Optional[str]:
     """The URL a webpage_view_plus view frames when it's another site's page,
-    else None: uploads, CKAN's own pages, non-http(s) URLs and hosts outside
-    allowed_hosts are never fetched."""
+    else None: uploads, CKAN's own pages and non-http(s) URLs are never
+    fetched, nor a page_url outside allowed_hosts (which doesn't render).
+    As in rendering, allowed_hosts doesn't apply to the resource URL."""
     url = page_url or resource_url
     if not page_url and url_type == "upload":
         return None
     if not frame.is_http_url(url) or frame.is_ckan_host(url, settings.ckan_hosts()):
         return None
     allowed = settings.allowed_hosts()
-    if allowed and frame.url_host(url) not in allowed:
+    if page_url and allowed and frame.url_host(url) not in allowed:
         return None
     return url
 
@@ -67,6 +69,14 @@ def mixed_content(url: str) -> bool:
     host = frame.url_host(url)
     loopback = host in settings.LOOPBACK_HOSTS or host.endswith(".localhost")
     return site_scheme == "https" and scheme == "http" and not loopback
+
+
+def classify(result: frameability.Probe) -> frameability.Probe:
+    """``result``, with problem "mixed-content" if its redirect chain goes
+    through an http:// URL that browsers would block on this site."""
+    if any(mixed_content(u) for u in result.urls[1:]):
+        return dataclasses.replace(result, problem="mixed-content")
+    return result
 
 
 def store(view_id: str, url: str, result: frameability.Probe) -> None:
@@ -105,21 +115,25 @@ def stored(view_id: str, url: str) -> Optional[dict[str, Any]]:
     return dict(row._mapping) if row else None
 
 
-def refused(view_id: Optional[str], url: str) -> Optional[str]:
-    """Why a third-party page can't be shown, from what's already known:
-    "mixed" (http on an https site) or "blocked" (its stored check found it
-    refusing to be framed). None means show the frame."""
+def refused(view_id: Optional[str], url: str, third_party: bool = True) -> Optional[str]:
+    """Why a page can't be shown, from what's already known: "mixed" (http
+    on an https site, itself or in its stored redirect chain) or "blocked"
+    (its stored check found it refusing to be framed; third-party pages
+    only). None means show the frame."""
     if mixed_content(url):
         return "mixed"
-    if view_id and settings.frameability_check():
+    if third_party and view_id and settings.frameability_check():
         row = stored(view_id, url)
+        if row and row["problem"] == "mixed-content":
+            return "mixed"
         if row and row["verdict"] == frameability.BLOCKED:
             return "blocked"
     return None
 
 
 def check_view(view_id: str, url: str, deadline: Optional[float] = None) -> frameability.Probe:
-    result = frameability.probe(url, frameability.ckan_identity(settings.site_url()), deadline)
+    result = classify(frameability.probe(
+        url, frameability.ckan_identity(settings.site_url()), deadline))
     store(view_id, url, result)
     if result.verdict == frameability.BLOCKED:
         events.emit("frameability_blocked", host=frame.url_host(url))

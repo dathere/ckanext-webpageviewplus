@@ -226,6 +226,16 @@ def connections_summary(limit: int):
 
 
 VIEW_TYPES = ("webpage_view_plus", "webpage_view")
+ACTIVE_CONTENT = ("html", "htm", "xhtml", "svg", "xml")
+
+
+def _active_content(resource: model.Resource) -> bool:
+    """Whether an upload looks like HTML, SVG or XML, which run scripts."""
+    fmt = (resource.format or "").lower()
+    mimetype = (resource.mimetype or "").lower()
+    ext = (resource.url or "").rpartition(".")[2].lower()
+    return (fmt in ACTIVE_CONTENT or ext in ACTIVE_CONTENT
+            or any(t in mimetype for t in ("html", "svg", "xml")))
 
 
 def assess(
@@ -246,33 +256,40 @@ def assess(
         return {"problem": problem, "detail": detail, "url": url}
 
     if not page_url and resource.url_type == "upload":
-        if plus:
-            return result(detail="upload")
-        return result(
-            "unsandboxed-upload",
-            "an upload framed without a sandbox, on CKAN's own origin; "
-            "`ckan webpageviewplus migrate` fixes it",
-        )
+        # Core frames uploads unsandboxed, but with harden_downloads (the
+        # default) HTML downloads carry a CSP sandbox, so they can't run as
+        # CKAN.
+        if not plus and not settings.harden_downloads() and _active_content(resource):
+            return result(
+                "unsandboxed-upload",
+                "uploaded HTML framed without a sandbox, on CKAN's own origin; "
+                "`ckan webpageviewplus migrate` fixes it",
+            )
+        return result(detail="upload")
     if not frame.is_http_url(url):
         return result("not-http", "only http:// and https:// pages can be framed")
+    if health.mixed_content(url):
+        return result("mixed-content", "http:// page on an https:// site: browsers block it")
     if frame.is_ckan_host(url, settings.ckan_hosts()):
         return result(detail="a page on this site, not fetched")
     allowed = settings.allowed_hosts()
-    if plus and allowed and frame.url_host(url) not in allowed:
+    # As in rendering, allowed_hosts applies to page_url only.
+    if plus and page_url and allowed and frame.url_host(url) not in allowed:
         return result("host-not-allowed", "not in ckanext.webpageviewplus.allowed_hosts")
-    if health.mixed_content(url):
-        return result("mixed-content", "http:// page on an https:// site: browsers block it")
     if url not in probes:
-        probes[url] = frameability.probe(
+        probes[url] = health.classify(frameability.probe(
             url, frameability.ckan_identity(settings.site_url()),
-            time.monotonic() + timeout)
+            time.monotonic() + timeout))
     probe = probes[url]
     if plus and store and probe.problem != "private":
         health.store(view.id, url, probe)
     if probe.problem == "private":
         return result(detail="not fetched: not a public address")
     if probe.problem == "unreachable":
-        return result("unreachable", "no answer (network error, timeout or too many redirects)")
+        return result(
+            "unreachable", "no answer (unknown host, network error, timeout or too many redirects)")
+    if probe.problem == "mixed-content":
+        return result("mixed-content", "redirects to an http:// page, which browsers block here")
     if probe.problem:
         return result(probe.problem, "HTTP {}".format(probe.status))
     if probe.verdict == frameability.BLOCKED:

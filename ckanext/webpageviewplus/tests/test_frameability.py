@@ -166,7 +166,7 @@ def test_probe_deadline_passed_fetches_nothing(dns):
     dns["pages.example.com"] = ["93.184.216.34"]
     responses.get("https://pages.example.com/a")
     result = fa.probe("https://pages.example.com/a", CKAN, deadline=time.monotonic() - 1)
-    assert result == fa.Probe(fa.UNKNOWN, problem="unreachable")
+    assert (result.verdict, result.problem) == (fa.UNKNOWN, "unreachable")
     assert len(responses.calls) == 0
 
 
@@ -254,3 +254,34 @@ def test_form_has_status_region_only_when_enabled(app, ckan_config, monkeypatch,
     if present:
         assert 'role="status"' in body
         assert "/api/3/action/webpageviewplus_frameability" in body
+
+
+@responses.activate
+def test_unresolved_host_is_unreachable_not_private(dns):
+    result = fa.probe("https://gone.example.com/", CKAN)
+    assert result.problem == "unreachable"
+    assert len(responses.calls) == 0
+    # The form's check still gives one answer for every failure.
+    assert fa.check("https://gone.example.com/", CKAN) == (fa.UNKNOWN, "")
+
+
+def test_dns_bounded_by_deadline(monkeypatch):
+    def slow(host, port):
+        time.sleep(3)
+        return ["93.184.216.34"]
+
+    monkeypatch.setattr(fa, "_resolve", slow)
+    start = time.monotonic()
+    result = fa.probe("https://pages.example.com/a", CKAN, deadline=start + 0.5)
+    assert result.problem == "unreachable"
+    assert time.monotonic() - start < 2
+
+
+@responses.activate
+def test_probe_records_redirect_chain(dns):
+    dns["pages.example.com"] = ["93.184.216.34"]
+    responses.get("https://pages.example.com/a", status=301,
+                  headers={"Location": "http://pages.example.com/b"})
+    responses.get("http://pages.example.com/b")
+    result = fa.probe("https://pages.example.com/a", CKAN)
+    assert result.urls == ("https://pages.example.com/a", "http://pages.example.com/b")
