@@ -543,6 +543,15 @@ class TestModernExtras:
     def test_color_scheme_off_by_default(self, app):
         assert "color-scheme" not in _render(app, {})
 
+    def test_narrow_width_default(self, app):
+        assert '<div class="webpageviewplus" data-narrow-width="576">' in _render(app, {})
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.narrow_width", "0")
+    def test_narrow_width_off(self, app):
+        body = _render(app, {})
+        assert '<div class="webpageviewplus">' in body
+        assert "data-narrow-width" not in body
+
     def test_no_preconnect_for_third_party_page(self, app):
         assert 'rel="preconnect"' not in _render(app, {})
 
@@ -595,4 +604,16 @@ def test_unknown_color_scheme_stops_startup(monkeypatch):
         lambda key: "dark;background:red" if key == "color_scheme" else real_get(key),
     )
     with pytest.raises(CkanConfigurationException, match="color_scheme"):
+        settings.check()
+
+
+def test_negative_narrow_width_stops_startup(monkeypatch):
+    from ckan.exceptions import CkanConfigurationException
+    from ckanext.webpageviewplus import settings
+
+    real_get = settings._get
+    monkeypatch.setattr(
+        settings, "_get", lambda key: "-1" if key == "narrow_width" else real_get(key)
+    )
+    with pytest.raises(CkanConfigurationException, match="narrow_width"):
         settings.check()

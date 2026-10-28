@@ -4,6 +4,8 @@ floor, and a view that hides its control bar still offers Open in new tab.
 Playwright can't set browser zoom; a 320x200 viewport is what 400% zoom
 gives on a 1280x800 screen.
 """
+import re
+
 import pytest
 from playwright.sync_api import expect
 
@@ -116,3 +118,20 @@ def test_scroll_kept_when_frame_above_shrinks_under_floor(page, view_urls, ancho
     assert abs(_frame_height(page) - FLOOR) <= 1
     after = page.evaluate("document.getElementById('below').getBoundingClientRect().top")
     assert abs(after - top) <= 2, after - top
+
+
+def test_responsive_height(page, view_urls):
+    """Below narrow_width (576px by default) an aspect-ratio view takes 80%
+    of the screen's height instead of a thin 16:9 strip; a fixed one keeps
+    its height."""
+    page.goto(view_urls["Aspect 16/9"])
+    box = page.locator(FRAME).bounding_box()
+    assert abs(box["height"] - box["width"] * 9 / 16) <= 2
+
+    page.set_viewport_size({"width": 500, "height": 800})
+    expect(page.locator(".webpageviewplus")).to_have_class(re.compile("webpageviewplus-narrow"))
+    assert abs(_frame_height(page) - 640) <= 2
+
+    page.goto(view_urls["Interactive fixed 300"])
+    expect(page.locator(".webpageviewplus")).to_have_class(re.compile("webpageviewplus-narrow"))
+    assert abs(_frame_height(page) - 300) <= 1

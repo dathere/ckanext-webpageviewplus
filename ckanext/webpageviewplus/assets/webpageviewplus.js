@@ -58,7 +58,19 @@
       announceLoaded(iframe);
     });
     replyViewport(state);
+    setupNarrow(state);
     setupShield(state);
+  }
+
+  // Responsive height: the breakpoint is a site setting, which a container
+  // query can't read, so the class is set here and the CSS does the rest.
+  function setupNarrow(state) {
+    var wrapper = state.iframe.closest(".webpageviewplus");
+    var limit = wrapper ? intAttr(wrapper, "data-narrow-width", 0) : 0;
+    if (!limit || !window.ResizeObserver) return;
+    new ResizeObserver(function () {
+      wrapper.classList.toggle("webpageviewplus-narrow", wrapper.clientWidth < limit);
+    }).observe(wrapper);
   }
 
   // Tap to interact: on a touch screen a frame taller than half the screen

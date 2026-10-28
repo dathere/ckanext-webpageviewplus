@@ -211,6 +211,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             controls=settings.controls(),
             show_controls=not toolkit.asbool(resource_view.get("hide_controls")),
             color_scheme=settings.color_scheme(),
+            narrow_width=settings.narrow_width(),
             preconnect=preconnect,
         )
 

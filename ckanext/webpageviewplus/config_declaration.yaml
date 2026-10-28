@@ -125,6 +125,16 @@ groups:
           URL, via the browser's share sheet; shown only where
           navigator.share exists). Empty hides the bar on every view.
 
+      - key: ckanext.webpageviewplus.narrow_width
+        default: 576
+        type: int
+        description: |
+          Below this view width, in px, views whose height is an aspect ratio
+          or a share of the window switch to 80% of the screen's height
+          (svh), so a 16:9 frame on a phone isn't a thin strip. Fixed and
+          auto heights are unchanged. 0 turns it off. Needs the view's
+          script.
+
       - key: ckanext.webpageviewplus.color_scheme
         default: auto
         description: |

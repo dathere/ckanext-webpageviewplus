@@ -42,8 +42,11 @@ order now being built:
    the iframe, which only Firefox passes on to cross-origin frames). `fetchpriority` isn't
    built: it isn't valid on iframes. Phones and tablets, started: Expand, Share, the landscape
    lock and tap to interact are done. Decided, not built: load on tap only for `Save-Data: on`
-   (with `Vary: Save-Data`, the resource size in the label, no thumbnail), and responsive height
-   as a site-wide rule (below a breakpoint setting, aspect and viewport views use 80svh).
+   (with `Vary: Save-Data`, the resource size in the label, no thumbnail). Done: responsive
+   height, a site-wide rule: below `narrow_width` (default 576px of view width; 0 is off),
+   aspect and viewport views use 80svh. The script toggles `webpageviewplus-narrow` from the
+   wrapper's `data-narrow-width`, since a container query can't read a setting and no inline
+   `<style>` is allowed.
 8. Telemetry and opt-in view counting.
 
 ## The security model (read before touching frame, validator, content or download code)

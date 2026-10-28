@@ -82,6 +82,16 @@
   }
 }
 
+/* Responsive height: below the site's narrow_width (the script sets the
+   class), aspect-ratio and share-of-window views take 80% of the screen,
+   over their inline height. Not in fullscreen or Expand. */
+.webpageviewplus-narrow:not(:fullscreen):not(.webpageviewplus-expanded)
+  .webpageviewplus-frame:is([data-height-mode="aspect"], [data-height-mode="viewport"]) {
+  height: 80vh !important;
+  height: 80svh !important;
+  aspect-ratio: auto !important;
+}
+
 /* Tap to interact: over the frame (the script sets its top and height),
    so a swipe scrolls the page instead of the framed page. */
 .webpageviewplus-shield {

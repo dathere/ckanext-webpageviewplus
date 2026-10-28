@@ -4,7 +4,7 @@
   {% set desc_id = ('webpageviewplus-desc-' ~ resource_view.id) if resource_view and resource_view.id and resource_view.description else none %}
   {# No skip link in the form's preview, which has no view id to key it on. #}
   {% set after_id = ('webpageviewplus-after-' ~ resource_view.id) if resource_view and resource_view.id else none %}
-  <div class="webpageviewplus">
+  <div class="webpageviewplus"{% if narrow_width %} data-narrow-width="{{ narrow_width }}"{% endif %}>
     {# Warms the connection before the (lazy) frame needs it. Frame
        navigation isn't CORS, so no crossorigin. #}
     {% if preconnect %}<link rel="preconnect" href="{{ preconnect }}">{% endif %}

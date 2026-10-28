@@ -52,6 +52,10 @@ def max_height() -> int:
     return int(_get("max_height"))
 
 
+def narrow_width() -> int:
+    return int(_get("narrow_width") or 0)
+
+
 def _hosts_setting(name: str) -> list[str]:
     return [frame.canonical_config_host(h) for h in toolkit.aslist(_get(name))]
 
@@ -218,6 +222,10 @@ def check() -> None:
     origin = content_origin()
     if origin:
         _check_content_origin(origin)
+    if narrow_width() < 0:
+        raise CkanConfigurationException(
+            PREFIX + "narrow_width: must be 0 (off) or a width in px"
+        )
     if not 0 < min_height() <= max_height():
         raise CkanConfigurationException(
             PREFIX + "min_height" + ": " + "Must be positive and at most max_height"
