@@ -509,6 +509,13 @@ class TestAccessibilityMarkup:
         target = re.search(r'class="webpageviewplus-skip" href="#([^"]+)"', body).group(1)
         assert 'id="{}"'.format(target) in body
 
+    def test_tap_to_interact_shield(self, app):
+        body = _render(app, {})
+        assert ('aria-label="Interact with Report" hidden><span>Tap to interact</span>'
+                '</button>') in body
+        # Over the frame, so before it in the markup; shown by the script.
+        assert body.index("data-webpageviewplus-shield") < body.index("<iframe")
+
     def test_live_region(self, app):
         body = _render(app, {})
         assert 'role="status" data-webpageviewplus-status' in body

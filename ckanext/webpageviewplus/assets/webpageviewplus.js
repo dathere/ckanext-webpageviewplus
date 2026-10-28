@@ -58,6 +58,40 @@
       announceLoaded(iframe);
     });
     replyViewport(state);
+    setupShield(state);
+  }
+
+  // Tap to interact: on a touch screen a frame taller than half the screen
+  // would trap the reader's scrolling, so a shield covers it until tapped,
+  // and comes back once the frame has left the viewport.
+  var coarse = window.matchMedia ? window.matchMedia("(pointer: coarse)") : null;
+
+  function setupShield(state) {
+    var wrapper = state.iframe.closest(".webpageviewplus");
+    var shield = wrapper && wrapper.querySelector("[data-webpageviewplus-shield]");
+    if (!shield || !coarse || !window.IntersectionObserver) return;
+    var iframe = state.iframe;
+    function place() {
+      shield.style.top = iframe.offsetTop + "px";
+      shield.style.height = iframe.offsetHeight + "px";
+    }
+    function arm() {
+      if (!coarse.matches || iframe.offsetHeight <= window.innerHeight / 2) return;
+      place();
+      shield.hidden = false;
+    }
+    shield.addEventListener("click", function () {
+      shield.hidden = true;
+    });
+    new IntersectionObserver(function (entries) {
+      if (!entries[entries.length - 1].isIntersecting) arm();
+    }).observe(iframe);
+    if (window.ResizeObserver) {
+      new ResizeObserver(function () {
+        if (!shield.hidden) place();
+      }).observe(iframe);
+    }
+    arm();
   }
 
   // The view's live region says when its page has loaded. A frame that

@@ -36,6 +36,10 @@ VIEWS = [
         "preset": "interactive", "height_mode": "fixed", "height_value": "300",
         "hide_controls": True,
     }),
+    # Taller than half a phone's screen: gets the tap-to-interact shield.
+    ("Interactive fixed 700", {
+        "preset": "interactive", "height_mode": "fixed", "height_value": "700",
+    }),
     # No scripts run: the fixture stays as served, and nothing resizes it.
     ("Strict", {"preset": "strict"}),
 ]

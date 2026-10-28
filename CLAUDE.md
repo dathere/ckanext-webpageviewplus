@@ -40,9 +40,10 @@ order now being built:
 7. Modern extras done: `<link rel="preconnect">` to the content origin (set where an upload is
    moved onto it), and `color_scheme` (default `auto`; `light`/`dark` add CSS `color-scheme` to
    the iframe, which only Firefox passes on to cross-origin frames). `fetchpriority` isn't
-   built: it isn't valid on iframes. Phones and tablets, started: Expand, Share and the
-   landscape lock are done; tap to interact, load on tap and responsive height remain (the last
-   two need design decisions first).
+   built: it isn't valid on iframes. Phones and tablets, started: Expand, Share, the landscape
+   lock and tap to interact are done. Decided, not built: load on tap only for `Save-Data: on`
+   (with `Vary: Save-Data`, the resource size in the label, no thumbnail), and responsive height
+   as a site-wide rule (below a breakpoint setting, aspect and viewport views use 80svh).
 8. Telemetry and opt-in view counting.
 
 ## The security model (read before touching frame, validator, content or download code)
@@ -119,6 +120,10 @@ order now being built:
   screen to landscape while fullscreen. Share (`navigator.share`, shown only where it exists) sends
   the CKAN page's URL with `view_id` (`share_url`), never the frame's. Labels the script swaps in
   come from the template as `data-*` attributes, since the script has no translations.
+- Tap to interact: a `data-webpageviewplus-shield` button over the frame (the script sets its top
+  and height), shown only under `(pointer: coarse)` for frames taller than half the screen,
+  hidden on tap, re-armed once the frame has fully left the viewport. Browser tests use the
+  `touch_page` fixture (Playwright's Firefox has no coarse pointer, so it skips there).
 - Control bar: Open in new tab and Reload use `open_url`. For a content-origin upload that's
   CKAN's download URL, because the frame's signed URL may have expired. The per-view field is
   `hide_controls`, so a view saved without it shows the bar.

@@ -27,11 +27,12 @@ if (window.top === window) {
 NO_SHARE = """
 if (window.top === window) delete Navigator.prototype.share;
 """
+# On the prototype: WebKit can hand back a new screen.orientation object.
 ORIENTATION = """
-if (window.top === window && screen.orientation) {
+if (window.top === window && window.ScreenOrientation) {
   window.wvpLocks = [];
-  screen.orientation.lock = type => { wvpLocks.push(type); return Promise.resolve(); };
-  screen.orientation.unlock = () => { wvpLocks.push("unlock"); };
+  ScreenOrientation.prototype.lock = type => { wvpLocks.push(type); return Promise.resolve(); };
+  ScreenOrientation.prototype.unlock = () => { wvpLocks.push("unlock"); };
 }
 """
 EXPAND = '[data-webpageviewplus-action="fullscreen"]'
@@ -64,6 +65,8 @@ def test_expand_without_fullscreen(page, view_urls):
     box = _frame_box(page)
     assert box["y"] < 20 and box["height"] > 800 - 120  # the viewport, less the bar
     expect(filler).to_have_css("height", "500px")
+    # Bootstrap's buttons fade between colours; measure the settled ones.
+    page.emulate_media(reduced_motion="reduce")
     results = Axe().run(page, context=".webpageviewplus",
                         options={"resultTypes": ["violations"], "iframes": False})
     assert results.violations_count == 0, results.generate_report()
@@ -84,6 +87,11 @@ def test_expand_close_button_and_narrow_floor(page, view_urls):
     page.locator(EXPAND).click()
     box = _frame_box(page)
     assert box["height"] < NARROW["height"]
+    # The whole control bar stays on the (scroll-locked) screen.
+    for button in page.locator(".webpageviewplus-controls > *").all():
+        if button.is_visible():
+            b = button.bounding_box()
+            assert b["y"] >= 0 and b["y"] + b["height"] <= NARROW["height"] + 1
     page.locator(CLOSE).click()
     expect(page.locator(CLOSE)).to_be_hidden()
     assert _frame_box(page)["height"] >= 599
@@ -131,3 +139,52 @@ def test_landscape_lock_in_fullscreen(page, view_urls, title, viewport, wide):
     page.wait_for_timeout(200)
     locks = page.evaluate("wvpLocks")
     assert locks == (["landscape", "unlock"] if wide else [])
+
+
+SHIELD = "[data-webpageviewplus-shield]"
+
+
+def _coarse(page):
+    if not page.evaluate("matchMedia('(pointer: coarse)').matches"):
+        pytest.skip("no coarse pointer in this browser's touch emulation")
+
+
+def test_tap_to_interact(touch_page, view_urls):
+    page = touch_page
+    page.goto(view_urls["Interactive fixed 700"])
+    _coarse(page)
+    shield = page.locator(SHIELD)
+    expect(shield).to_be_visible()
+    assert shield.get_attribute("aria-label") == "Interact with Interactive fixed 700"
+    frame, box = page.locator(FRAME).bounding_box(), shield.bounding_box()
+    assert abs(box["y"] - frame["y"]) <= 1 and abs(box["height"] - frame["height"]) <= 1
+    results = Axe().run(page, context=".webpageviewplus",
+                        options={"resultTypes": ["violations"], "iframes": False})
+    assert results.violations_count == 0, results.generate_report()
+
+    shield.tap()
+    expect(shield).to_be_hidden()
+
+    # Scrolled fully away and back: the shield returns.
+    page.evaluate("""() => {
+        const s = document.createElement('div');
+        s.style.height = '3000px';
+        document.querySelector('.webpageviewplus').after(s);
+        const f = document.querySelector('%s').getBoundingClientRect();
+        window.scrollTo({top: window.scrollY + f.bottom + 100, behavior: 'instant'});
+    }""" % FRAME)
+    expect(shield).to_be_visible()
+
+
+def test_no_shield_on_short_frames(touch_page, view_urls):
+    page = touch_page
+    page.goto(view_urls["Interactive fixed 300"])
+    _coarse(page)
+    page.locator('[data-webpageviewplus-action="reload"]').wait_for()
+    expect(page.locator(SHIELD)).to_be_hidden()
+
+
+def test_no_shield_with_a_mouse(page, view_urls):
+    page.goto(view_urls["Interactive fixed 700"])
+    page.locator('[data-webpageviewplus-action="reload"]').wait_for()
+    expect(page.locator(SHIELD)).to_be_hidden()

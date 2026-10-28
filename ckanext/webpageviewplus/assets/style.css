@@ -1,3 +1,7 @@
+.webpageviewplus {
+  position: relative;
+}
+
 .webpageviewplus-frame {
   display: block;
   width: 100%;
@@ -64,6 +68,7 @@
 @media (forced-colors: active) {
   .webpageviewplus-controls .btn,
   .webpageviewplus-narrow-open,
+  .webpageviewplus-shield span,
   .webpageviewplus-skip {
     border: 1px solid ButtonText;
     color: ButtonText;
@@ -75,6 +80,42 @@
   .webpageviewplus-skip:focus-visible {
     outline-color: Highlight;
   }
+}
+
+/* Tap to interact: over the frame (the script sets its top and height),
+   so a swipe scrolls the page instead of the framed page. */
+.webpageviewplus-shield {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0 1rem;
+  border: 0;
+  background: transparent;
+}
+
+.webpageviewplus-shield[hidden],
+.webpageviewplus:fullscreen .webpageviewplus-shield,
+.webpageviewplus-expanded .webpageviewplus-shield {
+  display: none;
+}
+
+.webpageviewplus-shield span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  border-radius: 22px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.webpageviewplus-shield:focus-visible span {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
 }
 
 /* Reflow (WCAG 1.4.10): at a 320px width, which is 400% zoom on a
@@ -141,8 +182,15 @@
 
 .webpageviewplus-expanded .webpageviewplus-frame {
   flex: 1;
+  /* Without this the frame keeps its intrinsic 150px and, on a short
+     screen, pushes the control bar (and Close) off it. */
+  min-height: 0;
   height: auto !important;
   aspect-ratio: auto !important;
+}
+
+.webpageviewplus-expanded .webpageviewplus-controls {
+  flex-shrink: 0;
 }
 
 .webpageviewplus-noscroll,

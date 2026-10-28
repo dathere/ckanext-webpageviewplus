@@ -9,6 +9,10 @@
        navigation isn't CORS, so no crossorigin. #}
     {% if preconnect %}<link rel="preconnect" href="{{ preconnect }}">{% endif %}
     {% if after_id %}<a class="webpageviewplus-skip" href="#{{ after_id }}">{{ _('Skip embedded content') }}</a>{% endif %}
+    {# Touch screens, frames taller than half the screen: lets the page scroll
+       past the frame until the reader taps it. Shown by the script. #}
+    <button type="button" class="webpageviewplus-shield" data-webpageviewplus-shield
+            aria-label="{{ _('Interact with {title}').format(title=frame.title) }}" hidden><span>{{ _('Tap to interact') }}</span></button>
     <iframe class="webpageviewplus-frame"
             title="{{ frame.title }}"
             src="{{ frame.src }}"

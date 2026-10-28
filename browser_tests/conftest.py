@@ -56,20 +56,41 @@ def browser(request, playwright):
     browser.close()
 
 
-@pytest.fixture
-def page(browser):
-    context = browser.new_context(viewport={"width": 1280, "height": 800})
+HIDE_DEBUG_TOOLBAR = """
+    if (window.top === window) document.addEventListener("DOMContentLoaded", () => {
+        const s = document.createElement("style");
+        s.textContent = "#flDebug, #flDebugToolbarHandle { display: none !important; }";
+        document.head.append(s);
+    });
+"""
+
+
+def _page(browser, **context_options):
+    context = browser.new_context(**context_options)
     # The dev site's Flask debug toolbar covers controls on narrow screens.
-    context.add_init_script("""
-        if (window.top === window) document.addEventListener("DOMContentLoaded", () => {
-            const s = document.createElement("style");
-            s.textContent = "#flDebug, #flDebugToolbarHandle { display: none !important; }";
-            document.head.append(s);
-        });
-    """)
+    context.add_init_script(HIDE_DEBUG_TOOLBAR)
     page = context.new_page()
     page.errors = []
     page.on("pageerror", lambda error: page.errors.append(str(error)))
+    return context, page
+
+
+@pytest.fixture
+def page(browser):
+    context, page = _page(browser, viewport={"width": 1280, "height": 800})
+    yield page
+    context.close()
+    assert page.errors == []
+
+
+@pytest.fixture
+def touch_page(browser):
+    """A phone-sized page with touch. Playwright's Firefox has no isMobile,
+    so tests check (pointer: coarse) and skip where it doesn't match."""
+    options = {"viewport": {"width": 390, "height": 844}, "has_touch": True}
+    if browser.browser_type.name != "firefox":
+        options["is_mobile"] = True
+    context, page = _page(browser, **options)
     yield page
     context.close()
     assert page.errors == []
