@@ -250,8 +250,8 @@ def test_fullscreen_permission_survives_download_redirect(page, view_urls, how, 
     """Load on tap and Reload frame an upload through CKAN's download URL,
     which redirects to the content origin: the frame's allow must name that
     origin, or the page loses fullscreen there."""
-    if title.startswith("Interactive") and page.context.browser.browser_type.name == "firefox":
-        pytest.skip("Firefox gives no fullscreen to opaque-origin frames, even before any redirect")
+    if title.startswith("Interactive") and page.context.browser.browser_type.name != "chromium":
+        pytest.skip("only Chromium gives fullscreen to opaque-origin frames, even before any redirect")
     if how == "load on tap":
         page.set_extra_http_headers({"Save-Data": "on"})
         page.goto(view_urls[title])
