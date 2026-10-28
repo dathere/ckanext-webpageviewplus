@@ -148,7 +148,9 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
         # access and redirects to a freshly signed content URL: the frame's
         # own signed URL may have expired by the time someone clicks.
         open_url = url
+        preconnect = None
         if is_upload and content.serves(resource):
+            preconnect = settings.content_origin()
             package_id = (data_dict.get("package") or {}).get("id") or resource.get(
                 "package_id"
             )
@@ -195,6 +197,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             open_url=open_url,
             controls=settings.controls(),
             show_controls=not toolkit.asbool(resource_view.get("hide_controls")),
+            color_scheme=settings.color_scheme(),
+            preconnect=preconnect,
         )
 
     def view_template(self, context: Context, data_dict: dict[str, Any]) -> str:

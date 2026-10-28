@@ -122,6 +122,17 @@ groups:
           Buttons in the control bar under each view, from: open (in a new
           tab), fullscreen, reload. Empty hides the bar on every view.
 
+      - key: ckanext.webpageviewplus.color_scheme
+        default: auto
+        description: |
+          The colour scheme framed pages see as prefers-color-scheme: auto
+          (the viewer's OS), light or dark. A site with a fixed light or dark
+          theme can set it so a page that follows prefers-color-scheme (a qsv
+          Data Schematic, say) matches the portal. Sets CSS color-scheme on
+          the iframe, which only Firefox honours for these frames so far:
+          Chrome and Safari keep following the OS. A page's own stored choice
+          (qsv's qsv-viz-theme) still wins.
+
       - key: ckanext.webpageviewplus.formats
         default: html htm
         type: list

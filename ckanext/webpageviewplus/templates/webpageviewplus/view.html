@@ -5,6 +5,9 @@
   {# No skip link in the form's preview, which has no view id to key it on. #}
   {% set after_id = ('webpageviewplus-after-' ~ resource_view.id) if resource_view and resource_view.id else none %}
   <div class="webpageviewplus">
+    {# Warms the connection before the (lazy) frame needs it. Frame
+       navigation isn't CORS, so no crossorigin. #}
+    {% if preconnect %}<link rel="preconnect" href="{{ preconnect }}">{% endif %}
     {% if after_id %}<a class="webpageviewplus-skip" href="#{{ after_id }}">{{ _('Skip embedded content') }}</a>{% endif %}
     <iframe class="webpageviewplus-frame"
             title="{{ frame.title }}"
@@ -14,7 +17,7 @@
             referrerpolicy="{{ frame.referrerpolicy }}"
             loading="lazy"
             {% if frame.credentialless %}credentialless{% endif %}
-            style="{{ frame.style }}"
+            style="{{ frame.style }}{% if color_scheme and color_scheme != 'auto' %};color-scheme:{{ color_scheme }}{% endif %}"
             data-preset="{{ frame.preset }}"
             data-height-mode="{{ frame.height_mode }}"
             data-frame-origin="{{ frame.origin }}"

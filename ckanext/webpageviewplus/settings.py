@@ -67,6 +67,13 @@ def controls() -> list[str]:
     return [c.lower() for c in toolkit.aslist(_get("controls"))]
 
 
+COLOR_SCHEMES = ("light", "dark", "auto")
+
+
+def color_scheme() -> str:
+    return (_get("color_scheme") or "").strip().lower()
+
+
 def credentialless_presets() -> list[str]:
     return toolkit.aslist(_get("credentialless"))
 
@@ -198,6 +205,11 @@ def check() -> None:
         raise CkanConfigurationException(
             PREFIX + "controls: unknown buttons " + " ".join(bad)
             + " (choose from " + " ".join(CONTROLS) + ")"
+        )
+    if color_scheme() not in COLOR_SCHEMES:
+        # The value is written into the frame's style attribute.
+        raise CkanConfigurationException(
+            PREFIX + "color_scheme: must be one of " + " ".join(COLOR_SCHEMES)
         )
     if url_ttl() < 30:
         raise CkanConfigurationException(

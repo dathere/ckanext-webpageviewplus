@@ -498,6 +498,31 @@ class TestAccessibilityMarkup:
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
 @pytest.mark.ckan_config("ckan.views.default_views", "")
 @pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestModernExtras:
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.color_scheme", "light")
+    def test_color_scheme_light(self, app):
+        assert 'style="height:600px;color-scheme:light"' in _render(app, {})
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.color_scheme", "dark")
+    def test_color_scheme_dark(self, app):
+        assert 'style="height:600px;color-scheme:dark"' in _render(app, {})
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.color_scheme", "auto")
+    def test_color_scheme_auto_leaves_it_to_the_viewer(self, app):
+        body = _render(app, {})
+        assert 'style="height:600px"' in body
+        assert "color-scheme" not in body
+
+    def test_color_scheme_off_by_default(self, app):
+        assert "color-scheme" not in _render(app, {})
+
+    def test_no_preconnect_for_third_party_page(self, app):
+        assert 'rel="preconnect"' not in _render(app, {})
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
 class TestCredentialless:
     def test_off_by_default(self, app):
         assert " credentialless" not in _render(app, {"preset": "strict"})
@@ -530,4 +555,17 @@ def test_unknown_credentialless_preset_stops_startup(monkeypatch):
         lambda key: "strict nope" if key == "credentialless" else real_get(key),
     )
     with pytest.raises(CkanConfigurationException, match="credentialless"):
+        settings.check()
+
+
+def test_unknown_color_scheme_stops_startup(monkeypatch):
+    from ckan.exceptions import CkanConfigurationException
+    from ckanext.webpageviewplus import settings
+
+    real_get = settings._get
+    monkeypatch.setattr(
+        settings, "_get",
+        lambda key: "dark;background:red" if key == "color_scheme" else real_get(key),
+    )
+    with pytest.raises(CkanConfigurationException, match="color_scheme"):
         settings.check()

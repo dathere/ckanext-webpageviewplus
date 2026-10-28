@@ -20,6 +20,7 @@
 <h1>qsv protocol fixture</h1>
 <p>origin: <code id="origin"></code></p>
 <p>last <code>qsvVizViewport</code> reply: <code id="viewport">none yet</code></p>
+<p>prefers-color-scheme: <code id="scheme"></code></p>
 <p>
   <button id="grow" type="button">Grow by 300px</button>
   <button id="shrink" type="button">Shrink by 300px</button>
@@ -32,6 +33,12 @@
   "use strict";
   var framed = window.self !== window.top;
   document.getElementById("origin").textContent = self.origin;
+  var dark = window.matchMedia("(prefers-color-scheme: dark)");
+  function showScheme() {
+    document.getElementById("scheme").textContent = dark.matches ? "dark" : "light";
+  }
+  showScheme();
+  dark.addEventListener("change", showScheme);
 
   function post(message) {
     if (framed) window.parent.postMessage(message, "*");

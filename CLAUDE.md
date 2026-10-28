@@ -37,7 +37,10 @@ order now being built:
    the suite, and reflow: at 320px wide (400% zoom) every frame gets a 600px floor, and a view
    that hides its bar still shows Open in new tab unless the site's `controls` drops `open`.
    Reveal scrolling is always instant, so reduced motion needs nothing.
-7. Remaining modern extras (theme follows CKAN, preconnect, fetchpriority), then Phones and tablets.
+7. Modern extras done: `<link rel="preconnect">` to the content origin (set where an upload is
+   moved onto it), and `color_scheme` (default `auto`; `light`/`dark` add CSS `color-scheme` to
+   the iframe, which only Firefox passes on to cross-origin frames). `fetchpriority` isn't
+   built: it isn't valid on iframes. Next: Phones and tablets.
 8. Telemetry and opt-in view counting.
 
 ## The security model (read before touching frame, validator, content or download code)
