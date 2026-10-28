@@ -193,6 +193,9 @@ order now being built:
   `ckan.lib.plugins.DefaultTranslation` (it isn't in `toolkit`). Before a release, refresh the
   template with `python setup.py extract_messages` (run it in the container), bump the version
   in `pyproject.toml`, and add to `CHANGELOG.md`; date the release there in the tagging commit.
+  Pushing a bare version tag (`0.1.0`) runs `.github/workflows/publish.yml`: it checks the tag
+  against `pyproject.toml`, checks the wheel has the migration files, and publishes to PyPI by
+  trusted publishing (GitHub environment `pypi`, no token).
 
 ## Local CKAN (Docker)
 

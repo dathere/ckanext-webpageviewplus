@@ -369,12 +369,10 @@ themselves (CKAN's fixtures drop them when they reset the test database).
    [PEP 440](https://peps.python.org/pep-0440/)), and date the release in
    [CHANGELOG.md](CHANGELOG.md).
 
-3. Build the distributions and check them:
+3. Optionally build locally to catch packaging errors early:
 
        pip install --upgrade build twine
        rm -rf dist && python -m build && twine check dist/*
-
-   Fix any errors you get.
 
 4. Commit, tag with the version from `pyproject.toml`, and push:
 
@@ -382,9 +380,9 @@ themselves (CKAN's fixtures drop them when they reset the test database).
        git tag 0.1.0
        git push && git push --tags
 
-5. Upload to PyPI:
-
-       twine upload dist/*
+   Pushing the tag runs [`publish.yml`](.github/workflows/publish.yml), which checks that the
+   tag matches `pyproject.toml`, builds, and publishes to PyPI with trusted publishing (no API
+   token; the job runs in the `pypi` environment).
 
 ## License
 

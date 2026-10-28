@@ -1,0 +1,62 @@
+name: Publish to PyPI
+
+# Pushing a version tag (e.g. 0.1.0) builds and publishes the release with
+# PyPI trusted publishing: no API token is stored anywhere.
+on:
+  push:
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Check the tag matches the version in pyproject.toml
+      run: |
+        version=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+        if [ "$version" != "$GITHUB_REF_NAME" ]; then
+          echo "Tag $GITHUB_REF_NAME does not match pyproject.toml version $version"; exit 1
+        fi
+    - name: Build
+      run: |
+        pip install build twine
+        python -m build
+        twine check --strict dist/*
+    # `ckan db upgrade -p` reads these from the installed package; an
+    # editable install in the test job wouldn't notice them missing.
+    - name: Check the wheel has the migration files
+      run: |
+        unzip -Z1 dist/*.whl > files.txt
+        m=ckanext/webpageviewplus/migration/webpage_view_plus
+        for f in alembic.ini env.py script.py.mako versions/35c91ad0b38c_view_counts.py versions/929956801471_connections.py config_declaration.yaml; do
+          case $f in config_declaration.yaml) p=ckanext/webpageviewplus/$f;; *) p=$m/$f;; esac
+          grep -qx "$p" files.txt || { echo "missing from wheel: $p"; exit 1; }
+        done
+    - uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/ckanext-webpageviewplus
+    permissions:
+      id-token: write
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: dist
+        path: dist/
+    - uses: pypa/gh-action-pypi-publish@release/v1
