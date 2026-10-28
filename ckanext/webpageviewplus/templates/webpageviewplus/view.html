@@ -41,6 +41,11 @@
           <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-action="reload" data-reload-url="{{ open_url }}" hidden>{{ _('Reload') }}</button>
         {% endif %}
       </div>
+    {% elif 'open' in controls %}
+      {# This view hides its bar, but the site still offers Open in new tab:
+         shown only on narrow screens (and 400% zoom), where the frame is
+         hardest to use. #}
+      <a class="btn btn-sm btn-outline-secondary webpageviewplus-narrow-open" href="{{ open_url }}" target="_blank" rel="noopener noreferrer">{{ _('Open in new tab') }}</a>
     {% endif %}
   </div>
 {% elif frame_error == 'host' %}

@@ -450,7 +450,25 @@ class TestControlBar:
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.controls", "")
     def test_site_can_hide_all(self, app):
-        assert 'role="toolbar"' not in _render(app, {})
+        body = _render(app, {})
+        assert 'role="toolbar"' not in body
+        assert "Open in new tab" not in body
+
+    def test_one_open_link_with_bar(self, app):
+        body = _render(app, {})
+        assert body.count("Open in new tab") == 1
+        assert "webpageviewplus-narrow-open" not in body
+
+    def test_narrow_open_link_when_view_hides_bar(self, app):
+        body = _render(app, {"hide_controls": "true"})
+        assert ('class="btn btn-sm btn-outline-secondary webpageviewplus-narrow-open" '
+                'href="https://pages.example.com/a.html" target="_blank" '
+                'rel="noopener noreferrer"') in body
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.controls", "reload")
+    def test_no_narrow_open_link_when_site_drops_open(self, app):
+        body = _render(app, {"hide_controls": "true"})
+        assert "Open in new tab" not in body
 
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")

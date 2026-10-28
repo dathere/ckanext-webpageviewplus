@@ -17,6 +17,7 @@
 }
 
 .webpageviewplus-controls .btn:focus-visible,
+.webpageviewplus-narrow-open:focus-visible,
 .webpageviewplus-skip:focus-visible {
   outline: 3px solid currentColor;
   outline-offset: 2px;
@@ -62,6 +63,7 @@
 /* Windows High Contrast and other forced-colour modes: system colours. */
 @media (forced-colors: active) {
   .webpageviewplus-controls .btn,
+  .webpageviewplus-narrow-open,
   .webpageviewplus-skip {
     border: 1px solid ButtonText;
     color: ButtonText;
@@ -69,13 +71,36 @@
   }
 
   .webpageviewplus-controls .btn:focus-visible,
+  .webpageviewplus-narrow-open:focus-visible,
   .webpageviewplus-skip:focus-visible {
     outline-color: Highlight;
   }
 }
 
+/* Reflow (WCAG 1.4.10): at a 320px width, which is 400% zoom on a
+   1280px screen, content framed in a short box turns into a small nested
+   scroll area, so every height mode gets a tall floor. 600px matches
+   FALLBACK_HEIGHT in frame.py. Not in fullscreen, where the frame fills the
+   screen instead. */
+.webpageviewplus-narrow-open {
+  display: none;
+}
+
+@media (max-width: 320px) {
+  .webpageviewplus:not(:fullscreen) .webpageviewplus-frame {
+    min-height: 600px;
+  }
+
+  .webpageviewplus-narrow-open {
+    display: inline-block;
+    min-height: 24px;
+    margin-top: 0.5rem;
+  }
+}
+
 @media (pointer: coarse) {
-  .webpageviewplus-controls .btn {
+  .webpageviewplus-controls .btn,
+  .webpageviewplus-narrow-open {
     min-height: 44px;
     min-width: 44px;
   }

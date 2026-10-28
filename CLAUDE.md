@@ -33,7 +33,10 @@ order now being built:
    asks, build a cross-browser setting adding directives to the CSP on served HTML uploads instead.
 5. Next: the Playwright suite (Chromium, Firefox, WebKit), starting with self-sizing and the qsv
    protocol on the `wvp-demo` fixture views.
-6. Accessibility (skip link, live region, focus, contrast, axe-core in the suite).
+6. Done: accessibility. Skip link, live region, focus, contrast and forced colours, axe-core in
+   the suite, and reflow: at 320px wide (400% zoom) every frame gets a 600px floor, and a view
+   that hides its bar still shows Open in new tab unless the site's `controls` drops `open`.
+   Reveal scrolling is always instant, so reduced motion needs nothing.
 7. Remaining modern extras (theme follows CKAN, preconnect, fetchpriority), then Phones and tablets.
 8. Telemetry and opt-in view counting.
 

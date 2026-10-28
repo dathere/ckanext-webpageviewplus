@@ -29,6 +29,13 @@ VIEWS = [
     ("Interactive fixed 300", {
         "preset": "interactive", "height_mode": "fixed", "height_value": "300",
     }),
+    ("Aspect 16/9", {
+        "preset": "interactive", "height_mode": "aspect", "height_value": "16/9",
+    }),
+    ("Fixed 300 no bar", {
+        "preset": "interactive", "height_mode": "fixed", "height_value": "300",
+        "hide_controls": True,
+    }),
     # No scripts run: the fixture stays as served, and nothing resizes it.
     ("Strict", {"preset": "strict"}),
 ]

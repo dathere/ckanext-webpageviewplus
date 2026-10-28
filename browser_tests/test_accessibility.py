@@ -11,7 +11,8 @@ from playwright.sync_api import expect
 
 from wvp_helpers import FRAME
 
-VIEWS = ["Schematic auto", "Interactive auto", "Interactive fixed 300", "Strict"]
+VIEWS = ["Schematic auto", "Interactive auto", "Interactive fixed 300", "Aspect 16/9",
+         "Fixed 300 no bar", "Strict"]
 AXE = Axe()
 
 
@@ -19,7 +20,9 @@ def _goto(page, view_urls, title):
     page.goto(view_urls[title])
     # The script unhides Reload (and Fullscreen, where supported) once it has
     # run; axe skips hidden elements, so wait for that first.
-    page.locator('[data-webpageviewplus-action="reload"]').wait_for()
+    reload = page.locator('[data-webpageviewplus-action="reload"]')
+    if reload.count():
+        reload.wait_for()
 
 
 @pytest.mark.parametrize("title", VIEWS)
