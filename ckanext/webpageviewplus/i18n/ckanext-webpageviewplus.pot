@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-28 16:29+0000\n"
+"POT-Creation-Date: 2026-10-28 23:42+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,15 +18,19 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.15.0\n"
 
-#: ckanext/webpageviewplus/plugin.py:125
+#: ckanext/webpageviewplus/actions.py:156
+msgid "Must be a whole number"
+msgstr ""
+
+#: ckanext/webpageviewplus/plugin.py:138
 msgid "Website (Plus)"
 msgstr ""
 
-#: ckanext/webpageviewplus/plugin.py:144
+#: ckanext/webpageviewplus/plugin.py:157
 msgid "Website"
 msgstr ""
 
-#: ckanext/webpageviewplus/plugin.py:237
+#: ckanext/webpageviewplus/plugin.py:250
 msgid "Embedded web page"
 msgstr ""
 
@@ -42,33 +46,37 @@ msgstr ""
 msgid "Unknown height mode"
 msgstr ""
 
-#: ckanext/webpageviewplus/validators.py:44
-msgid "Unknown sandbox tokens: {}"
-msgstr ""
+#: ckanext/webpageviewplus/validators.py:47
+msgid "Unknown sandbox token: {tokens}"
+msgid_plural "Unknown sandbox tokens: {tokens}"
+msgstr[0] ""
+msgstr[1] ""
 
-#: ckanext/webpageviewplus/validators.py:55
-msgid "These features can't be granted: {}"
-msgstr ""
+#: ckanext/webpageviewplus/validators.py:62
+msgid "This feature can't be granted: {features}"
+msgid_plural "These features can't be granted: {features}"
+msgstr[0] ""
+msgstr[1] ""
 
-#: ckanext/webpageviewplus/validators.py:64
+#: ckanext/webpageviewplus/validators.py:70
 msgid "Unknown referrer policy"
 msgstr ""
 
-#: ckanext/webpageviewplus/validators.py:125
+#: ckanext/webpageviewplus/validators.py:131
 msgid "Height value doesn't fit the height mode"
 msgstr ""
 
-#: ckanext/webpageviewplus/validators.py:152
+#: ckanext/webpageviewplus/validators.py:158
 msgid ""
 "External is for third-party sites: uploaded HTML always gets a sandbox. Use "
 "Data Schematic or Interactive"
 msgstr ""
 
-#: ckanext/webpageviewplus/validators.py:165
+#: ckanext/webpageviewplus/validators.py:171
 msgid "This host isn't on the site's list of allowed hosts"
 msgstr ""
 
-#: ckanext/webpageviewplus/validators.py:178
+#: ckanext/webpageviewplus/validators.py:184
 msgid ""
 "This frame can't let scripts keep a real origin: don't combine allow-scripts "
 "with allow-same-origin. Pages on this site never may; other pages may once "
@@ -91,209 +99,282 @@ msgstr ""
 msgid "Data Schematic: qsv Data Schematics"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:10
-msgid "Fixed (px)"
-msgstr ""
-
+#. how the embedded page's height is set; "Auto" means the page reports its own
+#. height.
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:11
-msgid "Share of the window height, in percent"
-msgstr ""
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:12
-msgid "Aspect ratio (e.g. 16/9)"
-msgstr ""
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:13
 msgid "Auto"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:16
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:12
+msgid "Fixed (px)"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:13
+msgid "Share of the window height, in percent"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:14
+msgid "Aspect ratio (e.g. 16/9)"
+msgstr ""
+
+#. names of security presets, as in "the External preset".
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:19
+msgid "Strict"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:20
+msgid "Interactive"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:21
+msgid "External"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:22
+msgid "Data Schematic"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:26
 msgid "Web Page url"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:16
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:26
 msgid "eg. http://example.com  (if blank uses resource url)"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:23
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:34
+msgid ""
+"This is a {service} page. Use its embed address and the settings its embed "
+"needs?"
+msgstr ""
+
+#. a button accepting the suggested embed address and settings.
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:36
+msgid "Use them"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:37
+msgid ""
+"Using the embed address and settings for {service}. Save the view to keep "
+"them."
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:38
+msgid ""
+"{service} only works with the {preset} preset, which this site runs as "
+"Interactive until it serves uploads from a separate content origin, so it "
+"won't play here yet."
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:39
+msgid "{service} only works with the {preset} preset, which this site doesn't allow."
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:40
+msgid ""
+"{service} embeds come from {host}, which isn't on this site's list of allowed"
+" hosts."
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:46
 msgid ""
 "This site refuses to be embedded ({reason}), so the view will show an error. "
 "Consider linking to it instead."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:24
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:47
 msgid "Couldn't check whether this site allows embedding."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:28
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:51
 msgid "Security preset"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:41
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:64
 msgid ""
 "This preset needs uploaded HTML to be served from a separate content origin, "
 "which this site doesn't have yet, so the view runs as Interactive."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:42
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:65
 msgid "Charts, the Tour and Explore work, but maps stay blank."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:46
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:69
 msgid ""
 "This view's sandbox would let scripts keep a real origin, which isn't allowed"
 " here, so it runs as Strict."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:49
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:72
 msgid ""
 "In Chrome and Edge, this site loads pages with this preset without the "
 "visitor's cookies or saved data, so logins inside the page and sign-in popups"
 " won't work."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:53
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:76
 msgid "Height"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:56
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:79
 msgid "Preset's default"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:65
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:88
 msgid "Height value"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:65
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:88
 msgid "eg. 600, 80 or 16/9"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:70
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:93
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:74
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:97
 msgid "Ask before loading a page from another site"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:79
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:102
 msgid "Count visits (daily totals only, nothing about visitors; the view says so)"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:84
+#. view counts as "label: number" pairs, so no plural forms are needed.
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:108
 msgid ""
-"Last 30 days: {impressions} shown, {seen} seen, {loaded} loaded, {engaged} "
-"used, {failed} failed."
+"Last 30 days. Shown: {impressions}. Seen: {seen}. Loaded: {loaded}. Used: "
+"{engaged}. Failed: {failed}."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:92
+#. heading of the advanced (sysadmin-only) settings.
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:117
 msgid "Advanced"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:93
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:118
 msgid "Sandbox tokens (replace the preset's)"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:93
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:118
 msgid "eg. allow-scripts allow-popups"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:94
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:119
 msgid "Allowed features (replace the preset's)"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:94
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:119
 msgid "eg. fullscreen; clipboard-write"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:96
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:121
 msgid "Referrer policy"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:99
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:124
 msgid "Site default"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:11
-msgid "Skip embedded content"
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:8
+msgid ""
+"This page can't be shown here: it's served over http://, which browsers block"
+" inside https:// sites."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:16
-msgid "Interact with {title}"
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:10
+msgid "{host} doesn't allow its pages to be shown inside other sites."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:16
-msgid "Tap to interact"
-msgstr ""
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:41
-msgid "This view loads content from {host}."
-msgstr ""
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:43
-msgid "Not loaded, to save data."
-msgstr ""
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:46
-msgid "Load ({size})"
-msgstr ""
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:46
-msgid "Load"
-msgstr ""
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:58
-msgid "{title} loaded"
-msgstr ""
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:61
-msgid "This page connects to"
-msgstr ""
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:67
-msgid "This view counts visits."
-msgstr ""
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:68
-msgid "Privacy policy"
-msgstr ""
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:72
-msgid "Embedded page"
-msgstr ""
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:74
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:13
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:89
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:115
 msgid "Open in new tab"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:80
-msgid "Expand"
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:24
+msgid "Skip embedded content"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:80
-msgid "Fullscreen"
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:29
+msgid "Interact with {title}"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:29
+msgid "Tap to interact"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:54
+msgid "This view loads content from {host}."
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:56
+msgid "Not loaded, to save data."
+msgstr ""
+
+#. a button loading the embedded page; {size} is its file size, e.g. "1.2 MB".
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:60
+msgid "Load ({size})"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:60
+msgid "Load"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:72
+msgid "{title} loaded"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:75
+msgid "This page connects to"
 msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:81
+msgid "This view counts visits."
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:82
+msgid "Privacy policy"
+msgstr ""
+
+#. accessible name of the toolbar under an embedded web page.
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:87
+msgid "Embedded page"
+msgstr ""
+
+#. "Expand" makes the embedded page fill the window; "Fullscreen" fills the screen.
+#. Buttons.
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
+msgid "Expand"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
+msgid "Fullscreen"
+msgstr ""
+
+#. a button leaving the expanded (full-window) view.
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:98
 msgid "Close"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:84
+#. a button reloading the embedded page.
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:102
 msgid "Reload"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:89
+#. a button opening the device's share sheet for this page.
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:108
 msgid "Share"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:100
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:119
 msgid ""
 "This page can't be embedded: its host isn't on this site's list of allowed "
 "hosts."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:102
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:121
 msgid "This page cannot be embedded: only http:// and https:// URLs are supported."
 msgstr ""
 

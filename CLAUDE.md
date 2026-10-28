@@ -209,8 +209,16 @@ order now being built:
   `env.py`, `script.py.mako`, `versions/`): `ckan db upgrade -p` reads them from the installed
   package, and CI's editable install wouldn't notice them missing, so check the built wheel.
 - Translations: the plugin implements `ITranslation` through
-  `ckan.lib.plugins.DefaultTranslation` (it isn't in `toolkit`). Before a release, refresh the
-  template with `python setup.py extract_messages` (run it in the container), bump the version
+  `ckan.lib.plugins.DefaultTranslation` (it isn't in `toolkit`), overriding `i18n_domain()`:
+  the default derives it from the plugin name (`ckanext-webpage_view_plus`), not setup.cfg's
+  `ckanext-webpageviewplus`. de, es, fr, it, ja and pt_BR `.po` and `.mo` are committed;
+  `tests/test_i18n.py` checks completeness, placeholders, `%` and `.mo` freshness, and that
+  `/es/...` renders Spanish. Follow CKAN's string-i18n guide: named placeholders with
+  `.format()`, `toolkit.ungettext` for counts, `TRANSLATORS:` comments on the line before short
+  labels (Babel attaches one only to the next call, so in a `{% set %}` dict put the label
+  needing it first). Before a release, refresh the
+  template with `python setup.py extract_messages` (run it in the container), then
+  `update_catalog`/`compile_catalog`, bump the version
   in `pyproject.toml`, and add to `CHANGELOG.md`; date the release there in the tagging commit.
   Pushing a bare version tag (`0.1.0`) runs `.github/workflows/publish.yml`: it checks the tag
   against `pyproject.toml`, checks the wheel has the migration files, and publishes to PyPI by

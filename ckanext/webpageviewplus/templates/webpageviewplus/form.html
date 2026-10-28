@@ -6,13 +6,15 @@
   'external': _('External: a trusted third-party site, no sandbox (runs as Interactive for now)'),
   'data-schematic': _('Data Schematic: qsv Data Schematics'),
 } %}
+{# TRANSLATORS: how the embedded page's height is set; "Auto" means the page reports its own height. #}
 {% set height_labels = {
+  'auto': _('Auto'),
   'fixed': _('Fixed (px)'),
   'viewport': _('Share of the window height, in percent'),
   'aspect': _('Aspect ratio (e.g. 16/9)'),
-  'auto': _('Auto'),
 } %}
 
+{# TRANSLATORS: names of security presets, as in "the External preset". #}
 {% set preset_names = {
   'strict': _('Strict'),
   'interactive': _('Interactive'),
@@ -102,7 +104,8 @@
     {% if view_counts and data.count_views in (true, 'true', 'True') %}
       {% set t = view_counts.totals %}
       <p class="form-text webpageviewplus-counts">
-        {{ _('Last 30 days: {impressions} shown, {seen} seen, {loaded} loaded, {engaged} used, {failed} failed.').format(**t) }}
+        {# TRANSLATORS: view counts as "label: number" pairs, so no plural forms are needed. #}
+        {{ _('Last 30 days. Shown: {impressions}. Seen: {seen}. Loaded: {loaded}. Used: {engaged}. Failed: {failed}.').format(**t) }}
       </p>
     {% endif %}
   {% endif %}
@@ -110,6 +113,7 @@
 
 {% if can_set_advanced %}
   <fieldset class="webpageviewplus-advanced">
+    {# TRANSLATORS: heading of the advanced (sysadmin-only) settings. #}
     <legend>{{ _('Advanced') }}</legend>
     {{ form.input('sandbox', id='field-sandbox', label=_('Sandbox tokens (replace the preset\'s)'), placeholder=_('eg. allow-scripts allow-popups'), value=data.sandbox, error=errors.sandbox, classes=['control-full']) }}
     {{ form.input('allow', id='field-allow', label=_('Allowed features (replace the preset\'s)'), placeholder=_('eg. fullscreen; clipboard-write'), value=data.allow, error=errors.allow, classes=['control-full']) }}

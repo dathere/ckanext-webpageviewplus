@@ -34,6 +34,7 @@ origin, so anyone who opens it runs its scripts as CKAN, with their login. Stock
 | Editor help | none | paste a YouTube, Vimeo, Datawrapper, Flourish, Observable or Tableau Public link and the form offers its embed address and settings; optional warning when a page refuses to be framed |
 | Finding broken views | none | `ckan webpageviewplus check-views` lists views (core's too) whose page is gone, unreachable or refuses framing |
 | Telemetry | none | none by default; opt-in view counting and connection reports |
+| Languages | CKAN's | English, German, Spanish, French, Italian, Japanese and Brazilian Portuguese |
 | Moving over | n/a | `ckan webpageviewplus migrate` converts existing views in place |
 
 
@@ -455,6 +456,28 @@ resource.
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 
+## Translations
+
+The view, its control bar and the view form come in English, German (`de`), Spanish (`es`),
+French (`fr`), Italian (`it`), Japanese (`ja`) and Brazilian Portuguese (`pt_BR`), following the
+visitor's CKAN language. These are first
+translations: corrections from native speakers are very welcome, as pull requests to
+`ckanext/webpageviewplus/i18n/<locale>/LC_MESSAGES/ckanext-webpageviewplus.po`.
+
+To add or update a language (strings follow CKAN's
+[i18n guidelines](https://docs.ckan.org/en/latest/contributing/string-i18n.html)):
+
+    python setup.py extract_messages             # refresh the .pot from the code
+    python setup.py init_catalog -l de           # a new language, or:
+    python setup.py update_catalog -l es         # merge new strings into an existing one
+    # translate the .po, keeping every {placeholder}
+    python setup.py compile_catalog -l es        # the .mo CKAN reads; commit both
+
+`test_i18n.py` checks that each catalogue covers every string, keeps its placeholders and
+matches its `.mo`. The script takes its labels from the template, so `ckan translation js`
+isn't needed for this extension.
+
+
 ## Developer installation
 
 To install ckanext-webpageviewplus for development, activate your CKAN virtualenv and
@@ -483,8 +506,8 @@ themselves (CKAN's fixtures drop them when they reset the test database).
 
 ## Releasing a new version of ckanext-webpageviewplus
 
-1. Refresh the translation template (`python setup.py extract_messages`, which writes
-   `ckanext/webpageviewplus/i18n/ckanext-webpageviewplus.pot`).
+1. Refresh the translations: `python setup.py extract_messages`, then `update_catalog` and,
+   once the new strings are translated, `compile_catalog` (see Translations).
 
 2. Update the version number in `pyproject.toml` (see
    [PEP 440](https://peps.python.org/pep-0440/)), and date the release in

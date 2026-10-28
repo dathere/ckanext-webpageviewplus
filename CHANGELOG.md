@@ -14,6 +14,15 @@
 - The view form recognises YouTube, Vimeo, Datawrapper, Flourish, Observable and Tableau Public
   links and offers each service's embed address, preset and height, or says why it won't work
   on the site (YouTube, Vimeo, Observable and Tableau Public need a content origin).
+- German, Spanish, French, Italian, Japanese and Brazilian Portuguese translations (first
+  versions; corrections welcome).
+
+### Fixed
+
+- Translations never loaded: CKAN looked for `ckanext-webpage_view_plus` catalogues (from the
+  plugin name), not `ckanext-webpageviewplus`.
+- Strings follow CKAN's i18n guidelines: named placeholders and plural forms in validation
+  messages, a translated API error, and translator comments on short labels.
 
 ### Viewing
 

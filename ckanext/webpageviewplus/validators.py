@@ -41,7 +41,11 @@ def sandbox_validator(value: Any, context: Context) -> Any:
     ok, bad = frame.parse_sandbox(value)
     if bad:
         raise toolkit.Invalid(
-            toolkit._("Unknown sandbox tokens: {}").format(" ".join(bad))
+            toolkit.ungettext(
+                "Unknown sandbox token: {tokens}",
+                "Unknown sandbox tokens: {tokens}",
+                len(bad),
+            ).format(tokens=" ".join(bad))
         )
     return " ".join(ok)
 
@@ -52,9 +56,11 @@ def allow_validator(value: Any, context: Context) -> Any:
     ok, bad = frame.parse_allow(value)
     if bad:
         raise toolkit.Invalid(
-            toolkit._("These features can't be granted: {}").format(
-                " ".join(bad)
-            )
+            toolkit.ungettext(
+                "This feature can't be granted: {features}",
+                "These features can't be granted: {features}",
+                len(bad),
+            ).format(features=" ".join(bad))
         )
     return "; ".join(ok)
 

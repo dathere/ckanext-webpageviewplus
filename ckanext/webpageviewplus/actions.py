@@ -153,7 +153,7 @@ def webpageviewplus_view_stats_show(
     try:
         days = int(data_dict.get("days") or 30)
     except (TypeError, ValueError):
-        raise toolkit.ValidationError({"days": ["Must be a whole number"]})
+        raise toolkit.ValidationError({"days": [toolkit._("Must be a whole number")]})
     days = max(1, min(days, settings.view_counting_retention_days()))
     result = stats.totals(view.id, days)
     result["counting"] = stats.countable(view.config or {})

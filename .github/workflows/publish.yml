@@ -33,12 +33,16 @@ jobs:
         twine check --strict dist/*
     # `ckan db upgrade -p` reads these from the installed package; an
     # editable install in the test job wouldn't notice them missing.
-    - name: Check the wheel has the migration files
+    - name: Check the wheel has the migration files and translations
       run: |
         unzip -Z1 dist/*.whl > files.txt
         m=ckanext/webpageviewplus/migration/webpage_view_plus
         for f in alembic.ini env.py script.py.mako versions/35c91ad0b38c_view_counts.py versions/929956801471_connections.py versions/1b2e58efd947_frameability.py config_declaration.yaml; do
           case $f in config_declaration.yaml) p=ckanext/webpageviewplus/$f;; *) p=$m/$f;; esac
+          grep -qx "$p" files.txt || { echo "missing from wheel: $p"; exit 1; }
+        done
+        for l in de es fr it ja pt_BR; do
+          p=ckanext/webpageviewplus/i18n/$l/LC_MESSAGES/ckanext-webpageviewplus.mo
           grep -qx "$p" files.txt || { echo "missing from wheel: $p"; exit 1; }
         done
     - uses: actions/upload-artifact@v4

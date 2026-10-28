@@ -61,6 +61,14 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
     # Translations in ckanext/webpageviewplus/i18n (DefaultTranslation).
     plugins.implements(plugins.ITranslation)
 
+    # ITranslation
+
+    def i18n_domain(self) -> str:
+        # DefaultTranslation derives the domain from the plugin name
+        # (ckanext-webpage_view_plus); the catalogues are named after the
+        # package, as setup.cfg builds them.
+        return "ckanext-webpageviewplus"
+
     # IConfigurer
 
     def update_config(self, config_: CKANConfig):
