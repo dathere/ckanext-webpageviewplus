@@ -242,3 +242,28 @@ def test_load_on_tap_with_save_data(page, view_urls):
     child.locator("#viewport").filter(has_text="px").wait_for()
     wait_content_height(page, child)
     expect(page.locator(FRAME)).to_be_focused()
+
+
+@pytest.mark.parametrize("how", ["load on tap", "reload"])
+@pytest.mark.parametrize("title", ["Interactive fixed 300", "Schematic auto"])
+def test_fullscreen_permission_survives_download_redirect(page, view_urls, how, title):
+    """Load on tap and Reload frame an upload through CKAN's download URL,
+    which redirects to the content origin: the frame's allow must name that
+    origin, or the page loses fullscreen there."""
+    if title.startswith("Interactive") and page.context.browser.browser_type.name == "firefox":
+        pytest.skip("Firefox gives no fullscreen to opaque-origin frames, even before any redirect")
+    if how == "load on tap":
+        page.set_extra_http_headers({"Save-Data": "on"})
+        page.goto(view_urls[title])
+        page.locator("[data-webpageviewplus-load]").click()
+    else:
+        child = open_view(page, view_urls, title)
+        assert child.locator("body").evaluate("() => document.fullscreenEnabled")
+        click_in_frame(child, "#grow")
+        expect(child.locator("#filler")).to_have_css("height", "500px")
+        page.locator('[data-webpageviewplus-action="reload"]').click()
+        expect(page.frame_locator(FRAME).locator("#filler")).to_have_css("height", "200px")
+    child = page.frame_locator(FRAME)
+    child.locator("#viewport").filter(has_text="px").wait_for()
+    assert "/webpageviewplus/content/" in page.frames[1].url
+    assert child.locator("body").evaluate("() => document.fullscreenEnabled")

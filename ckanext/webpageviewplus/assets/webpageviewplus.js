@@ -38,7 +38,9 @@
     return isFinite(value) ? value : fallback;
   }
 
-  function setup(iframe) {
+  // inserted: added by load on tap, so not loaded yet (and still on CKAN's
+  // download URL, where a reply addressed to the frame's origin can't land).
+  function setup(iframe, inserted) {
     var state = {
       iframe: iframe,
       origin: iframe.getAttribute("data-frame-origin") || "",
@@ -57,7 +59,7 @@
       replyViewport(state);
       announceLoaded(iframe);
     });
-    replyViewport(state);
+    if (!inserted) replyViewport(state);
     setupNarrow(state);
     setupShield(state);
   }
@@ -393,7 +395,7 @@
         stage.parentNode.removeChild(stage);
         var iframe = wrapper.querySelector("iframe.webpageviewplus-frame");
         if (!iframe) return;
-        setup(iframe);
+        setup(iframe, true);
         var held = wrapper.querySelectorAll(
           '[data-webpageviewplus-action="fullscreen"], [data-webpageviewplus-action="reload"]');
         for (var j = 0; j < held.length; j++) held[j].hidden = false;

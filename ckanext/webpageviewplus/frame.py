@@ -424,6 +424,12 @@ def build_frame(
         max_height,
     )
 
+    # A bare feature is granted to the src's origin only. An upload on the
+    # content origin is also loaded through CKAN's download URL (Reload,
+    # load on tap), which redirects there, so name the content origin.
+    origin = serialize_origin(url)
+    if is_upload and content_origin and origin == serialize_origin(content_origin):
+        allow = ["{} 'src' {}".format(f, origin) for f in allow]
     allow_attr = "; ".join(
         allow + ["{} 'none'".format(f) for f in DENIED_FEATURES]
     )

@@ -290,3 +290,18 @@ def test_credentialless_never_loosens_the_sandbox():
     assert hardened.credentialless
     assert hardened.sandbox == plain.sandbox
     assert hardened.allow == plain.allow
+
+
+def test_content_origin_upload_grants_features_to_the_content_origin():
+    """Reload and load on tap go through CKAN's download URL, which
+    redirects to the content origin; a bare feature would be granted to the
+    src's origin (CKAN's) only."""
+    f = build(content_origin=CO, url=CO + "/x/s.html", preset="data-schematic",
+              is_upload=True, allow_override="fullscreen clipboard-write")
+    assert f.allow == "fullscreen 'src' {0}; clipboard-write 'src' {0}; ".format(CO) + DENIALS
+
+
+def test_other_frames_keep_bare_features():
+    f = build(content_origin=CO, url="https://pages.example.com/a.html",
+              preset="interactive")
+    assert f.allow == "fullscreen; " + DENIALS
