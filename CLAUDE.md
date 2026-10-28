@@ -49,7 +49,7 @@ order now being built:
    - Load on tap: only for `Save-Data: on`. The shield and frame wait in a `<template>` behind a
      card with the resource's size in its Load button, and every page rendering a view gets
      `Vary: Save-Data` (`plugin.vary`).
-8. Telemetry and opt-in view counting. Started: slice 1 done (no database).
+8. Done: telemetry and opt-in view counting.
    - Consent gate: the held-back card (`held_back` = `consent` or `save-data`) shows "This view
      loads content from <host>" for third-party pages only, when `consent_gate` (site or per
      view) is on, `privacy_profile = eu` and the frame runs as `external`, or the browser sends
@@ -72,8 +72,15 @@ order now being built:
      `ckan webpageviewplus purge-stats` / `stats-summary`. No page-events allow-list.
    - Tests: CKAN's `non_clean_db` resets the test DB once per session, dropping plugin tables,
      so counting tests use the `counts_table` fixture, which runs the migration's `upgrade()`.
-   - Next: CSP report-only on the content origin with a "This page connects to" disclosure
-     (per resource; a second migration).
+   - What uploaded pages contact (`connections.py`): with `connection_reports` on (default off,
+     as each report is a DB write), served uploads get `Content-Security-Policy-Report-Only`
+     (`default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:`, `report-to` plus
+     `report-uri`). Reports go to `/webpageviewplus/report/<resource_id>` on the content origin
+     itself (no CORS; `ContentHostMiddleware` lets that prefix through), are reduced to
+     distinct other hosts (at most 20 per request, 64 KB bodies) and kept per resource in
+     `webpage_view_plus_connections` (second migration). `webpageviewplus_connections_show`,
+     `ckan webpageviewplus connections`, `purge-stats` also purges them, and
+     `show_connections` (default off: anyone can post a report) adds "This page connects to".
 
 ## The security model (read before touching frame, validator, content or download code)
 

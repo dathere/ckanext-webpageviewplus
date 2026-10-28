@@ -26,7 +26,7 @@ import ckan.model as model
 import ckan.plugins.toolkit as toolkit
 from ckan.lib.uploader import ResourceUpload, get_resource_uploader
 
-from ckanext.webpageviewplus import events, frame, settings
+from ckanext.webpageviewplus import connections, events, frame, settings
 
 log = logging.getLogger(__name__)
 
@@ -173,7 +173,31 @@ def serve(resource_id: str, filename: str):
     # Cache-Control is set by ContentHostMiddleware from this decision: CKAN's
     # own response hooks run after this view and would overwrite it.
     request.environ[CACHE_ENVIRON_KEY] = "private" if private else "public"
-    return send_file(path, mimetype="text/html", conditional=True)
+    response = send_file(path, mimetype="text/html", conditional=True)
+    if settings.connection_reports():
+        # Never blocks: only tells CKAN which hosts the page contacts.
+        response.headers["Content-Security-Policy-Report-Only"] = connections.policy(resource_id)
+        response.headers["Reporting-Endpoints"] = connections.reporting_endpoints(resource_id)
+    return response
+
+
+@content.route(connections.PATH, methods=["POST"])
+def report(resource_id: str):
+    """CSP reports from served uploads: kept as hosts per resource. Always
+    204, so it says nothing about which resources exist."""
+    if not on_content_host():
+        abort(404)
+    if settings.connection_reports():
+        body = request.stream.read(connections.MAX_BODY + 1)
+        resource_obj = model.Resource.get(resource_id)
+        if (
+            len(body) <= connections.MAX_BODY
+            and resource_obj is not None
+            and resource_obj.state == "active"
+        ):
+            connections.record(resource_id, connections.hosts_in(
+                body, frame.url_host(settings.content_origin())))
+    return "", 204
 
 
 def frame_ancestors() -> str:
@@ -195,7 +219,8 @@ def content_headers(response: Response) -> Response:
 
 
 class ContentHostMiddleware:
-    """WSGI wrapper that confines the content host to the content route.
+    """WSGI wrapper that confines the content host to the content route and
+    its CSP report endpoint.
 
     The content domain proxies to the same CKAN, so without this every CKAN
     page would also answer there, and a visitor tricked into logging in on
@@ -218,7 +243,9 @@ class ContentHostMiddleware:
         )
         if host != frame.url_host(origin):
             return self.app(environ, start_response)
-        if not (environ.get("PATH_INFO") or "").startswith(self.PREFIX):
+        if not (environ.get("PATH_INFO") or "").startswith(
+            (self.PREFIX, connections.PREFIX)
+        ):
             start_response(
                 "404 Not Found",
                 [("Content-Type", "text/plain"), ("X-Content-Type-Options", "nosniff")],

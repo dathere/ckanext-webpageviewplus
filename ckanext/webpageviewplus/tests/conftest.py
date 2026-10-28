@@ -32,9 +32,9 @@ def events_log():
 
 @pytest.fixture
 def counts_table(non_clean_db):
-    """The view counts table. CKAN's test fixtures reset the database once
-    per session, which drops plugin tables, so run the plugin's migration
-    (its own upgrade(), through alembic) when the table is missing."""
+    """The plugin's tables. CKAN's test fixtures reset the database once per
+    session, which drops plugin tables, so run each of the plugin's
+    migrations (its own upgrade(), through alembic) whose table is missing."""
     import importlib.util
     import os
 
@@ -44,18 +44,26 @@ def counts_table(non_clean_db):
 
     from ckan import model
 
-    if sa.inspect(model.meta.engine).has_table("webpage_view_plus_view_counts"):
-        return
     versions = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
         "migration", "webpage_view_plus", "versions")
-    for name in sorted(os.listdir(versions)):
-        if not name.endswith(".py"):
-            continue
-        spec = importlib.util.spec_from_file_location("wvp_migration_" + name[:-3],
-                                                      os.path.join(versions, name))
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+    modules = []
+    for name in os.listdir(versions):
+        if name.endswith(".py"):
+            spec = importlib.util.spec_from_file_location(
+                "wvp_migration_" + name[:-3], os.path.join(versions, name))
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            modules.append(module)
+    by_parent = {m.down_revision: m for m in modules}
+    module = by_parent.get(None)
+    while module is not None:
         with model.meta.engine.begin() as connection:
-            with Operations.context(MigrationContext.configure(connection)):
-                module.upgrade()
+            context = MigrationContext.configure(connection)
+            with Operations.context(context):
+                try:
+                    with connection.begin_nested():
+                        module.upgrade()
+                except sa.exc.ProgrammingError:
+                    pass  # its table is already there
+        module = by_parent.get(module.revision)

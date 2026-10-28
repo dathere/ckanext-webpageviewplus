@@ -6,7 +6,14 @@ import ckan.model as model
 import ckan.plugins.toolkit as toolkit
 from ckan.types import Context
 
-from ckanext.webpageviewplus import events, frame, frameability, settings, stats
+from ckanext.webpageviewplus import (
+    connections,
+    events,
+    frame,
+    frameability,
+    settings,
+    stats,
+)
 
 
 def frameability_auth(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:
@@ -95,3 +102,27 @@ def webpageviewplus_view_stats_show(
     result = stats.totals(view.id, days)
     result["counting"] = stats.countable(view.config or {})
     return result
+
+
+def connections_auth(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:
+    """Anyone who may update the resource."""
+    try:
+        toolkit.check_access("resource_update", context, {"id": data_dict.get("id")})
+    except (toolkit.NotAuthorized, toolkit.ObjectNotFound):
+        return {"success": False}
+    return {"success": True}
+
+
+@toolkit.side_effect_free
+def webpageviewplus_connections_show(
+    context: Context, data_dict: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """The hosts an uploaded page was seen contacting, from CSP reports on
+    the content origin. Reports can be posted by anyone: a hint, not proof.
+
+    :param id: the resource's id
+    :returns: ``[{"host", "reports", "last_seen"}, ...]``, most reported first
+    """
+    toolkit.check_access("webpageviewplus_connections_show", context, data_dict)
+    resource_id = toolkit.get_or_bust(data_dict, "id")
+    return connections.hosts_for(resource_id)

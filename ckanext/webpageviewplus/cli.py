@@ -181,13 +181,15 @@ def migrate(dry_run: bool, uploads_only: bool, preset: Optional[str]):
 
 @webpageviewplus.command("purge-stats")
 def purge_stats():
-    """Delete view counts older than view_counting_retention_days. Run it
-    daily from cron."""
-    from ckanext.webpageviewplus import stats
+    """Delete view counts, and hosts not reported, in more than
+    view_counting_retention_days. Run it daily from cron."""
+    from ckanext.webpageviewplus import connections, stats
 
     days = settings.view_counting_retention_days()
     deleted = stats.purge(days)
     click.echo("{} daily total(s) older than {} days deleted.".format(deleted, days))
+    deleted = connections.purge(days)
+    click.echo("{} host(s) not reported in {} days deleted.".format(deleted, days))
 
 
 @webpageviewplus.command("stats-summary")
@@ -204,6 +206,21 @@ def stats_summary(limit: int):
     click.echo("view_id\t" + "\t".join(names))
     for row in rows:
         click.echo("\t".join([row["view_id"]] + [str(row[n] or 0) for n in names]))
+
+
+@webpageviewplus.command("connections")
+@click.option("--limit", default=50, show_default=True, help="Hosts to list.")
+def connections_summary(limit: int):
+    """Hosts uploaded pages were seen contacting (CSP reports), site-wide."""
+    from ckanext.webpageviewplus import connections
+
+    rows = connections.summary()[:limit]
+    if not rows:
+        click.echo("No reported hosts.")
+        return
+    click.echo("host\tresources\treports")
+    for row in rows:
+        click.echo("{}\t{}\t{}".format(row["host"], row["resources"], row["reports"]))
 
 
 def get_commands():

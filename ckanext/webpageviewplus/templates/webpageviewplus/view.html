@@ -56,6 +56,12 @@
     {% if after_id %}<span id="{{ after_id }}" class="webpageviewplus-after" tabindex="-1"></span>{% endif %}
     <p class="webpageviewplus-sr" role="status" data-webpageviewplus-status
        data-loaded="{{ _('{title} loaded').format(title=frame.title) }}"></p>
+    {% if connections %}
+      <details class="webpageviewplus-connections small">
+        <summary>{{ _('This page connects to') }}</summary>
+        <ul>{% for host in connections %}<li>{{ host }}</li>{% endfor %}</ul>
+      </details>
+    {% endif %}
     {% if count_url %}
       <p class="webpageviewplus-counted small text-muted">
         {{ _('This view counts visits.') }}

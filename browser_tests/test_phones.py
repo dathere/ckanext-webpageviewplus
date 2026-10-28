@@ -393,3 +393,25 @@ def test_counting_load_is_engagement(page, view_urls):
     page.wait_for_function("() => wvpBeacons.length === 1")
     body = dict(p.split("=") for p in page.evaluate("wvpBeacons[0]").split("&"))
     assert body["engaged"] == "1" and body["loaded"] == "1"
+
+
+def test_uploads_report_other_hosts_without_blocking(page, view_urls):
+    """The content origin sends Content-Security-Policy-Report-Only: a
+    fetch from another host is reported (to CKAN), never blocked."""
+    child = open_view(page, view_urls, "Interactive fixed 300")
+    src = page.locator(FRAME).get_attribute("src")
+    if "content-security-policy-report-only" not in page.request.get(src).headers:
+        pytest.skip("this site has connection_reports off (the default; CI turns it on)")
+    result = child.locator("body").evaluate("""() => new Promise(resolve => {
+        document.addEventListener('securitypolicyviolation', e => resolve({
+            disposition: e.disposition, directive: e.effectiveDirective,
+            blocked: e.blockedURI}), {once: true});
+        const img = new Image();
+        img.src = 'https://tiles.example.invalid/1.png';
+        setTimeout(() => resolve(null), 3000);
+    })""")
+    assert result is not None
+    assert result["disposition"] == "report"
+    assert result["blocked"].startswith("https://tiles.example.invalid")
+    # Firefox also logs the (report-only) violation as a page error.
+    page.errors[:] = [e for e in page.errors if "Report-Only" not in e]

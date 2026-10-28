@@ -12,6 +12,7 @@ from flask import Blueprint, Response, g, has_request_context, request
 from ckanext.webpageviewplus import (
     actions,
     cli,
+    connections,
     content,
     downloads,
     events,
@@ -78,6 +79,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
         try:
             from ckan.config.middleware.flask_app import csrf
             csrf.exempt(stats.beacon)
+            # Browsers post CSP reports without a CSRF token.
+            csrf.exempt(content.content)
         except (ImportError, AttributeError):
             pass
         return [downloads.hardening, content.content, vary, stats.beacon]
@@ -88,6 +91,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
         return {
             "webpageviewplus_frameability": actions.webpageviewplus_frameability,
             "webpageviewplus_view_stats_show": actions.webpageviewplus_view_stats_show,
+            "webpageviewplus_connections_show": actions.webpageviewplus_connections_show,
         }
 
     # IAuthFunctions
@@ -96,6 +100,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
         return {
             "webpageviewplus_frameability": actions.frameability_auth,
             "webpageviewplus_view_stats_show": actions.view_stats_auth,
+            "webpageviewplus_connections_show": actions.connections_auth,
         }
 
     # IMiddleware
@@ -290,6 +295,12 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin):
             held_back=held_back,
             count_url=count_url,
             privacy_policy_url=settings.privacy_policy_url(),
+            # Uploads on the content origin: the hosts they were seen
+            # contacting (CSP reports), if the site shows them.
+            connections=(
+                [c["host"] for c in connections.hosts_for(resource["id"])]
+                if preconnect and settings.show_connections() else []
+            ),
             consent_host=frame.url_host(built.src),
             # A content-origin URL's signature may expire before the reader
             # taps Load, so a held-back upload loads through CKAN's download

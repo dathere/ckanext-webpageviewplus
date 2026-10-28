@@ -102,6 +102,14 @@ def privacy_policy_url() -> str:
     return (_get("privacy_policy_url") or "").strip()
 
 
+def connection_reports() -> bool:
+    return toolkit.asbool(_get("connection_reports"))
+
+
+def show_connections() -> bool:
+    return toolkit.asbool(_get("show_connections"))
+
+
 def credentialless_presets() -> list[str]:
     return toolkit.aslist(_get("credentialless"))
 

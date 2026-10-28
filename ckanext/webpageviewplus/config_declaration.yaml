@@ -164,6 +164,25 @@ groups:
           The site's privacy policy, linked from the "This view counts
           visits" notice. Required when view_counting is on.
 
+      - key: ckanext.webpageviewplus.connection_reports
+        default: false
+        type: bool
+        description: |
+          Send Content-Security-Policy-Report-Only on HTML uploads served
+          from the content origin, so CKAN learns which hosts those pages
+          contact (kept as hosts per resource, nothing else). It never
+          blocks anything. Off by default: each report request from a
+          visitor's browser is a database write. Needs ckan db upgrade -p
+          webpage_view_plus.
+
+      - key: ckanext.webpageviewplus.show_connections
+        default: false
+        type: bool
+        description: |
+          Show "This page connects to <hosts>" under views of uploads, from
+          those reports. Anyone can post a report, so the list is a hint,
+          not proof; off by default.
+
       - key: ckanext.webpageviewplus.narrow_width
         default: 576
         type: int
