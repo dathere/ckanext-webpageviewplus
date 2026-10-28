@@ -79,13 +79,25 @@ def test_scroll_kept_when_frame_above_shrinks_under_floor(page, view_urls, ancho
     child.locator("#viewport").filter(has_text="px").wait_for()
 
     def report(height):
-        child.locator("body").evaluate(
-            "(b, h) => parent.postMessage({qsvVizHeight: h}, '*')", height)
+        """Make the fixture's content `height` tall and post it. The fixture
+        also reports its own height (on resize, and on timers), so the two
+        must agree or its reports would undo the test's."""
+        return child.locator("body").evaluate("""(b, h) => {
+            const f = document.getElementById('filler');
+            const measure = () => { const s = getComputedStyle(b);
+                return Math.ceil(b.offsetHeight + parseFloat(s.marginTop)
+                                 + parseFloat(s.marginBottom)); };
+            f.style.height = Math.max(0, f.offsetHeight + h - measure()) + 'px';
+            const got = measure();
+            parent.postMessage({qsvVizHeight: got}, '*');
+            return got;
+        }""", height)
 
-    report(1000)
+    tall = report(1000)
+    assert tall > 900
     page.wait_for_function(
-        "() => Math.round(document.querySelector('%s').getBoundingClientRect().height) === 1000"
-        % FRAME)
+        "t => Math.abs(document.querySelector('%s').getBoundingClientRect().height - t) <= 1"
+        % FRAME, arg=tall)
     # Something to read below the frame, and room to scroll past it.
     page.evaluate("""() => {
         const s = document.createElement('div');
@@ -96,9 +108,11 @@ def test_scroll_kept_when_frame_above_shrinks_under_floor(page, view_urls, ancho
         window.scrollTo({top: window.scrollY + f.bottom + 50, behavior: 'instant'});
     }""" % FRAME)
     top = page.evaluate("document.getElementById('below').getBoundingClientRect().top")
-    report(450)
+    short = report(450)
+    assert short < FLOOR - 50
     page.wait_for_function(
-        "() => document.querySelector('%s').style.height === '450px'" % FRAME)
+        "s => Math.abs(parseFloat(document.querySelector('%s').style.height) - s) <= 1"
+        % FRAME, arg=short)
     assert abs(_frame_height(page) - FLOOR) <= 1
     after = page.evaluate("document.getElementById('below').getBoundingClientRect().top")
     assert abs(after - top) <= 2, after - top
