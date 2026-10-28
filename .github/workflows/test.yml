@@ -79,6 +79,10 @@ jobs:
       CKAN_REDIS_URL: redis://redis:6379/1
       CKAN_INI: browser_tests/ci.ini
       WVP_BASE_URL: http://localhost:5000
+      # Firefox won't run as root with a $HOME owned by another user (the
+      # runner's /github/home). Set for the whole job so the browsers are
+      # installed to and launched from the same cache.
+      HOME: /root
     steps:
     - uses: actions/checkout@v4
     - name: Install requirements
