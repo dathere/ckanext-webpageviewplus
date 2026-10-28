@@ -83,6 +83,23 @@
   }
 }
 
+/* Browsers without aspect-ratio (before Chrome 88, Firefox 89, Safari 15)
+   or clamp() drop the frame's inline height and leave it at the default
+   150px. Give them FALLBACK_HEIGHT (frame.py). Plain selectors only (an
+   unknown one such as :fullscreen in old Safari drops the whole rule), and
+   placed first so fullscreen, Expand and the narrow rule still win. */
+@supports not (aspect-ratio: 1 / 1) {
+  .webpageviewplus-frame[data-height-mode="aspect"] {
+    height: 600px !important;
+  }
+}
+
+@supports not (height: clamp(1px, 1vh, 2px)) {
+  .webpageviewplus-frame[data-height-mode="viewport"] {
+    height: 600px !important;
+  }
+}
+
 /* Responsive height: below the site's narrow_width (the script sets the
    class), aspect-ratio and share-of-window views take 80% of the screen,
    over their inline height. Not in fullscreen or Expand. */

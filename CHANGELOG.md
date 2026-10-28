@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Viewing
+
+- Browsers without CSS `aspect-ratio` (before Chrome 88, Firefox 89, Safari 15) or `clamp()`
+  showed aspect-ratio and share-of-window views at the default iframe height (150 px). They now
+  get 600 px.
+
 ## 0.1.0 (2026-10-28)
 
 The first release: a drop-in replacement for CKAN's `webpage_view` (CKAN 2.10 and 2.11). The

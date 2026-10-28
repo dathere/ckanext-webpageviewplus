@@ -65,7 +65,7 @@ In older browsers, a view still shows its page, with less around it:
 
 | Feature | Needs | Without it |
 | --- | --- | --- |
-| Aspect-ratio height | Chrome 88 (Jan 2021), Firefox 89 (Jun 2021), Safari 15 (Sep 2021) | the frame is the browser's default iframe height (150 px); use a fixed height for readers on old browsers |
+| Aspect-ratio height | Chrome 88 (Jan 2021), Firefox 89 (Jun 2021), Safari 15 (Sep 2021) | the frame is 600 px tall |
 | Share-of-window height | Chrome 79 (Dec 2019), Firefox 75 (Apr 2020), Safari 13.1 (Mar 2020) | the same |
 | Lazy loading | Chrome 77 (Sep 2019), Firefox 121 (Dec 2023), Safari 16.4 (Mar 2023) | frames load with the page |
 | `referrerpolicy` | Chrome 51 (May 2016), Firefox 50 (Nov 2016), Safari 14 (Sep 2020) | the browser's default applies, which in those versions can send the dataset page's URL to the framed site |
@@ -75,8 +75,8 @@ In older browsers, a view still shows its page, with less around it:
 | Tap to interact | Safari 12.1 (Mar 2019; iOS 12.2) | no overlay; swipes over the frame scroll the frame |
 | Windows High Contrast styles | Chrome 89 (Mar 2021), Firefox 89 (Jun 2021) | the default focus styles |
 
-For reference, the current versions as of October 2026 are Chrome 156, Edge 155, Firefox 158
-and Safari 27 (macOS and iOS). Versions and dates are from MDN's
+For reference, the current versions as of October 2026 are Chrome 157, Edge 155, Firefox 159
+and Safari 27 (macOS and iOS). Minimum versions and dates are from MDN's
 [browser-compat-data](https://github.com/mdn/browser-compat-data).
 
 **Without JavaScript** (turned off, or the script blocked), frames still render with their
