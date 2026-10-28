@@ -186,7 +186,13 @@ order now being built:
 - Packaging follows the 2.11 cookiecutter: metadata and entry points in `pyproject.toml`,
   setuptools and Babel options in `setup.cfg`, and `setup.py` only for message extractors.
   `ckanext/` is a namespace package. Keep `*.yaml` in `MANIFEST.in` (for
-  `config_declaration.yaml`).
+  `config_declaration.yaml`), and `*.pot`/`*.po` and the `migration/` files (`alembic.ini`,
+  `env.py`, `script.py.mako`, `versions/`): `ckan db upgrade -p` reads them from the installed
+  package, and CI's editable install wouldn't notice them missing, so check the built wheel.
+- Translations: the plugin implements `ITranslation` through
+  `ckan.lib.plugins.DefaultTranslation` (it isn't in `toolkit`). Before a release, refresh the
+  template with `python setup.py extract_messages` (run it in the container), bump the version
+  in `pyproject.toml`, and add to `CHANGELOG.md`; date the release there in the tagging commit.
 
 ## Local CKAN (Docker)
 
