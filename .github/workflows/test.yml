@@ -109,6 +109,10 @@ jobs:
             raise SystemExit("CKAN did not start")
         EOF
     - name: Run browser tests
+      # They use no pytest plugins; the image's CKAN plugin doesn't load
+      # under the pinned pytest.
+      env:
+        PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
       run: pytest -p no:cacheprovider browser_tests
     - name: CKAN log
       if: failure()
