@@ -135,7 +135,8 @@ groups:
           its preset, shows a consent card ("This view loads content from
           <host>") before anything is requested from that host. A sandbox
           doesn't stop the browser sending the visitor's cookies for that
-          host, so the host can still tell who is looking.
+          host, so the host can still tell who is looking. Today this is the
+          same as consent_gate = true; eu is where further EU defaults go.
 
       - key: ckanext.webpageviewplus.consent_gate
         default: false

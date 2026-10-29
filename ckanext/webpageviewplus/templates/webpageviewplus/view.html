@@ -48,10 +48,15 @@
       {# Consent (a third-party page) or Save-Data: a card instead of the
          page, which the script loads from the template on request. Nothing
          is requested from the page's host until then. #}
-      <div class="webpageviewplus-card" data-webpageviewplus-card data-reason="{{ held_back }}">
+      <div class="webpageviewplus-card" data-webpageviewplus-card data-reason="{{ held_back }}"
+           {%- if held_back == 'consent' %} data-host="{{ consent_host }}"{% if save_data %} data-save-data="on"{% endif %}{% endif %}>
         <p class="webpageviewplus-card-title">{{ frame.title }}</p>
         {% if held_back == 'consent' %}
           <p>{{ _('This view loads content from {host}.').format(host=consent_host) }}</p>
+          <p class="small text-muted">
+            {{ _('Loading it lets {host} see that you are viewing this page, and it may recognise you if you are signed in there.').format(host=consent_host) }}
+            {% if privacy_policy_url %}<a href="{{ privacy_policy_url }}">{{ _('Privacy policy') }}</a>{% endif %}
+          </p>
         {% else %}
           <p class="text-muted">{{ _('Not loaded, to save data.') }}</p>
         {% endif %}
@@ -59,8 +64,24 @@
           {#- TRANSLATORS: a button loading the embedded page; {size} is its file size, e.g. "1.2 MB". #}
           {%- if load_size %}{{ _('Load ({size})').format(size=load_size) }}{% else %}{{ _('Load') }}{% endif -%}
         </button>
+        {% if held_back == 'consent' %}
+          {#- TRANSLATORS: a button that loads the page and remembers, in this browser, to load pages from {host} without asking. #}
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-load="always">
+            {{- _('Always load from {host}').format(host=consent_host) -}}
+          </button>
+        {% endif %}
       </div>
       <template data-webpageviewplus-stage>{{ stage }}</template>
+      {% if held_back == 'consent' %}
+        <p class="webpageviewplus-remembered small text-muted" data-webpageviewplus-remembered="{{ consent_host }}" hidden>
+          {{ _('Content from {host} loads without asking in this browser.').format(host=consent_host) }}
+          <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-webpageviewplus-forget
+                  data-forgotten="{{ _('You will be asked again next time.') }}">
+            {#- TRANSLATORS: a button that forgets the choice to always load pages from a site. #}
+            {{- _('Ask me again') -}}
+          </button>
+        </p>
+      {% endif %}
     {% else %}
       {{ stage }}
     {% endif %}

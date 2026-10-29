@@ -515,26 +515,94 @@
     run();
   }
 
+  // Hosts the visitor chose to always load ("Always load from <host>"),
+  // kept in this browser only. Storage can be missing or throw (private
+  // windows, blocked site data): then every card just asks again.
+  var CONSENT_KEY = "webpageviewplus.consent";
+
+  function rememberedHosts() {
+    try {
+      var hosts = JSON.parse(window.localStorage.getItem(CONSENT_KEY) || "[]");
+      return Array.isArray(hosts) ? hosts : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function setRemembered(host, on) {
+    try {
+      var hosts = rememberedHosts().filter(function (h) { return h !== host; });
+      if (on) hosts.push(host);
+      window.localStorage.setItem(CONSENT_KEY, JSON.stringify(hosts));
+    } catch (e) { /* not stored: the card asks next time */ }
+  }
+
+  function showRemembered(wrapper) {
+    var note = wrapper.querySelector("[data-webpageviewplus-remembered]");
+    if (note) note.hidden = false;
+  }
+
+  function loadCard(card, focus) {
+    var wrapper = card.closest(".webpageviewplus");
+    var stage = wrapper && wrapper.querySelector("template[data-webpageviewplus-stage]");
+    if (!stage) return;
+    card.parentNode.replaceChild(stage.content.cloneNode(true), card);
+    stage.parentNode.removeChild(stage);
+    var iframe = wrapper.querySelector("iframe.webpageviewplus-frame");
+    if (!iframe) return;
+    setup(iframe, true);
+    var held = wrapper.querySelectorAll(
+      '[data-webpageviewplus-action="fullscreen"], [data-webpageviewplus-action="reload"]');
+    for (var j = 0; j < held.length; j++) held[j].hidden = false;
+    if (focus) iframe.focus();
+  }
+
   function setupLoadOnTap() {
     var buttons = document.querySelectorAll("[data-webpageviewplus-load]");
     for (var i = 0; i < buttons.length; i++) {
       buttons[i].addEventListener("click", function (event) {
-        var card = event.currentTarget.closest("[data-webpageviewplus-card]");
-        var wrapper = card && card.closest(".webpageviewplus");
-        var stage = wrapper && wrapper.querySelector("template[data-webpageviewplus-stage]");
-        if (!stage) return;
-        card.parentNode.replaceChild(stage.content.cloneNode(true), card);
-        stage.parentNode.removeChild(stage);
-        var iframe = wrapper.querySelector("iframe.webpageviewplus-frame");
-        if (!iframe) return;
-        setup(iframe, true);
-        var held = wrapper.querySelectorAll(
-          '[data-webpageviewplus-action="fullscreen"], [data-webpageviewplus-action="reload"]');
-        for (var j = 0; j < held.length; j++) held[j].hidden = false;
-        iframe.focus();
+        var button = event.currentTarget;
+        var card = button.closest("[data-webpageviewplus-card]");
+        if (!card) return;
+        var host = card.getAttribute("data-host");
+        var wrapper = card.closest(".webpageviewplus");
+        loadCard(card, true);
+        if (host && button.getAttribute("data-webpageviewplus-load") === "always") {
+          setRemembered(host, true);
+          if (wrapper) showRemembered(wrapper);
+          loadRemembered();
+        }
       });
     }
+    var forget = document.querySelectorAll("[data-webpageviewplus-forget]");
+    for (var f = 0; f < forget.length; f++) {
+      forget[f].addEventListener("click", function (event) {
+        var button = event.currentTarget;
+        var note = button.closest("[data-webpageviewplus-remembered]");
+        setRemembered(note.getAttribute("data-webpageviewplus-remembered"), false);
+        var text = button.getAttribute("data-forgotten");
+        note.setAttribute("role", "status");
+        // Changed after the role, so screen readers announce it.
+        setTimeout(function () { note.textContent = text; }, 50);
+      });
+    }
+    loadRemembered();
     return buttons.length;
+  }
+
+  // Cards for hosts the visitor chose to always load open now, unless the
+  // browser asks to save data.
+  function loadRemembered() {
+    var remembered = rememberedHosts();
+    var cards = document.querySelectorAll("[data-webpageviewplus-card][data-host]");
+    for (var c = 0; c < cards.length; c++) {
+      var card = cards[c];
+      if (card.getAttribute("data-save-data") === "on") continue;
+      if (remembered.indexOf(card.getAttribute("data-host")) === -1) continue;
+      var wrapper = card.closest(".webpageviewplus");
+      if (wrapper) showRemembered(wrapper);
+      loadCard(card, false);
+    }
   }
 
   // Opt-in view counting: one beacon per page load with what happened to

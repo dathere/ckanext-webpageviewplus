@@ -323,6 +323,9 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             frame=built,
             share_url=share_url,
             held_back=held_back,
+            # A remembered "always load" from this host still waits when
+            # the browser asks to save data.
+            save_data=save_data,
             count_url=count_url,
             privacy_policy_url=settings.privacy_policy_url(),
             # Uploads on the content origin: the hosts they were seen

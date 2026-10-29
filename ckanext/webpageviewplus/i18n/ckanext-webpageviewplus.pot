@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.2.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-29 15:38+0000\n"
+"POT-Creation-Date: 2026-10-29 16:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -344,8 +344,8 @@ msgid "{host} doesn't allow its pages to be shown inside other sites."
 msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:13
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:89
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:115
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:110
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:136
 msgid "Open in new tab"
 msgstr ""
 
@@ -361,76 +361,102 @@ msgstr ""
 msgid "Tap to interact"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:54
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:55
 msgid "This view loads content from {host}."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:56
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:57
+msgid ""
+"Loading it lets {host} see that you are viewing this page, and it may "
+"recognise you if you are signed in there."
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:58
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:103
+msgid "Privacy policy"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:61
 msgid "Not loaded, to save data."
 msgstr ""
 
 #. a button loading the embedded page; {size} is its file size, e.g. "1.2 MB".
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:60
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:65
 msgid "Load ({size})"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:60
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:65
 msgid "Load"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:72
+#. a button that loads the page and remembers, in this browser, to load pages from
+#. {host} without asking.
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:70
+msgid "Always load from {host}"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:77
+msgid "Content from {host} loads without asking in this browser."
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:79
+msgid "You will be asked again next time."
+msgstr ""
+
+#. a button that forgets the choice to always load pages from a site.
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:81
+msgid "Ask me again"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:93
 msgid "{title} loaded"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:75
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
 msgid "This page connects to"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:81
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:102
 msgid "This view counts visits."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:82
-msgid "Privacy policy"
-msgstr ""
-
 #. accessible name of the toolbar under an embedded web page.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:87
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:108
 msgid "Embedded page"
 msgstr ""
 
 #. "Expand" makes the embedded page fill the window; "Fullscreen" fills the screen.
 #. Buttons.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:117
 msgid "Expand"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:117
 msgid "Fullscreen"
 msgstr ""
 
 #. a button leaving the expanded (full-window) view.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:98
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:119
 msgid "Close"
 msgstr ""
 
 #. a button reloading the embedded page.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:102
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:123
 msgid "Reload"
 msgstr ""
 
 #. a button opening the device's share sheet for this page.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:108
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:129
 msgid "Share"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:119
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:140
 msgid ""
 "This page can't be embedded: its host isn't on this site's list of allowed "
 "hosts."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:121
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:142
 msgid "This page cannot be embedded: only http:// and https:// URLs are supported."
 msgstr ""
 

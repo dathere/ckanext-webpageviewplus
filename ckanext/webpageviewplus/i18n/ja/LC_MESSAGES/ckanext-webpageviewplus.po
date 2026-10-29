@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-29 15:38+0000\n"
+"POT-Creation-Date: 2026-10-29 16:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -378,8 +378,8 @@ msgid "{host} doesn't allow its pages to be shown inside other sites."
 msgstr "{host} は、他のサイト内でのページの表示を許可していません。"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:13
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:89
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:115
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:110
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:136
 msgid "Open in new tab"
 msgstr "新しいタブで開く"
 
@@ -396,80 +396,108 @@ msgstr "{title} を操作"
 msgid "Tap to interact"
 msgstr "タップして操作"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:54
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:55
 #, python-brace-format
 msgid "This view loads content from {host}."
 msgstr "このビューは {host} のコンテンツを読み込みます。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:56
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:57
+msgid ""
+"Loading it lets {host} see that you are viewing this page, and it may "
+"recognise you if you are signed in there."
+msgstr "読み込むと、{host} はあなたがこのページを閲覧していることを知り、ログインしている場合はあなたを識別できる可能性があります。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:58
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:103
+msgid "Privacy policy"
+msgstr "プライバシーポリシー"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:61
 msgid "Not loaded, to save data."
 msgstr "データ節約のため読み込んでいません。"
 
 #. a button loading the embedded page; {size} is its file size, e.g. "1.2 MB".
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:60
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:65
 #, python-brace-format
 msgid "Load ({size})"
 msgstr "読み込む ({size})"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:60
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:65
 msgid "Load"
 msgstr "読み込む"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:72
+#. a button that loads the page and remembers, in this browser, to load pages
+#. from
+#. {host} without asking.
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:70
+#, python-brace-format
+msgid "Always load from {host}"
+msgstr "常に {host} から読み込む"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:77
+msgid "Content from {host} loads without asking in this browser."
+msgstr "このブラウザでは、{host} のコンテンツを確認なしで読み込みます。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:79
+msgid "You will be asked again next time."
+msgstr "次回は再度確認します。"
+
+#. a button that forgets the choice to always load pages from a site.
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:81
+msgid "Ask me again"
+msgstr "再度確認する"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:93
 #, python-brace-format
 msgid "{title} loaded"
 msgstr "{title} を読み込みました"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:75
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
 msgid "This page connects to"
 msgstr "このページの接続先"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:81
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:102
 msgid "This view counts visits."
 msgstr "このビューは訪問数を数えています。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:82
-msgid "Privacy policy"
-msgstr "プライバシーポリシー"
-
 #. accessible name of the toolbar under an embedded web page.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:87
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:108
 msgid "Embedded page"
 msgstr "埋め込みページ"
 
 #. "Expand" makes the embedded page fill the window; "Fullscreen" fills the
 #. screen.
 #. Buttons.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:117
 msgid "Expand"
 msgstr "拡大"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:117
 msgid "Fullscreen"
 msgstr "全画面"
 
 #. a button leaving the expanded (full-window) view.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:98
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:119
 msgid "Close"
 msgstr "閉じる"
 
 #. a button reloading the embedded page.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:102
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:123
 msgid "Reload"
 msgstr "再読み込み"
 
 #. a button opening the device's share sheet for this page.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:108
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:129
 msgid "Share"
 msgstr "共有"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:119
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:140
 msgid ""
 "This page can't be embedded: its host isn't on this site's list of "
 "allowed hosts."
 msgstr "このページは埋め込めません。ホストがこのサイトの許可ホスト一覧にありません。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:121
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:142
 msgid ""
 "This page cannot be embedded: only http:// and https:// URLs are "
 "supported."

@@ -47,6 +47,11 @@ VIEWS = [
     }),
     # No scripts run: the fixture stays as served, and nothing resizes it.
     ("Strict", {"preset": "strict"}),
+    # A third-party page behind the consent card. The tests check the card
+    # and what's remembered, not the page, so example.com needn't load.
+    ("Consent example.com", {
+        "preset": "interactive", "page_url": "https://example.com/", "consent_gate": True,
+    }),
 ]
 
 

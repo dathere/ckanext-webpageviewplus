@@ -8,6 +8,10 @@
   with `interactive`, and ArcGIS StoryMaps and Plotly Cloud apps (`*.plotly.app`, including
   Plotly Studio's) with `external`, each checked in Chrome under every preset.
 - Well-known services: Google Forms (`interactive`) and Typeform (`external`).
+- The consent card explains what loading tells the host (with the site's privacy policy link,
+  if set) and offers **Always load from *host***. The choice is kept in that browser only;
+  later views from that host load without asking and show **Ask me again**, which forgets it.
+  `Save-Data: on` still shows the card.
 
 ### Changed
 
@@ -19,7 +23,8 @@
 - `interactive` and `data-schematic` now include `allow-forms`. Without it, embedded forms that
   submit a regular form post, Google Forms among them, render and fill in but silently drop the
   response, and so do forms in uploaded HTML. Scripts in these frames could already send the
-  same requests, and CKAN's own forms need a CSRF token. `strict` is unchanged. Existing views pick this up without being edited.
+  same requests, and CKAN's own forms need a CSRF token. `strict` is unchanged. Existing views
+  pick this up without being edited.
 - The view form has help text under the page URL, preset, height, control bar, consent and
   advanced fields, linked to each field for screen readers. Where `allowed_hosts` is set, the
   page URL's help lists the accepted hosts. Translated into de, es, fr, it, ja and pt_BR.

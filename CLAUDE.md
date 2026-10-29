@@ -53,7 +53,11 @@ order now being built:
    - Consent gate: the held-back card (`held_back` = `consent` or `save-data`) shows "This view
      loads content from <host>" for third-party pages only, when `consent_gate` (site or per
      view) is on, `privacy_profile = eu` (any preset: a sandbox doesn't stop the browser sending
-     the visitor's cookies for the host), or the browser sends `Sec-GPC: 1`. View pages send `Vary: Save-Data, Sec-GPC` (`plugin.vary`).
+     the visitor's cookies for the host), or the browser sends `Sec-GPC: 1`. The card's "Always
+     load from <host>" is kept in the browser's local storage (`webpageviewplus.consent`, a
+     list of hosts); the script opens remembered hosts' cards at once (not under Save-Data)
+     and shows "Ask me again". Browser tests: `browser_tests/test_consent.py` on the seeded
+     "Consent example.com" view, which never needs example.com to load. View pages send `Vary: Save-Data, Sec-GPC` (`plugin.vary`).
    - DOM events `webpageviewplus:loaded|expanded|failed` bubble from the wrapper. `failed` is
      only a timeout on loads the script starts (Load, Reload): the first load may finish before
      the script runs. `data-load-timeout` on the wrapper is a test hook.

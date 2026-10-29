@@ -750,6 +750,33 @@ class TestConsentGate:
                              url=config.get("ckan.site_url").rstrip("/") + "/page.html").body
         assert "data-webpageviewplus-card" not in body
 
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.privacy_policy_url",
+                             "https://data.example.org/privacy")
+    def test_card_explains_and_offers_always(self, app):
+        html = BeautifulSoup(_privacy_page(app, {"consent_gate": "true"}).body, "html.parser")
+        card = html.select_one("[data-webpageviewplus-card]")
+        assert card["data-host"] == "pages.example.com"
+        assert not card.has_attr("data-save-data")
+        assert "may recognise you if you are signed in there" in card.get_text()
+        assert card.find("a", href="https://data.example.org/privacy")
+        always = card.select_one('[data-webpageviewplus-load="always"]')
+        assert always.get_text(strip=True) == "Always load from pages.example.com"
+        note = html.select_one("[data-webpageviewplus-remembered]")
+        assert note["data-webpageviewplus-remembered"] == "pages.example.com"
+        assert note.has_attr("hidden") and note.select_one("[data-webpageviewplus-forget]")
+
+    def test_save_data_marked_on_a_consent_card(self, app):
+        html = BeautifulSoup(_privacy_page(app, {"consent_gate": "true"},
+                                           headers={"Save-Data": "on"}).body, "html.parser")
+        assert html.select_one("[data-webpageviewplus-card]")["data-save-data"] == "on"
+
+    def test_save_data_card_has_no_always(self, app):
+        html = BeautifulSoup(_privacy_page(app, headers={"Save-Data": "on"}).body, "html.parser")
+        card = html.select_one("[data-webpageviewplus-card]")
+        assert card["data-reason"] == "save-data" and not card.has_attr("data-host")
+        assert not html.select('[data-webpageviewplus-load="always"]')
+        assert not html.select("[data-webpageviewplus-remembered]")
+
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
 @pytest.mark.ckan_config("ckan.views.default_views", "")

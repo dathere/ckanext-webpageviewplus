@@ -398,7 +398,11 @@ denies ad and tracking features (Topics, Attribution Reporting, FLEDGE), and its
   *host*") until the reader asks, so nothing is requested from that host before. It's on with
   `consent_gate` (for the site, or per view), with `privacy_profile = eu` for every third-party
   page whatever its preset, and whenever the browser sends Global Privacy Control (`Sec-GPC: 1`). Uploads and
-  CKAN's own pages never get it. A sandbox doesn't make visitors anonymous: even under `strict`
+  CKAN's own pages never get it. The card says what loading tells the host, links the site's
+  `privacy_policy_url` if set, and offers **Always load from *host***: remembered in that
+  browser only (local storage), so later views from that host load without asking, each with
+  an "Ask me again" button that forgets it. A browser sending `Save-Data: on` still gets the
+  card. A sandbox doesn't make visitors anonymous: even under `strict`
   or `interactive`, the browser sends their cookies for the host when the frame loads (a Google
   Form shows the visitor's signed-in account), so turn the card on where that matters. View pages send `Vary: Save-Data, Sec-GPC`.
 - **For a site's own analytics,** each view fires DOM events that bubble from its wrapper:

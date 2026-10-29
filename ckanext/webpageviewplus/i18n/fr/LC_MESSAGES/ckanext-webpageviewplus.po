@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-29 15:38+0000\n"
+"POT-Creation-Date: 2026-10-29 16:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -427,8 +427,8 @@ msgid "{host} doesn't allow its pages to be shown inside other sites."
 msgstr "{host} n’autorise pas l’affichage de ses pages dans d’autres sites."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:13
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:89
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:115
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:110
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:136
 msgid "Open in new tab"
 msgstr "Ouvrir dans un nouvel onglet"
 
@@ -445,74 +445,104 @@ msgstr "Interagir avec {title}"
 msgid "Tap to interact"
 msgstr "Touchez pour interagir"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:54
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:55
 #, python-brace-format
 msgid "This view loads content from {host}."
 msgstr "Cette vue charge du contenu depuis {host}."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:56
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:57
+msgid ""
+"Loading it lets {host} see that you are viewing this page, and it may "
+"recognise you if you are signed in there."
+msgstr ""
+"Le charger permet à {host} de savoir que vous consultez cette page, et il"
+" peut vous reconnaître si vous y êtes connecté."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:58
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:103
+msgid "Privacy policy"
+msgstr "Politique de confidentialité"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:61
 msgid "Not loaded, to save data."
 msgstr "Non chargé, pour économiser des données."
 
 #. a button loading the embedded page; {size} is its file size, e.g. "1.2 MB".
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:60
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:65
 #, python-brace-format
 msgid "Load ({size})"
 msgstr "Charger ({size})"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:60
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:65
 msgid "Load"
 msgstr "Charger"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:72
+#. a button that loads the page and remembers, in this browser, to load pages
+#. from
+#. {host} without asking.
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:70
+#, python-brace-format
+msgid "Always load from {host}"
+msgstr "Toujours charger depuis {host}"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:77
+msgid "Content from {host} loads without asking in this browser."
+msgstr "Le contenu de {host} se charge sans demander dans ce navigateur."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:79
+msgid "You will be asked again next time."
+msgstr "La question vous sera reposée la prochaine fois."
+
+#. a button that forgets the choice to always load pages from a site.
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:81
+msgid "Ask me again"
+msgstr "Me redemander"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:93
 #, python-brace-format
 msgid "{title} loaded"
 msgstr "{title} : chargement terminé"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:75
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
 msgid "This page connects to"
 msgstr "Cette page se connecte à"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:81
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:102
 msgid "This view counts visits."
 msgstr "Cette vue compte les visites."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:82
-msgid "Privacy policy"
-msgstr "Politique de confidentialité"
-
 #. accessible name of the toolbar under an embedded web page.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:87
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:108
 msgid "Embedded page"
 msgstr "Page intégrée"
 
 #. "Expand" makes the embedded page fill the window; "Fullscreen" fills the
 #. screen.
 #. Buttons.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:117
 msgid "Expand"
 msgstr "Agrandir"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:117
 msgid "Fullscreen"
 msgstr "Plein écran"
 
 #. a button leaving the expanded (full-window) view.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:98
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:119
 msgid "Close"
 msgstr "Fermer"
 
 #. a button reloading the embedded page.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:102
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:123
 msgid "Reload"
 msgstr "Recharger"
 
 #. a button opening the device's share sheet for this page.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:108
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:129
 msgid "Share"
 msgstr "Partager"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:119
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:140
 msgid ""
 "This page can't be embedded: its host isn't on this site's list of "
 "allowed hosts."
@@ -520,7 +550,7 @@ msgstr ""
 "Cette page ne peut pas être intégrée : son hôte ne figure pas dans la "
 "liste des hôtes autorisés de ce site."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:121
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:142
 msgid ""
 "This page cannot be embedded: only http:// and https:// URLs are "
 "supported."

@@ -124,6 +124,11 @@
 
 .webpageviewplus-card [data-webpageviewplus-load] {
   min-height: 24px;
+  margin: 0 0.5rem 0.25rem 0;
+}
+
+.webpageviewplus-remembered {
+  margin: 0.25rem 0 0;
 }
 
 /* Tap to interact: over the frame (the script sets its top and height),
