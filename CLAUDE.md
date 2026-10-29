@@ -223,6 +223,9 @@ order now being built:
   Pushing a bare version tag (`0.1.0`) runs `.github/workflows/publish.yml`: it checks the tag
   against `pyproject.toml`, checks the wheel has the migration files, and publishes to PyPI by
   trusted publishing (GitHub environment `pypi`, no token).
+  After the publish run succeeds and the version is on PyPI, create the GitHub release:
+  `gh release create <version> --verify-tag --title <version> --notes-file <notes>`, with the
+  version's `CHANGELOG.md` section as the notes plus a link to its PyPI page.
 
 ## Local CKAN (Docker)
 
