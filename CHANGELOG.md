@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- The view form labelled the External preset "runs as Interactive for now" on every site. It now
+  says so only where uploads aren't yet isolated (no content origin, or `harden_downloads` off),
+  which is when it's true.
+
 ## 0.2.0 (2026-10-28)
 
 Upgrading: run `ckan db upgrade -p webpage_view_plus` (a new table for stored frameability

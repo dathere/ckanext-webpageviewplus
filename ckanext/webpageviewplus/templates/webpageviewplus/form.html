@@ -3,7 +3,8 @@
 {% set preset_labels = {
   'strict': _('Strict: static HTML, no scripts'),
   'interactive': _('Interactive: scripts, popups and downloads, no storage'),
-  'external': _('External: a trusted third-party site, no sandbox (runs as Interactive for now)'),
+  'external': _('External: a trusted third-party site, no sandbox') if isolated
+    else _('External: a trusted third-party site, no sandbox (runs as Interactive for now)'),
   'data-schematic': _('Data Schematic: qsv Data Schematics'),
 } %}
 {# TRANSLATORS: how the embedded page's height is set; "Auto" means the page reports its own height. #}

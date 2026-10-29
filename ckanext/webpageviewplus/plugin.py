@@ -187,6 +187,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             "referrer_policies": frame.REFERRER_POLICIES,
             "can_set_advanced": v.can_set_advanced(context),
             "frameability_check": settings.frameability_check(),
+            # `external` runs as `interactive` until uploads are isolated.
+            "isolated": settings.isolating_content_origin(),
             "view_counting": settings.view_counting(),
             # Only the view's edit form shows them.
             "view_counts": (

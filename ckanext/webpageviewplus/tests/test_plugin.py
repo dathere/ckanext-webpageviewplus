@@ -149,6 +149,28 @@ def test_new_view_form_renders(app):
     assert 'name="page_url"' in response
 
 
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+@pytest.mark.parametrize("isolated", [False, True])
+def test_form_says_external_runs_as_interactive_only_without_isolation(
+    app, request, isolated
+):
+    if isolated:
+        request.getfixturevalue("content_origin")
+    sysadmin = factories.SysadminWithToken()
+    dataset = factories.Dataset()
+    resource = factories.Resource(package_id=dataset["id"], url="https://pages.example.com/a")
+    url = url_for(
+        "{}_resource.edit_view".format(dataset["type"]),
+        id=dataset["name"],
+        resource_id=resource["id"],
+        view_type="webpage_view_plus",
+    )
+    body = app.get(url, headers={"Authorization": sysadmin["token"]}).body
+    assert "External: a trusted third-party site, no sandbox" in body
+    assert ("runs as Interactive for now" in body) is not isolated
+
+
 @pytest.fixture
 def content_origin(monkeypatch):
     """Simulate phase 3, where uploads are served from their own origin."""
