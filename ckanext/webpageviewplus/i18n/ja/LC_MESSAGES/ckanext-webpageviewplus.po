@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-29 15:15+0000\n"
+"POT-Creation-Date: 2026-10-29 15:25+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -98,8 +98,6 @@ msgstr "厳格: 静的 HTML、スクリプトなし"
 msgid "Interactive: scripts, popups and downloads, no storage"
 msgstr "インタラクティブ: スクリプト、ポップアップ、ダウンロード可、ストレージなし"
 
-# | msgid "" "External: a trusted third-party site, no sandbox (runs as
-# | Interactive for" " now)"
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:6
 msgid "External: a trusted third-party site, no sandbox"
 msgstr "外部: 信頼できるサードパーティのサイト、サンドボックスなし"
@@ -159,12 +157,12 @@ msgstr "例: http://example.com  (空欄の場合はリソースの URL を使�
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:29
 msgid ""
-"Leave blank to show this resource's own address. Paste a link to YouTube,"
-" Vimeo, Datawrapper, Flourish, Observable or Tableau Public and the form "
-"suggests its embed address and settings."
+"Leave blank to show this resource's own address. Paste a link from a "
+"well-known service, such as YouTube, Datawrapper, Power BI or CARTO, and "
+"the form suggests its embed address and settings."
 msgstr ""
-"空欄にすると、このリソース自体のアドレスを表示します。YouTube、Vimeo、Datawrapper、Flourish、Observable、Tableau"
-" Public のリンクを貼り付けると、フォームが埋め込み用アドレスと必要な設定を提案します。"
+"空欄にすると、このリソース自体のアドレスを表示します。YouTube、Datawrapper、Power BI、CARTO "
+"などの有名なサービスのリンクを貼り付けると、フォームが埋め込み用アドレスと必要な設定を提案します。"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:30
 msgid "This site accepts pages from these hosts only: {hosts}."

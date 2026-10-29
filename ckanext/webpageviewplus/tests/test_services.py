@@ -7,6 +7,9 @@ from ckan.tests import factories, helpers
 from ckanext.webpageviewplus import frame, services
 
 YT = "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"
+PBI = "eyJrIjoiYjRlZjg5YzItOWM4Ni00MGNkLWI1OGYtZDA4MDAxNGYyNDQyIiwidCI6ImQ2NDk2NzM4LWY5MTItNGExZS04NDE1LTQwY2E2ZjRhOTRlZCJ9"
+STORY = "https://storymaps.arcgis.com/stories/18b624c3fd3b461796341ce3bd2c14a7"
+CARTO = "https://clausa.app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63"
 
 
 @pytest.mark.parametrize(
@@ -44,6 +47,15 @@ YT = "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"
         ("https://public.tableau.com/views/RegionalSampleWorkbook/Storms?:language=en-US",
          "Tableau Public",
          "https://public.tableau.com/views/RegionalSampleWorkbook/Storms?:showVizHome=no&:embed=true"),
+        ("https://app.powerbi.com/view?r=" + PBI, "Power BI",
+         "https://app.powerbi.com/view?r=" + PBI),
+        ("https://app.powerbi.com/view?r=" + PBI + "%3D&pageName=ReportSection2&x=1", "Power BI",
+         "https://app.powerbi.com/view?r=" + PBI + "%3D&pageName=ReportSection2"),
+        (STORY, "ArcGIS StoryMaps", STORY),
+        (STORY + "/?cover=false", "ArcGIS StoryMaps", STORY),
+        (CARTO, "CARTO", CARTO),
+        ("https://app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63", "CARTO",
+         "https://app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63"),
     ],
 )
 def test_recognised(url, service, embed):
@@ -69,6 +81,15 @@ def test_recognised(url, service, embed):
         "https://datawrapper.dwcdn.net/<x>/",
         "https://observablehq.com/@d3",
         "https://public.tableau.com/app/profile/someone",
+        "https://app.powerbi.com/groups/me/reports/1234",
+        "https://app.powerbi.com/view?r=<script>",
+        "https://app.powerbi.com.evil.example/view?r=" + PBI,
+        "https://storymaps.arcgis.com/stories/not-an-id",
+        "https://storymaps.arcgis.com/collections/18b624c3fd3b461796341ce3bd2c14a7",
+        "https://clausa.app.carto.com/viewer/5d942679-411f-4ab7-afb7-0f6061c9af63",
+        "https://evil.example/app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63",
+        "https://a.b.app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63",
+        "https://clausa.app.carto.com/map/not-a-uuid",
     ],
 )
 def test_not_recognised(url):
@@ -85,11 +106,15 @@ def test_video_settings():
     found = services.suggest("https://youtu.be/dQw4w9WgXcQ")
     assert (found.preset, found.height_mode, found.height_value) == ("external", "aspect", "16/9")
     assert services.suggest("https://datawrapper.dwcdn.net/XSj9X/").preset == "interactive"
+    assert services.suggest("https://app.powerbi.com/view?r=" + PBI).preset == "interactive"
+    assert services.suggest(CARTO).preset == "interactive"
+    assert services.suggest(STORY).preset == "external"
 
 
 def test_suggested_heights_are_valid():
     for url in ("https://youtu.be/dQw4w9WgXcQ", "https://datawrapper.dwcdn.net/XSj9X/",
-                "https://public.tableau.com/views/A/B"):
+                "https://public.tableau.com/views/A/B", "https://app.powerbi.com/view?r=" + PBI,
+                STORY, CARTO):
         found = services.suggest(url)
         assert frame.height_value_valid(found.height_mode, found.height_value)
 

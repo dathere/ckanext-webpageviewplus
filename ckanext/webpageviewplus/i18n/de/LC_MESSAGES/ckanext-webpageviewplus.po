@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-29 15:15+0000\n"
+"POT-Creation-Date: 2026-10-29 15:25+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -101,8 +101,6 @@ msgstr "Streng: statisches HTML, keine Skripte"
 msgid "Interactive: scripts, popups and downloads, no storage"
 msgstr "Interaktiv: Skripte, Pop-ups und Downloads, kein Speicher"
 
-# | msgid "" "External: a trusted third-party site, no sandbox (runs as
-# | Interactive for" " now)"
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:6
 msgid "External: a trusted third-party site, no sandbox"
 msgstr "Extern: eine vertrauenswürdige Website Dritter, keine Sandbox"
@@ -166,14 +164,14 @@ msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:29
 msgid ""
-"Leave blank to show this resource's own address. Paste a link to YouTube,"
-" Vimeo, Datawrapper, Flourish, Observable or Tableau Public and the form "
-"suggests its embed address and settings."
+"Leave blank to show this resource's own address. Paste a link from a "
+"well-known service, such as YouTube, Datawrapper, Power BI or CARTO, and "
+"the form suggests its embed address and settings."
 msgstr ""
 "Leer lassen, um die eigene Adresse dieser Ressource anzuzeigen. Fügen Sie"
-" einen Link zu YouTube, Vimeo, Datawrapper, Flourish, Observable oder "
-"Tableau Public ein, und das Formular schlägt die Einbettungsadresse und "
-"die passenden Einstellungen vor."
+" einen Link von einem bekannten Dienst wie YouTube, Datawrapper, Power BI"
+" oder CARTO ein, und das Formular schlägt die Einbettungsadresse und die "
+"passenden Einstellungen vor."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:30
 msgid "This site accepts pages from these hosts only: {hosts}."

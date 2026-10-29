@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-29 15:15+0000\n"
+"POT-Creation-Date: 2026-10-29 15:25+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: it\n"
@@ -101,8 +101,6 @@ msgstr "Rigoroso: HTML statico, nessuno script"
 msgid "Interactive: scripts, popups and downloads, no storage"
 msgstr "Interattivo: script, popup e download, nessuna memorizzazione"
 
-# | msgid "" "External: a trusted third-party site, no sandbox (runs as
-# | Interactive for" " now)"
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:6
 msgid "External: a trusted third-party site, no sandbox"
 msgstr "Esterno: un sito di terze parti affidabile, senza sandbox"
@@ -164,13 +162,13 @@ msgstr "es. http://example.com  (se vuoto, usa l'URL della risorsa)"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:29
 msgid ""
-"Leave blank to show this resource's own address. Paste a link to YouTube,"
-" Vimeo, Datawrapper, Flourish, Observable or Tableau Public and the form "
-"suggests its embed address and settings."
+"Leave blank to show this resource's own address. Paste a link from a "
+"well-known service, such as YouTube, Datawrapper, Power BI or CARTO, and "
+"the form suggests its embed address and settings."
 msgstr ""
 "Lascia vuoto per mostrare l'indirizzo della risorsa stessa. Incolla un "
-"link a YouTube, Vimeo, Datawrapper, Flourish, Observable o Tableau Public"
-" e il modulo suggerisce l'indirizzo di incorporamento e le impostazioni "
+"link di un servizio noto, come YouTube, Datawrapper, Power BI o CARTO, e "
+"il modulo suggerisce l'indirizzo di incorporamento e le impostazioni "
 "necessarie."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:30

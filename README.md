@@ -154,8 +154,8 @@ name, and an `allow` list that always denies ad and tracking features. Editors p
 and height (fixed, share of the window, aspect ratio, auto). Sysadmins can also set sandbox
 tokens, allowed features and the referrer policy per view.
 
-**Well-known services.** Paste a YouTube, Vimeo, Datawrapper, Flourish, Observable or Tableau
-Public link as the page URL and the form offers the service's embed address, with the preset and
+**Well-known services.** Paste a YouTube, Vimeo, Datawrapper, Flourish, Observable, Tableau
+Public, Power BI, ArcGIS StoryMaps or CARTO link as the page URL and the form offers the service's embed address, with the preset and
 height its embed needs ("Use them"). Nothing is changed until the editor accepts, and what's
 saved is what's shown. Each embed was checked in Chrome under each preset:
 
@@ -167,8 +167,11 @@ saved is what's shown. Each embed was checked in Chrome under each preset:
 | Flourish | `public.flourish.studio/visualisation/<id>/`, `flo.uri.sh/...` | `interactive` | 600 px |
 | Observable | `observablehq.com/@user/notebook`, `/d/<id>`, `/embed/...` | `external` | 600 px |
 | Tableau Public | `public.tableau.com/app/profile/.../viz/<workbook>/<sheet>`, `/views/...` | `external` | 800 px |
+| Power BI | Publish to web links, `app.powerbi.com/view?r=...` (a `pageName` is kept) | `interactive` | 16/9 |
+| ArcGIS StoryMaps | `storymaps.arcgis.com/stories/<id>` | `external` | 800 px |
+| CARTO | public Builder maps, `app.carto.com/map/<id>` or a regional `<tenant>.app.carto.com` | `interactive` | 640 px |
 
-YouTube, Vimeo, Observable and Tableau Public fail inside a sandbox without
+YouTube, Vimeo, Observable, Tableau Public and ArcGIS StoryMaps fail inside a sandbox without
 `allow-same-origin`, so they need `external`, and so a content origin. On a site without one,
 the form says so instead of offering settings that won't play.
 
@@ -178,6 +181,25 @@ YouTube's player, though, so it's not consent: to load nothing from YouTube unti
 agrees, turn on `consent_gate`. Hosts in `allowed_hosts` must match exactly, so a site that
 lists only `www.youtube.com` must also list `www.youtube-nocookie.com`, or the form reports
 that the suggested address isn't allowed.
+
+Only public embeds are recognised. Power BI reports shared inside an organisation and private
+CARTO maps need the viewer's login or an access token, and Plotly's Chart Studio closed on
+31 October 2025. A Plotly chart saved as HTML (`fig.write_html`) can be uploaded and shown with
+`interactive` or `data-schematic`, like a qsv Data Schematic.
+
+**Dashboard apps (Apache Superset, Plotly Dash and Plotly Studio).** These have no fixed
+address to recognise, and whether they can be embedded is up to their own server:
+
+- **Superset**'s security headers (Talisman) usually refuse framing, so its admin has to allow
+  the CKAN site as a frame ancestor, and either give the dashboard to a public role or use
+  Superset's embedded SDK with guest tokens. Frame the dashboard's `?standalone=1` address with
+  `external`, and add Superset's host to `allowed_hosts` if you use one. A dashboard that needs a
+  login won't work in browsers that block third-party cookies: visitors see Superset's login
+  page instead.
+- **Dash** apps, including those Plotly Studio builds and publishes to Plotly Cloud, fetch data
+  from their own server as you interact, which fails from a frame without an origin, so they
+  need `external`. The app's server must not send `X-Frame-Options` or a `frame-ancestors`
+  that excludes the CKAN site, and a private Plotly Cloud app shows its login instead.
 
 **Auto height.** With height "Auto", the frame takes the height the page reports, clamped to
 `min_height`/`max_height`; until it reports one, it keeps a fixed fallback height. Any page can

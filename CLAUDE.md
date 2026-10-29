@@ -176,8 +176,11 @@ order now being built:
   (`preset_not_allowed`, `needs_content_origin`, `host_not_allowed`), and the form script
   offers "Use them", which fills page_url, preset and height. Nothing is rewritten at render.
   Each service's preset comes from loading a real embed in Chrome under each sandbox:
-  Datawrapper and Flourish work in `interactive`; YouTube, Vimeo, Observable and Tableau
-  Public need `allow-same-origin`, hence `external`. Re-check that way before adding one.
+  Datawrapper, Flourish, Power BI (Publish to web) and CARTO work in `interactive`; YouTube,
+  Vimeo, Observable, Tableau Public and ArcGIS StoryMaps need `allow-same-origin`, hence
+  `external`. Re-check that way before adding one (a local page framing the embed once per
+  preset's sandbox will do). Plotly Chart Studio closed in 2025; Superset and Dash are
+  self-hosted, so the README explains them instead.
 - `health.py`: views whose page can't be shown. **Rendering never fetches**: with
   `frameability_check` on, `resource_view_create`/`_update` are chained (`actions.py`) to probe
   the page once after the save (`health.after_save`, `SAVE_SECONDS` overall via

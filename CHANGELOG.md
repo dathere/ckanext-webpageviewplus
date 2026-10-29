@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+
+- Well-known services: Power BI (Publish to web) and CARTO (public Builder maps) are suggested
+  with `interactive`, and ArcGIS StoryMaps with `external`, each checked in Chrome under every
+  preset.
+
 ### Changed
 
 - The view form has help text under the page URL, preset, height, control bar, consent and
@@ -12,6 +18,8 @@
 
 - README: why YouTube links become `youtube-nocookie.com` embeds, and that `allowed_hosts` must
   list that host.
+- README: embedding Superset dashboards and Dash apps (including Plotly Studio's), and what
+  isn't recognised (private Power BI and CARTO embeds, the closed Plotly Chart Studio).
 
 ## 0.2.1 (2026-10-29)
 

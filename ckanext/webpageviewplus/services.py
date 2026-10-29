@@ -4,9 +4,10 @@ its embed needs. Pure code with no CKAN imports.
 
 The view form suggests these; nothing is rewritten at render, so what's
 saved is what's shown. Each service's embed was loaded in Chrome under each
-preset: Datawrapper and Flourish work sandboxed (interactive); YouTube,
-Vimeo, Observable and Tableau Public need scripts with their own origin, so
-they need external, which needs a content origin.
+preset: Datawrapper, Flourish, Power BI and CARTO work sandboxed
+(interactive); YouTube, Vimeo, Observable, Tableau Public and ArcGIS
+StoryMaps need scripts with their own origin, so they need external, which
+needs a content origin.
 """
 from __future__ import annotations
 
@@ -140,8 +141,53 @@ def _tableau(host: str, path: str, query: dict[str, list[str]]) -> Optional[Sugg
         "external", "fixed", "800")
 
 
+_POWER_BI_TOKEN = re.compile(r"^[A-Za-z0-9+/_=-]{1,2000}$")
+
+
+def _power_bi(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
+    # Publish to web only: other report links need the viewer's Microsoft login.
+    if host != "app.powerbi.com" or path.rstrip("/") != "/view":
+        return None
+    token = (query.get("r") or [""])[0]
+    if not _POWER_BI_TOKEN.match(token):
+        return None
+    params = {"r": token}
+    page = (query.get("pageName") or [""])[0]
+    if re.fullmatch(r"[A-Za-z0-9_]{1,100}", page):
+        params["pageName"] = page
+    return Suggestion("Power BI", "https://app.powerbi.com/view?" + urlencode(params),
+                      "interactive", "aspect", "16/9")
+
+
+def _storymaps(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
+    if host != "storymaps.arcgis.com":
+        return None
+    parts = path.strip("/").split("/")
+    if len(parts) < 2 or parts[0] != "stories" or not re.fullmatch(r"[0-9a-f]{32}", parts[1]):
+        return None
+    return Suggestion("ArcGIS StoryMaps",
+                      "https://storymaps.arcgis.com/stories/" + parts[1],
+                      "external", "fixed", "800")
+
+
+_UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+
+def _carto(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
+    # app.carto.com or a regional tenant such as clausa.app.carto.com.
+    if not re.fullmatch(r"(?:[a-z0-9-]{1,63}\.)?app\.carto\.com", host):
+        return None
+    parts = path.strip("/").split("/")
+    # Public maps only: /viewer/ links to private maps need an access token.
+    if len(parts) != 2 or parts[0] != "map" or not _UUID.match(parts[1]):
+        return None
+    return Suggestion("CARTO", "https://{}/map/{}".format(host, parts[1]),
+                      "interactive", "fixed", "640")
+
+
 SERVICES: tuple[Callable[[str, str, dict[str, list[str]]], Optional[Suggestion]], ...] = (
     _youtube, _vimeo, _datawrapper, _flourish, _observable, _tableau,
+    _power_bi, _storymaps, _carto,
 )
 
 

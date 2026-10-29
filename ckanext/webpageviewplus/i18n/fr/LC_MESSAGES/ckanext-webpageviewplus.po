@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-29 15:15+0000\n"
+"POT-Creation-Date: 2026-10-29 15:25+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -103,8 +103,6 @@ msgstr ""
 "Interactif : scripts, fenêtres surgissantes et téléchargements, sans "
 "stockage"
 
-# | msgid "" "External: a trusted third-party site, no sandbox (runs as
-# | Interactive for" " now)"
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:6
 msgid "External: a trusted third-party site, no sandbox"
 msgstr "Externe : un site tiers de confiance, sans sandbox"
@@ -166,13 +164,13 @@ msgstr "p. ex. http://example.com  (si vide, l’URL de la ressource est utilis�
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:29
 msgid ""
-"Leave blank to show this resource's own address. Paste a link to YouTube,"
-" Vimeo, Datawrapper, Flourish, Observable or Tableau Public and the form "
-"suggests its embed address and settings."
+"Leave blank to show this resource's own address. Paste a link from a "
+"well-known service, such as YouTube, Datawrapper, Power BI or CARTO, and "
+"the form suggests its embed address and settings."
 msgstr ""
 "Laissez vide pour afficher l’adresse de la ressource elle-même. Collez un"
-" lien YouTube, Vimeo, Datawrapper, Flourish, Observable ou Tableau Public"
-" et le formulaire propose son adresse d’intégration et les réglages "
+" lien d’un service connu, comme YouTube, Datawrapper, Power BI ou CARTO, "
+"et le formulaire propose son adresse d’intégration et les réglages "
 "nécessaires."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:30
