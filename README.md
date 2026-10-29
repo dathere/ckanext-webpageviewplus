@@ -1,4 +1,5 @@
 [![Tests](https://github.com/dathere/ckanext-webpageviewplus/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/dathere/ckanext-webpageviewplus/actions)
+[![PyPI](https://img.shields.io/pypi/v/ckanext-webpageviewplus)](https://pypi.org/project/ckanext-webpageviewplus/)
 
 # ckanext-webpageviewplus
 
