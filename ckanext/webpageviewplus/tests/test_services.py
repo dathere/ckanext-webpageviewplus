@@ -177,7 +177,7 @@ def test_video_settings():
     assert services.suggest(CARTO).preset == "interactive"
     assert services.suggest(STORY).preset == "external"
     assert services.suggest("https://world-cup-goals.plotly.app/").preset == "external"
-    assert services.suggest(GF).preset == "interactive"
+    assert services.suggest(GF).preset == "external"
     assert services.suggest("https://form.typeform.com/to/NPUAWX7u").preset == "external"
     assert services.suggest("https://github.com/" + NB_PATH).preset == "interactive"
 

@@ -81,7 +81,8 @@ PRESETS: dict[str, Preset] = {
     ),
     "interactive": Preset(
         # allow-forms adds nothing scripts here can't already do (send the same
-        # request), and CKAN's own forms need a CSRF token. Google Forms needs it.
+        # request), and CKAN's own forms need a CSRF token. Plain HTML forms,
+        # in uploads or third-party pages, need it to submit.
         sandbox=("allow-scripts", "allow-forms", "allow-popups", "allow-downloads"),
         allow=("fullscreen",),
         height_mode="auto",

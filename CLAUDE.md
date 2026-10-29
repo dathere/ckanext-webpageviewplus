@@ -180,12 +180,14 @@ order now being built:
   (`preset_not_allowed`, `needs_content_origin`, `host_not_allowed`), and the form script
   offers "Use them", which fills page_url, preset and height. Nothing is rewritten at render.
   Each service's preset comes from loading a real embed in Chrome under each sandbox:
-  Datawrapper, Flourish, Power BI (Publish to web), CARTO, Google Forms and Jupyter notebooks
+  Datawrapper, Flourish, Power BI (Publish to web), CARTO and Jupyter notebooks
   (rendered by nbviewer; Colab's GitHub links too, as Colab sends `X-Frame-Options: DENY`)
-  work in `interactive`; YouTube, Vimeo, Observable, Tableau Public, ArcGIS StoryMaps and Typeform need
+  work in `interactive`; YouTube, Vimeo, Observable, Tableau Public, ArcGIS StoryMaps, Google
+  Forms (renders without an origin but its inputs stay disabled) and Typeform need
   `allow-same-origin`, hence `external`, and so do Plotly Cloud (`*.plotly.app`) apps: some work
-  in `interactive`, some don't. `interactive` and `data-schematic` include `allow-forms` because
-  Google Forms submits a real form post. Re-check that way before adding one (a local page framing the embed once per
+  in `interactive`, some don't. `interactive` and `data-schematic` include `allow-forms` so plain
+  HTML forms can submit. Check a service by clicking into it, not only by looking: Google Forms
+  looked fine under `interactive` until an option was clicked. Re-check that way before adding one (a local page framing the embed once per
   preset's sandbox will do). Plotly Chart Studio closed in 2025; Superset and Dash are
   self-hosted, so the README explains them instead. A new service also goes in
   `services.NAMES` (the form's page URL help lists them; `test_names_cover_every_service`

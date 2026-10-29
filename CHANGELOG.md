@@ -7,7 +7,9 @@
 - Well-known services: Power BI (Publish to web) and CARTO (public Builder maps) are suggested
   with `interactive`, and ArcGIS StoryMaps and Plotly Cloud apps (`*.plotly.app`, including
   Plotly Studio's) with `external`, each checked in Chrome under every preset.
-- Well-known services: Google Forms (`interactive`) and Typeform (`external`).
+- Well-known services: Google Forms and Typeform, both `external` (each needs its own origin; a
+  Google Form renders without one but its inputs stay disabled). A response was submitted
+  through a Google Forms view on the dev site.
 - Well-known services: Jupyter notebooks, any public `.ipynb` (GitHub, raw, Gist, nbviewer or
   any https URL), and Google Colab notebooks opened from GitHub, all shown read-only through
   nbviewer with `interactive` (Colab itself refuses every frame).
@@ -26,9 +28,9 @@
   host when the frame loads: a Google Form under `interactive` shows the visitor's signed-in
   account. EU sites will see the card on `strict` and `interactive` views that loaded directly
   before.
-- `interactive` and `data-schematic` now include `allow-forms`. Without it, embedded forms that
-  submit a regular form post, Google Forms among them, render and fill in but silently drop the
-  response, and so do forms in uploaded HTML. Scripts in these frames could already send the
+- `interactive` and `data-schematic` now include `allow-forms`. Without it, a plain HTML form,
+  in an uploaded page or a third-party one, renders and fills in but silently drops the
+  response. Scripts in these frames could already send the
   same requests, and CKAN's own forms need a CSRF token. `strict` is unchanged. Existing views
   pick this up without being edited.
 - The view form has help text under the page URL, preset, height, control bar, consent and

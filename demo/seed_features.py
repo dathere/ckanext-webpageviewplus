@@ -169,9 +169,9 @@ SERVICE_PAGES = [
      "A Dash app on Plotly Cloud, where Plotly Studio publishes too. Some Dash apps run "
      "without an origin and some don't, so they all get `external`."),
     ("Google Forms", GOOGLE_FORM,
-     "The extension's feedback form, answered right here. Google Forms sends a regular "
-     "form post, which is why `interactive` includes `allow-forms`. Google still sees who "
-     "you are if you're signed in: a sandbox doesn't make you anonymous."),
+     "The extension's feedback form, answered right here. Without its own origin a "
+     "Google Form shows but can't be filled in, so it's `external`. Google sees who you "
+     "are if you're signed in."),
     ("Google Colab", "https://colab.research.google.com/github/CamDavidsonPilon/"
      "Probabilistic-Programming-and-Bayesian-Methods-for-Hackers/blob/master/"
      "Chapter1_Introduction/Ch1_Introduction_PyMC3.ipynb",

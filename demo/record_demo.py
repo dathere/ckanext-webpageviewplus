@@ -42,7 +42,7 @@ SERVICE_VIEWS = [
     ("ArcGIS StoryMaps", "ArcGIS StoryMaps (external)", None),
     ("CARTO", "CARTO (interactive)", None),
     ("Plotly Cloud", "Plotly Cloud (external)", None),
-    ("Google Forms", "Google Forms (interactive)", None),
+    ("Google Forms", "Google Forms (external)", None),
     ("Typeform", "Typeform (external)", None),
     ("Google Colab", "Google Colab (interactive)", "Google Colab, via nbviewer (interactive)"),
     ("Jupyter", "Jupyter (interactive)", "Jupyter notebooks, via nbviewer (interactive)"),

@@ -4,11 +4,11 @@ its embed needs. Pure code with no CKAN imports.
 
 The view form suggests these; nothing is rewritten at render, so what's
 saved is what's shown. Each service's embed was loaded in Chrome under each
-preset: Datawrapper, Flourish, Power BI, CARTO, Google Forms and Jupyter
-notebooks (through nbviewer, also for Colab, which refuses every frame) work
-sandboxed (interactive); YouTube, Vimeo, Observable, Tableau Public, ArcGIS
-StoryMaps, Plotly Cloud apps and Typeform need scripts with their own
-origin, so they need external, which needs a content origin.
+preset: Datawrapper, Flourish, Power BI, CARTO and Jupyter notebooks
+(through nbviewer, also for Colab, which refuses every frame) work sandboxed
+(interactive); YouTube, Vimeo, Observable, Tableau Public, ArcGIS
+StoryMaps, Plotly Cloud apps, Google Forms and Typeform need scripts with
+their own origin, so they need external, which needs a content origin.
 """
 from __future__ import annotations
 
@@ -208,6 +208,7 @@ def _plotly_cloud(host: str, path: str, query: dict[str, list[str]]) -> Optional
 
 def _google_forms(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
     # A published form's /d/e/<id>/ address; /d/<id>/edit is the editor.
+    # It renders without an origin, but its inputs stay disabled: external.
     if host != "docs.google.com":
         return None
     m = re.fullmatch(r"/forms(?:/u/\d+)?/d/e/([A-Za-z0-9_-]{20,128})(?:/[a-zA-Z]*)?/?", path)
@@ -216,7 +217,7 @@ def _google_forms(host: str, path: str, query: dict[str, list[str]]) -> Optional
     return Suggestion(
         "Google Forms",
         "https://docs.google.com/forms/d/e/{}/viewform?embedded=true".format(m.group(1)),
-        "interactive", "fixed", "800")
+        "external", "fixed", "800")
 
 
 def _typeform(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:

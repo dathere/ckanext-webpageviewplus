@@ -172,13 +172,14 @@ saved is what's shown. Each embed was checked in Chrome under each preset:
 | [ArcGIS StoryMaps](https://storymaps.arcgis.com/) | `storymaps.arcgis.com/stories/<id>` | `external` | 800 px |
 | [CARTO](https://carto.com/) | public Builder maps, `app.carto.com/map/<id>` or a regional `<tenant>.app.carto.com` | `interactive` | 640 px |
 | [Plotly Cloud](https://plotly.com/cloud/) | Dash apps, including Plotly Studio's, at `<name>.plotly.app` | `external` | 800 px |
-| [Google Forms](https://www.google.com/forms/about/) | published forms, `docs.google.com/forms/d/e/<id>/viewform` | `interactive` | 800 px |
+| [Google Forms](https://www.google.com/forms/about/) | published forms, `docs.google.com/forms/d/e/<id>/viewform` | `external` | 800 px |
 | [Typeform](https://www.typeform.com/) | `form.typeform.com/to/<id>` or `<account>.typeform.com/to/<id>` | `external` | 600 px |
 | [Google Colab](https://colab.research.google.com/) | notebooks Colab opens from GitHub, `colab.research.google.com/github/...`, shown read-only through [nbviewer](https://nbviewer.org/) (Colab itself refuses every frame; Drive notebooks can't be shown) | `interactive` | 800 px |
 | [Jupyter](https://jupyter.org/) | any public `.ipynb`: `github.com/.../blob/...`, `raw.githubusercontent.com/...`, `gist.github.com/<user>/<id>`, `nbviewer.org/...`, or any `https://` URL ending `.ipynb`, shown read-only through nbviewer | `interactive` | 800 px |
 
 YouTube, Vimeo, Observable, Tableau Public and ArcGIS StoryMaps fail inside a sandbox without
-`allow-same-origin`, as do Typeform and some Plotly Cloud apps (it depends on the app), so they need `external`, and so a content origin. On a site without one,
+`allow-same-origin`, as do Google Forms and Typeform (without it a Google Form shows but its
+inputs stay disabled) and some Plotly Cloud apps (it depends on the app), so they need `external`, and so a content origin. On a site without one,
 the form says so instead of offering settings that won't play.
 
 YouTube links become `www.youtube-nocookie.com` embeds, YouTube's privacy-enhanced mode, in
