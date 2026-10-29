@@ -7,14 +7,12 @@ exclude_paths:
   - "ckanext/webpageviewplus/tests/**"
   - "browser_tests/**"
 
-# Complexity is suppressed on purpose. The functions Lizard flags
-# (build_frame, view_after_validator, setup_template_variables,
-# settings.check, ...) carry the security model and must change together;
-# splitting them to meet a cyclomatic limit of 8 adds risk, not quality.
+# Lizard's per-function complexity issues are suppressed on purpose. The
+# functions it flags (build_frame, view_after_validator,
+# setup_template_variables, settings.check, ...) carry the security model
+# and must change together; splitting them to meet a cyclomatic limit of 8 adds risk, not quality.
+# The metric engine stays on: Codacy's grade needs its line counts.
 engines:
   lizard:
-    exclude_paths:
-      - "**"
-  metric:
     exclude_paths:
       - "**"
