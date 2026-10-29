@@ -1,5 +1,6 @@
 [![Tests](https://github.com/dathere/ckanext-webpageviewplus/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/dathere/ckanext-webpageviewplus/actions)
 [![PyPI](https://img.shields.io/pypi/v/ckanext-webpageviewplus)](https://pypi.org/project/ckanext-webpageviewplus/)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/8f26e2b583ae4bdbb60ec8a942a27f7e)](https://app.codacy.com/gh/dathere/ckanext-webpageviewplus/dashboard)
 
 # ckanext-webpageviewplus
 
