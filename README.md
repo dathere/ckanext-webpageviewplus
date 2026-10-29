@@ -6,7 +6,7 @@
 
 A safer, more capable replacement for CKAN's built-in `webpage_view`. It embeds web pages and
 uploaded HTML in an `<iframe>` with a security preset per view, modern iframe attributes, and
-optionally a separate content origin, so uploaded HTML (such as qsv Data Schematics) can run
+optionally a separate content origin, so uploaded HTML (such as [qsv](https://github.com/dathere/qsv#qsv-blazing-fast-data-wrangling-toolkit) [Data Schematics](https://dathere.com/2026/08/data-schematic-a-neuro-symbolic-visual-story-telling-data-explorer-dictionary/)) can run
 fully without being able to act as CKAN. It uses its own view type (`webpage_view_plus`), so it
 runs beside `webpage_view` while you migrate.
 
