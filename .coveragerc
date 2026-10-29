@@ -1,3 +1,7 @@
+[run]
+# Paths relative to the repo root, so Codacy can match them to its files.
+relative_files = True
+
 [report]
 omit =
     */site-packages/*

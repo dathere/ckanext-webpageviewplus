@@ -1,0 +1,8 @@
+# Codacy analysis scope. Tests and agent instructions aren't product code:
+# their findings (fixture "secrets", test helpers' complexity, prose-style
+# rules on CLAUDE.md) say nothing about the extension's quality.
+exclude_paths:
+  - "CLAUDE.md"
+  - ".serena/**"
+  - "ckanext/webpageviewplus/tests/**"
+  - "browser_tests/**"
