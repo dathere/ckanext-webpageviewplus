@@ -46,3 +46,6 @@ docs/_build/
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# Built by demo/build_schematics.sh
+/demo/schematics/

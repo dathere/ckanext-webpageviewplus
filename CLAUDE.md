@@ -249,6 +249,11 @@ CKAN 2.11.5, http://localhost:5001.
   and an uploaded HTML page. The upload prints its origin and whether it can reach the parent
   page. It's seeded by a script run inside the container that calls CKAN actions with
   `ignore_auth`; don't mint API tokens for this.
+- `demo/` seeds two showcase datasets, each view described as a short story of what to look for:
+  `wvp-features` (`demo/seed_features.py`, one resource per feature) and `wvp-schematics` (qsv Data
+  Schematics; build the HTML on the host first with `demo/build_schematics.sh`, which needs a qsv
+  with PR #4949 as `QSV`). Run the seeds in the container:
+  `docker exec ckan-docker-ckan-dev-1 python /srv/app/src_extensions/ckanext-webpageviewplus/demo/seed_features.py`.
 - Re-run the editable install only after changing entry points / packaging:
   `docker exec -u root ckan-docker-ckan-dev-1 pip install --no-deps -e /srv/app/src_extensions/ckanext-webpageviewplus`
 - If ckan-dev crash-loops on boot, check `docker logs ckan-docker-ckan-dev-1`. A plugin that fails
