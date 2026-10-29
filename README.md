@@ -46,12 +46,14 @@ origin, so anyone who opens it runs its scripts as CKAN, with their login. Stock
 say not to enable `webpage_view` unless you trust the URL sources, nor where all users can create
 datasets. This plugin removes the risk to CKAN itself: no framed page or upload can run scripts as
 CKAN, editors can't loosen a view's sandbox (`editor_can_loosen` is off by default), and sites can
-limit the presets (`presets`) and the hosts that can be framed (`allowed_hosts`). What a framed page
-shows is still up to its source: a sandbox limits what a page can reach, not its content, so a page
-can still be misleading, open popups (`interactive`) or load trackers (see the consent gate and
+limit the presets (`presets`) and the hosts a view's own page URL may point to (`allowed_hosts`).
+`allowed_hosts` doesn't cover a view that leaves its page URL empty and frames the resource's URL,
+so anyone who can create a resource still chooses what it frames. What a framed page shows is
+up to its source: a sandbox limits what a page can reach, not its content, so a page can still be
+misleading, open popups (`interactive`) or load trackers (see the consent gate and
 `credentialless`). Where anyone can create datasets, set `content_origin`, keep
-`editor_can_loosen` off, set `allowed_hosts` to the sites you embed, and consider
-`ckanext.webpageviewplus.presets = strict interactive data-schematic`.
+`editor_can_loosen` off, and consider `ckanext.webpageviewplus.presets = strict interactive
+data-schematic`; set `allowed_hosts` to the sites you embed with a page URL.
 
 
 ## Requirements
@@ -437,7 +439,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.credentialless` | empty (off) | Presets whose frames of third-party pages load without the visitor's cookies or storage (Chromium only, extra hardening; never uploads or CKAN's own pages). Breaks logins and sign-in popups in those frames |
 | `ckanext.webpageviewplus.min_height` / `max_height` | `400` / `4000` | Clamp for viewport and auto heights, in px |
 | `ckanext.webpageviewplus.site_aliases` | empty | Other hosts this CKAN is reachable under; treated as CKAN's own |
-| `ckanext.webpageviewplus.allowed_hosts` | empty (any) | Allow-list of hosts an external page URL may point to |
+| `ckanext.webpageviewplus.allowed_hosts` | empty (any) | Allow-list of hosts a view's page URL may point to (not checked when a view frames its resource's URL) |
 | `ckanext.webpageviewplus.formats` | `html htm` | Resource formats the view is offered for |
 | `ckanext.webpageviewplus.controls` | `open fullscreen reload share` | Buttons in the control bar; empty hides it |
 | `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing, check pages when views are saved, and show a card for those that refuse. Makes CKAN request editor-typed URLs, see above |
