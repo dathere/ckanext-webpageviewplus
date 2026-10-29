@@ -32,6 +32,17 @@ AUTO = {"preset": "data-schematic", "height_mode": "auto"}
 # (file, resource name, how it was made, source CSV, built with, views)
 # Each view: (title, fields, description). Descriptions are Markdown.
 RESOURCES = [
+    ("allegheny-dogs-smart.html", "Allegheny County dog licences: Data Schematic",
+     "`qsv viz smart --smarter`, with a curated data dictionary and a zip-code map,",
+     "examples/viz/allegheny_dog_licenses.csv",
+     "qsv master (it's the schematic in qsv's own examples gallery)", [
+         ("Data Schematic (self-sizing)", AUTO,
+          "Fifty thousand dog licences from Allegheny County, Pennsylvania, told as one "
+          "page. Bella is the most popular name, then Lucy and Daisy. Mixed breeds lead, "
+          "with Labradors and Lab mixes close behind, and most licensed dogs are spayed "
+          "or neutered. Zip code 15237 licenses the most. The frame grows to fit the "
+          "whole story: the schematic tells the page its height."),
+     ]),
     ("nyc311-smart.html", "NYC 311 requests: Data Schematic",
      "`qsv viz smart`", ".claude/skills/tests/fixtures/nyc311-100.csv", HEAD, [
          ("Data Schematic (self-sizing)", AUTO,

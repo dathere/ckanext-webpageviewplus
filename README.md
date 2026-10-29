@@ -10,7 +10,7 @@ optionally a separate content origin, so uploaded HTML (such as [qsv](https://gi
 fully without being able to act as CKAN. It uses its own view type (`webpage_view_plus`), so it
 runs beside `webpage_view` while you migrate.
 
-![A qsv Data Schematic sizing itself to fit, an upload on the content origin, a consent card before a YouTube video, and the view form suggesting a Vimeo embed](https://raw.githubusercontent.com/dathere/ckanext-webpageviewplus/main/docs/demo.gif)
+![The four presets: a qsv Data Schematic of Allegheny County dog licences sizing itself to fit, Wikipedia in Strict, a Datawrapper chart in Interactive, YouTube in External behind a consent card, and the view form suggesting a Vimeo embed](https://raw.githubusercontent.com/dathere/ckanext-webpageviewplus/main/docs/demo.gif)
 
 **What it protects you from.** Out of the box, CKAN serves an uploaded HTML file inline on its own
 origin, so anyone who opens it runs its scripts as CKAN, with their login. Stock

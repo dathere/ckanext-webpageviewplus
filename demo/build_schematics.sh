@@ -24,6 +24,10 @@ for path in .claude/skills/tests/fixtures/nyc311-100.csv resources/test/boston31
     [ -s "$OUT/csv/$f" ] || curl -fsSL "$RAW/$path" -o "$OUT/csv/$f"
 done
 
+# qsv's own gallery schematic (--smarter, a curated dictionary, a zip-code map):
+# 50,000 Allegheny County dog licences.
+curl -fsSL "$RAW/examples/viz/smart_allegheny_dogs.html" -o "$OUT/allegheny-dogs-smart.html"
+
 viz() { "$QSV" viz "$@" 2>/dev/null; }
 viz smart "$OUT/csv/nyc311-100.csv" -o "$OUT/nyc311-smart.html"
 viz smart "$OUT/csv/boston311-100.csv" -o "$OUT/boston311-smart.html"

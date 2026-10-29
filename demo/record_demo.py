@@ -7,8 +7,8 @@ sysadmin from ckan-docker's .env (CKAN_DOCKER_ENV, default
 
 then turn the video it prints into the GIF:
 
-    ffmpeg -ss 1.2 -i VIDEO.webm -vf "fps=8,scale=800:-1:flags=lanczos,split[a][b];\
-[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=none:diff_mode=rectangle" \
+    ffmpeg -ss 1.2 -i VIDEO.webm -vf "fps=6,scale=720:-1:flags=lanczos,split[a][b];\
+[a]palettegen=max_colors=80:stats_mode=diff[p];[b][p]paletteuse=dither=none:diff_mode=rectangle" \
       -loop 0 docs/demo.gif
 """
 import json
@@ -66,10 +66,12 @@ def scroll(page, total, steps=40, pause=60):
 
 def main():
     shutil.rmtree(OUT, ignore_errors=True)
-    schematic = view_url("wvp-schematics", "NYC 311 requests: Data Schematic",
+    schematic = view_url("wvp-schematics", "Allegheny County dog licences: Data Schematic",
                          "Data Schematic (self-sizing)")
-    upload = view_url("wvp-features", "Uploaded HTML on the content origin",
-                      "Data Schematic preset, self-sizing")
+    strict = view_url("wvp-features", "Wikipedia: Open data",
+                      "Strict preset, 70% of the window")
+    interactive = view_url("wvp-features", "Datawrapper chart",
+                           "Interactive preset, fixed 500 px")
     consent = view_url("wvp-features", "YouTube video", "Ask before loading")
     form = view_url("wvp-features", "Try the view form", "Paste a link to see a suggestion",
                     edit=True)
@@ -89,37 +91,62 @@ def main():
                                   record_video_dir=OUT, record_video_size={"width": W, "height": H})
         page = ctx.new_page()
 
-        # 1. A Data Schematic sizes itself to fit.
+        def frame_box():
+            return page.locator("iframe").first.bounding_box()
+
+        # 1. data-schematic: an uploaded qsv Data Schematic sizes itself to fit.
         page.goto(schematic)
         page.frame_locator("iframe").first.locator(".js-plotly-plot").first.wait_for()
+        page.wait_for_timeout(1200)
+        caption(page, "Data Schematic preset: 50,000 dog licences as one uploaded qsv page, "
+                      "sandboxed and sized to fit")
+        page.wait_for_timeout(1800)
+        scroll(page, 3300, steps=70, pause=80)
+        page.wait_for_timeout(1000)
+
+        # 2. strict: a third-party page with nothing running.
+        page.goto(strict)
         page.wait_for_timeout(1500)
-        caption(page, "An uploaded qsv Data Schematic, sandboxed, sized to fit its content")
-        page.wait_for_timeout(2000)
-        scroll(page, 3200, steps=50, pause=70)
+        caption(page, "Strict preset: Wikipedia with no scripts, forms or popups")
+        scroll(page, 330, steps=10, pause=40)
         page.wait_for_timeout(800)
-        page.mouse.wheel(0, -10000)
+        box = frame_box()
+        page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        scroll(page, 900, steps=20, pause=60)
+        page.wait_for_timeout(1500)
+
+        # 3. interactive: scripts run, but the page has no origin of its own.
+        page.goto(interactive)
+        page.wait_for_timeout(2500)
+        caption(page, "Interactive preset: a Datawrapper chart's scripts run, "
+                      "with no access to cookies, storage or CKAN")
+        scroll(page, 330, steps=10, pause=40)
+        page.wait_for_timeout(600)
+        box = frame_box()
+        for i in range(36):
+            page.mouse.move(box["x"] + box["width"] * (0.15 + 0.7 * i / 35),
+                            box["y"] + box["height"] * 0.55)
+            page.wait_for_timeout(90)
         page.wait_for_timeout(1200)
 
-        # 2. Uploaded HTML runs on the content origin, not CKAN's.
-        page.goto(upload)
-        page.wait_for_timeout(1500)
-        caption(page, "Uploaded HTML runs on a separate content origin: it can't act as CKAN")
-        scroll(page, 300, steps=10, pause=40)
-        page.wait_for_timeout(3500)
-
-        # 3. Consent before a third-party page loads anything.
+        # 4. external: a trusted site, behind an optional consent card.
         page.goto(consent)
         page.wait_for_timeout(1000)
-        caption(page, "Optional consent card: nothing loads from YouTube until you choose")
-        scroll(page, 300, steps=10, pause=40)
-        page.wait_for_timeout(2500)
+        caption(page, "External preset for trusted sites like YouTube, here behind a "
+                      "consent card: nothing loads until you choose")
+        scroll(page, 330, steps=10, pause=40)
+        page.wait_for_timeout(2200)
         page.get_by_role("button", name="Load").first.click()
-        page.wait_for_timeout(3500)
+        page.wait_for_timeout(3000)
+        box = frame_box()
+        page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        page.wait_for_timeout(5500)
 
-        # 4. The view form recognises well-known services.
+        # 5. The view form recognises well-known services.
         page.goto(form)
         page.wait_for_timeout(800)
-        caption(page, "Paste a YouTube, Vimeo, Datawrapper or Flourish link: the form suggests the embed")
+        caption(page, "Paste a YouTube, Vimeo, Datawrapper or Flourish link: "
+                      "the form suggests the embed and preset")
         field = page.locator("#field-page_url")
         field.scroll_into_view_if_needed()
         page.mouse.wheel(0, 150)
@@ -127,9 +154,9 @@ def main():
         field.press_sequentially("https://vimeo.com/76979871", delay=45)
         suggestion = page.locator("[data-webpageviewplus-service]")
         suggestion.get_by_role("button", name="Use them").wait_for()
-        page.wait_for_timeout(2200)
+        page.wait_for_timeout(1800)
         suggestion.get_by_role("button", name="Use them").click()
-        page.wait_for_timeout(3500)
+        page.wait_for_timeout(3000)
 
         video = page.video.path()
         ctx.close()
