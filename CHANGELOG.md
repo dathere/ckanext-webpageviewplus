@@ -11,6 +11,11 @@
 
 ### Changed
 
+- `privacy_profile = eu` now puts the consent card on every third-party view, not only those
+  running as `external`. A sandbox doesn't stop the browser sending the visitor's cookies for the
+  host when the frame loads: a Google Form under `interactive` shows the visitor's signed-in
+  account. EU sites will see the card on `strict` and `interactive` views that loaded directly
+  before.
 - `interactive` and `data-schematic` now include `allow-forms`. Without it, embedded forms that
   submit a regular form post, Google Forms among them, render and fill in but silently drop the
   response, and so do forms in uploaded HTML. Scripts in these frames could already send the

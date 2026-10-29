@@ -266,8 +266,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
                 qualified=True,
             )
         # Held back behind a card until the reader asks: a third-party page
-        # when consent is needed (site or view setting, the eu profile on an
-        # external frame, or the browser's Global Privacy Control), or any
+        # when consent is needed (site or view setting, the eu profile, or the
+        # browser's Global Privacy Control), or any
         # page when the browser asks to save data. Both come from request
         # headers, so the page varies by them (vary_held_back).
         save_data = gpc = False
@@ -290,7 +290,9 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             gpc
             or settings.consent_gate()
             or toolkit.asbool(resource_view.get("consent_gate"))
-            or (settings.privacy_profile() == "eu" and built.preset == "external")
+            # Any preset: a sandbox doesn't stop the browser sending the
+            # visitor's cookies for that host when the frame loads.
+            or settings.privacy_profile() == "eu"
         )
         held_back = "consent" if consent else (
             "save-data" if save_data and not refused else None)

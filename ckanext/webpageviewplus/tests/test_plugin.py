@@ -738,9 +738,9 @@ class TestConsentGate:
         assert CONSENT in _privacy_page(app, headers={"Sec-GPC": "1"}).body
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.privacy_profile", "eu")
-    def test_eu_profile_gates_external_frames(self, app, content_origin):
-        assert CONSENT in _privacy_page(app, {"preset": "external"}).body
-        assert CONSENT not in _privacy_page(app, {"preset": "interactive"}).body
+    @pytest.mark.parametrize("preset", ["strict", "interactive", "external"])
+    def test_eu_profile_gates_every_third_party_frame(self, app, content_origin, preset):
+        assert CONSENT in _privacy_page(app, {"preset": preset}).body
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.consent_gate", "true")
     def test_never_for_ckans_own_pages(self, app):

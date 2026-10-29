@@ -131,9 +131,11 @@ groups:
       - key: ckanext.webpageviewplus.privacy_profile
         default: default
         description: |
-          default, or eu: with eu, views of third-party pages that run as the
-          external preset show a consent card ("This view loads content from
-          <host>") before anything is requested from that host.
+          default, or eu: with eu, every view of a third-party page, whatever
+          its preset, shows a consent card ("This view loads content from
+          <host>") before anything is requested from that host. A sandbox
+          doesn't stop the browser sending the visitor's cookies for that
+          host, so the host can still tell who is looking.
 
       - key: ckanext.webpageviewplus.consent_gate
         default: false

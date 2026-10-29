@@ -396,9 +396,11 @@ denies ad and tracking features (Topics, Attribution Reporting, FLEDGE), and its
 
 - **Consent card.** A third-party page can wait behind a card ("This view loads content from
   *host*") until the reader asks, so nothing is requested from that host before. It's on with
-  `consent_gate` (for the site, or per view), with `privacy_profile = eu` for frames running as
-  `external`, and whenever the browser sends Global Privacy Control (`Sec-GPC: 1`). Uploads and
-  CKAN's own pages never get it. View pages send `Vary: Save-Data, Sec-GPC`.
+  `consent_gate` (for the site, or per view), with `privacy_profile = eu` for every third-party
+  page whatever its preset, and whenever the browser sends Global Privacy Control (`Sec-GPC: 1`). Uploads and
+  CKAN's own pages never get it. A sandbox doesn't make visitors anonymous: even under `strict`
+  or `interactive`, the browser sends their cookies for the host when the frame loads (a Google
+  Form shows the visitor's signed-in account), so turn the card on where that matters. View pages send `Vary: Save-Data, Sec-GPC`.
 - **For a site's own analytics,** each view fires DOM events that bubble from its wrapper:
   `webpageviewplus:loaded`, `webpageviewplus:expanded` and `webpageviewplus:failed` (a load the
   view started, Load or Reload, that took over 15 s). The extension sends them nowhere.
@@ -477,7 +479,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing, check pages when views are saved, and show a card for those that refuse. Makes CKAN request editor-typed URLs, see above |
 | `ckanext.webpageviewplus.color_scheme` | `auto` | `light` or `dark`: the colour scheme framed pages see (Firefox only so far) |
 | `ckanext.webpageviewplus.narrow_width` | `576` | View width, in px, below which aspect and viewport heights become 80% of the screen; `0` turns it off |
-| `ckanext.webpageviewplus.privacy_profile` | `default` | `eu` puts the consent card on frames running as `external` |
+| `ckanext.webpageviewplus.privacy_profile` | `default` | `eu` puts the consent card on every third-party page, whatever its preset |
 | `ckanext.webpageviewplus.consent_gate` | `false` | Consent card on every third-party view (editors can also turn it on per view) |
 | `ckanext.webpageviewplus.view_counting` | `false` | Let editors turn on view counting per view |
 | `ckanext.webpageviewplus.view_counting_retention_days` | `365` | Days of daily totals (and reported hosts) `purge-stats` keeps |

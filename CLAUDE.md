@@ -52,8 +52,8 @@ order now being built:
 8. Done: telemetry and opt-in view counting.
    - Consent gate: the held-back card (`held_back` = `consent` or `save-data`) shows "This view
      loads content from <host>" for third-party pages only, when `consent_gate` (site or per
-     view) is on, `privacy_profile = eu` and the frame runs as `external`, or the browser sends
-     `Sec-GPC: 1`. View pages send `Vary: Save-Data, Sec-GPC` (`plugin.vary`).
+     view) is on, `privacy_profile = eu` (any preset: a sandbox doesn't stop the browser sending
+     the visitor's cookies for the host), or the browser sends `Sec-GPC: 1`. View pages send `Vary: Save-Data, Sec-GPC` (`plugin.vary`).
    - DOM events `webpageviewplus:loaded|expanded|failed` bubble from the wrapper. `failed` is
      only a timeout on loads the script starts (Load, Reload): the first load may finish before
      the script runs. `data-load-timeout` on the wrapper is a test hook.
