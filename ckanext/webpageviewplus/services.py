@@ -101,18 +101,26 @@ def _flourish(host: str, path: str, query: dict[str, list[str]]) -> Optional[Sug
 
 
 def _observable(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
-    if host not in ("observablehq.com", "www.observablehq.com"):
+    # old.observablehq.com: where embeds live since the new Observable (2026),
+    # so links copied from its embed menu come from there.
+    if host not in ("observablehq.com", "www.observablehq.com", "old.observablehq.com"):
         return None
     parts = path.strip("/").split("/")
     if parts and parts[0] == "embed":
         parts = parts[1:]
-    if len(parts) == 2 and re.fullmatch(r"@[A-Za-z0-9_-]+", parts[0]) \
-            and re.fullmatch(r"[A-Za-z0-9_-]+", parts[1]):
+    # old.observablehq.com writes the @ as %40.
+    if parts and parts[0][:3].lower() == "%40":
+        parts[0] = "@" + parts[0][3:]
+    # A notebook may carry a version segment: @d3/bar-chart/2.
+    if len(parts) in (2, 3) and re.fullmatch(r"@[A-Za-z0-9_-]+", parts[0]) \
+            and re.fullmatch(r"[A-Za-z0-9_-]+", parts[1]) \
+            and (len(parts) == 2 or re.fullmatch(r"[0-9]{1,6}", parts[2])):
         notebook = "/".join(parts)
     elif len(parts) == 2 and parts[0] == "d" and re.fullmatch(r"[0-9a-f]{16}", parts[1]):
         notebook = "d/" + parts[1]
     else:
         return None
+    # observablehq.com/embed/ redirects to old.observablehq.com for now.
     url = "https://observablehq.com/embed/" + notebook
     cells = (query.get("cells") or [""])[0]
     if cells and re.fullmatch(r"[A-Za-z0-9_,]+", cells):

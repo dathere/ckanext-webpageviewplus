@@ -8,6 +8,9 @@
   with `interactive`, and ArcGIS StoryMaps and Plotly Cloud apps (`*.plotly.app`, including
   Plotly Studio's) with `external`, each checked in Chrome under every preset.
 - Well-known services: Google Forms (`interactive`) and Typeform (`external`).
+- Observable links with a version (`@d3/bar-chart/2`, where D3's maintained examples live) and
+  links from `old.observablehq.com` are recognised. The new Observable (September 2026) has no
+  embeds; `observablehq.com/embed/` redirects to `old.observablehq.com` for every notebook.
 - The consent card explains what loading tells the host (with the site's privacy policy link,
   if set) and offers **Always load from *host***. The choice is kept in that browser only;
   later views from that host load without asking and show **Ask me again**, which forgets it.
