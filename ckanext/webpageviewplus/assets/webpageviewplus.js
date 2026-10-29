@@ -38,6 +38,19 @@
     return isFinite(value) ? value : fallback;
   }
 
+  // A frame that hasn't loaded yet still holds the initial about:blank,
+  // which has this page's origin: a message addressed to the frame's origin
+  // would be dropped (Firefox logs an error). Its load handler sends it.
+  // A loaded cross-origin or sandboxed page can't be read, so it throws.
+  function stillBlank(iframe) {
+    try {
+      var doc = iframe.contentWindow && iframe.contentWindow.document;
+      return !!doc && doc.URL === "about:blank";
+    } catch (e) {
+      return false;
+    }
+  }
+
   // inserted: added by load on tap, so not loaded yet (and still on CKAN's
   // download URL, where a reply addressed to the frame's origin can't land).
   function setup(iframe, inserted) {
@@ -64,7 +77,7 @@
       fire(iframe, "loaded");
     });
     if (inserted) watchLoad(state);
-    else replyViewport(state);
+    else if (!stillBlank(iframe)) replyViewport(state);
     setupNarrow(state);
     setupShield(state);
   }
