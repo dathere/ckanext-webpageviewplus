@@ -34,7 +34,8 @@
 
 - README: why YouTube links become `youtube-nocookie.com` embeds, and that `allowed_hosts` must
   list that host.
-- README: the well-known services table links each service.
+- README: the well-known services table links each service, and the demo GIF shows the new
+  consent card (Always load, then Ask me again) and the form's list of services.
 - README: embedding self-hosted Superset dashboards and Dash apps, and what isn't recognised
   (private Power BI, CARTO and Plotly Cloud embeds, the closed Plotly Chart Studio).
 

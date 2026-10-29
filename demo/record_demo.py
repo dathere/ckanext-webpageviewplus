@@ -129,23 +129,31 @@ def main():
             page.wait_for_timeout(90)
         page.wait_for_timeout(1200)
 
-        # 4. external: a trusted site, behind an optional consent card.
+        # 4. external: a trusted site, behind an optional consent card whose
+        # "Always load" is remembered in this browser.
         page.goto(consent)
         page.wait_for_timeout(1000)
-        caption(page, "External preset for trusted sites like YouTube, here behind a "
-                      "consent card: nothing loads until you choose")
+        caption(page, "External preset for trusted sites like YouTube, behind a consent "
+                      "card: nothing loads until you choose")
         scroll(page, 330, steps=10, pause=40)
-        page.wait_for_timeout(2200)
-        page.get_by_role("button", name="Load").first.click()
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(2600)
+        page.get_by_role("button", name="Always load from www.youtube-nocookie.com").click()
+        page.wait_for_timeout(2500)
         box = frame_box()
         page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-        page.wait_for_timeout(5500)
+        page.wait_for_timeout(4000)
+        page.goto(consent)
+        page.wait_for_timeout(800)
+        caption(page, "\"Always load\" is remembered in this browser only, "
+                      "with \"Ask me again\" to undo it")
+        page.locator("[data-webpageviewplus-remembered]").scroll_into_view_if_needed()
+        page.mouse.wheel(0, 120)
+        page.wait_for_timeout(3200)
 
         # 5. The view form recognises well-known services.
         page.goto(form)
         page.wait_for_timeout(800)
-        caption(page, "Paste a YouTube, Vimeo, Datawrapper or Flourish link: "
+        caption(page, "Paste a link from 12 well-known services, from YouTube to Power BI: "
                       "the form suggests the embed and preset")
         field = page.locator("#field-page_url")
         field.scroll_into_view_if_needed()
