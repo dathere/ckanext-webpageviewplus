@@ -189,6 +189,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             "frameability_check": settings.frameability_check(),
             # `external` runs as `interactive` until uploads are isolated.
             "isolated": settings.isolating_content_origin(),
+            "allowed_hosts": settings.allowed_hosts(),
             "view_counting": settings.view_counting(),
             # Only the view's edit form shows them.
             "view_counts": (

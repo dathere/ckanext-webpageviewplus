@@ -24,7 +24,12 @@
 } %}
 
 {% asset 'webpageviewplus/webpageviewplus-js' %}
-{{ form.input('page_url', id='field-page_url', label=_('Web Page url'), placeholder=_('eg. http://example.com  (if blank uses resource url)'), value=data.page_url, error=errors.page_url, classes=['control-full', 'control-large']) }}
+{% call form.input('page_url', id='field-page_url', label=_('Web Page url'), placeholder=_('eg. http://example.com  (if blank uses resource url)'), value=data.page_url, error=errors.page_url, classes=['control-full', 'control-large'], attrs={'class': 'form-control', 'aria-describedby': 'help-page_url'}) %}
+  <p class="form-text" id="help-page_url">
+    {{ _('Leave blank to show this resource\'s own address. Paste a link to YouTube, Vimeo, Datawrapper, Flourish, Observable or Tableau Public and the form suggests its embed address and settings.') }}
+    {% if allowed_hosts %}{{ _('This site accepts pages from these hosts only: {hosts}.').format(hosts=allowed_hosts | join(', ')) }}{% endif %}
+  </p>
+{% endcall %}
 {# Well-known services (YouTube, Datawrapper...): offers the embed address
    and the settings the embed needs. Filled in by the script. #}
 <div class="webpageviewplus-service" role="status" aria-live="polite"
@@ -51,12 +56,16 @@
 <div class="form-group control-medium">
   <label class="form-label" for="field-preset">{{ _('Security preset') }}</label>
   <div class="controls">
-    <select id="field-preset" name="preset" class="form-control form-select">
+    <select id="field-preset" name="preset" class="form-control form-select" aria-describedby="help-preset">
       {% for name in presets %}
         <option value="{{ name }}" {% if (data.preset or default_preset) == name %}selected{% endif %}>{{ preset_labels.get(name, name) }}</option>
       {% endfor %}
     </select>
     {% if errors.preset %}<span class="error-block">{{ errors.preset | join(', ') }}</span>{% endif %}
+    <p class="form-text" id="help-preset">
+      {{ _('Choose the most restrictive preset that works: if the page stays blank or broken, try the next one.') }}
+      {% if 'external' in presets %}{{ _('External turns the sandbox off, so use it only for sites you trust.') }}{% endif %}
+    </p>
   </div>
 </div>
 
@@ -76,26 +85,31 @@
 <div class="form-group control-medium">
   <label class="form-label" for="field-height_mode">{{ _('Height') }}</label>
   <div class="controls">
-    <select id="field-height_mode" name="height_mode" class="form-control form-select">
+    <select id="field-height_mode" name="height_mode" class="form-control form-select" aria-describedby="help-height_mode">
       <option value="" {% if not data.height_mode %}selected{% endif %}>{{ _("Preset's default") }}</option>
       {% for mode in height_modes %}
         <option value="{{ mode }}" {% if data.height_mode == mode %}selected{% endif %}>{{ height_labels.get(mode, mode) }}</option>
       {% endfor %}
     </select>
     {% if errors.height_mode %}<span class="error-block">{{ errors.height_mode | join(', ') }}</span>{% endif %}
+    <p class="form-text" id="help-height_mode">{{ _('Auto fits pages that report their own height, such as qsv Data Schematics. Other pages keep a fixed fallback height.') }}</p>
   </div>
 </div>
 
-{{ form.input('height_value', id='field-height_value', label=_('Height value'), placeholder=_('eg. 600, 80 or 16/9'), value=data.height_value, error=errors.height_value, classes=['control-medium']) }}
+{% call form.input('height_value', id='field-height_value', label=_('Height value'), placeholder=_('eg. 600, 80 or 16/9'), value=data.height_value, error=errors.height_value, classes=['control-medium'], attrs={'class': 'form-control', 'aria-describedby': 'help-height_value'}) %}
+  <p class="form-text" id="help-height_value">{{ _('Pixels for Fixed, a number from 1 to 100 for a share of the window, or a ratio such as 16/9. Auto and the preset\'s default need no value.') }}</p>
+{% endcall %}
 
 <div class="form-group control-medium">
   <div class="form-check">
-    <input class="form-check-input" type="checkbox" id="field-hide_controls" name="hide_controls" value="true" {% if data.hide_controls in (true, 'true', 'True') %}checked{% endif %}>
+    <input class="form-check-input" type="checkbox" id="field-hide_controls" name="hide_controls" value="true" aria-describedby="help-hide_controls" {% if data.hide_controls in (true, 'true', 'True') %}checked{% endif %}>
     <label class="form-check-label" for="field-hide_controls">{{ _('Hide the control bar (Open in new tab, Fullscreen, Reload)') }}</label>
+    <p class="form-text" id="help-hide_controls">{{ _('On phones and at high zoom, Open in new tab still shows, so visitors can always reach the page.') }}</p>
   </div>
   <div class="form-check">
-    <input class="form-check-input" type="checkbox" id="field-consent_gate" name="consent_gate" value="true" {% if data.consent_gate in (true, 'true', 'True') %}checked{% endif %}>
+    <input class="form-check-input" type="checkbox" id="field-consent_gate" name="consent_gate" value="true" aria-describedby="help-consent_gate" {% if data.consent_gate in (true, 'true', 'True') %}checked{% endif %}>
     <label class="form-check-label" for="field-consent_gate">{{ _('Ask before loading a page from another site') }}</label>
+    <p class="form-text" id="help-consent_gate">{{ _('Visitors see a card naming the site, and nothing loads from it until they choose Load. Uploads and pages on this site load as usual.') }}</p>
   </div>
   {% if view_counting %}
     <div class="form-check">
@@ -116,6 +130,7 @@
   <fieldset class="webpageviewplus-advanced">
     {# TRANSLATORS: heading of the advanced (sysadmin-only) settings. #}
     <legend>{{ _('Advanced') }}</legend>
+    <p class="form-text">{{ _('Each field replaces the preset\'s value; leave it blank to keep the preset\'s. A sandbox with both allow-scripts and allow-same-origin is refused wherever it could let a page act as this site.') }}</p>
     {{ form.input('sandbox', id='field-sandbox', label=_('Sandbox tokens (replace the preset\'s)'), placeholder=_('eg. allow-scripts allow-popups'), value=data.sandbox, error=errors.sandbox, classes=['control-full']) }}
     {{ form.input('allow', id='field-allow', label=_('Allowed features (replace the preset\'s)'), placeholder=_('eg. fullscreen; clipboard-write'), value=data.allow, error=errors.allow, classes=['control-full']) }}
     <div class="form-group control-medium">

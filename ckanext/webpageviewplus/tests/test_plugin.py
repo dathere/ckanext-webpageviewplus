@@ -1,6 +1,7 @@
 import re
 
 import pytest
+from bs4 import BeautifulSoup
 
 from ckan.plugins import plugin_loaded
 from ckan.plugins.toolkit import ValidationError, url_for
@@ -169,6 +170,29 @@ def test_form_says_external_runs_as_interactive_only_without_isolation(
     body = app.get(url, headers={"Authorization": sysadmin["token"]}).body
     assert "External: a trusted third-party site, no sandbox" in body
     assert ("runs as Interactive for now" in body) is not isolated
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckanext.webpageviewplus.allowed_hosts", "pages.example.com charts.example.org")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+def test_form_help_text_is_linked_to_its_fields(app):
+    sysadmin = factories.SysadminWithToken()
+    dataset = factories.Dataset()
+    resource = factories.Resource(package_id=dataset["id"], url="https://pages.example.com/a")
+    url = url_for(
+        "{}_resource.edit_view".format(dataset["type"]),
+        id=dataset["name"],
+        resource_id=resource["id"],
+        view_type="webpage_view_plus",
+    )
+    html = BeautifulSoup(
+        app.get(url, headers={"Authorization": sysadmin["token"]}).body, "html.parser")
+    for field in ("page_url", "preset", "height_mode", "height_value",
+                  "hide_controls", "consent_gate"):
+        control = html.find(id="field-" + field)
+        assert control["aria-describedby"] == "help-" + field
+        assert html.find(id="help-" + field).get_text(strip=True)
+    assert "pages.example.com, charts.example.org" in html.find(id="help-page_url").get_text()
 
 
 @pytest.fixture

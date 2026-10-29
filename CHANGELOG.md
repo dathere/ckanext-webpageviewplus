@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- The view form has help text under the page URL, preset, height, control bar, consent and
+  advanced fields, linked to each field for screen readers. Where `allowed_hosts` is set, the
+  page URL's help lists the accepted hosts. Translated into de, es, fr, it, ja and pt_BR.
+
+### Docs
+
+- README: why YouTube links become `youtube-nocookie.com` embeds, and that `allowed_hosts` must
+  list that host.
+
 ## 0.2.1 (2026-10-29)
 
 ### Fixed
