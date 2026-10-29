@@ -28,9 +28,16 @@ def test_external_has_no_sandbox_attribute_with_content_origin():
     assert f.allow == "fullscreen; " + DENIALS
 
 
+def test_presets_with_scripts_allow_forms():
+    # A form in the frame (Google Forms posts one) would otherwise be dropped.
+    for name in ("interactive", "data-schematic"):
+        assert "allow-forms" in frame.PRESETS[name].sandbox
+    assert "allow-forms" not in frame.PRESETS["strict"].sandbox
+
+
 def test_interactive_tokens():
     f = build()
-    assert f.sandbox == "allow-scripts allow-popups allow-downloads"
+    assert f.sandbox == "allow-scripts allow-forms allow-popups allow-downloads"
     assert f.preset == "interactive"
 
 
@@ -209,7 +216,7 @@ def test_external_degrades_to_interactive_without_content_origin():
     # An unsandboxed page could navigate itself to HTML uploaded to CKAN.
     f = build(preset="external")
     assert f.preset == "interactive"
-    assert f.sandbox == "allow-scripts allow-popups allow-downloads"
+    assert f.sandbox == "allow-scripts allow-forms allow-popups allow-downloads"
     assert f.notices == ["degraded"]
 
 

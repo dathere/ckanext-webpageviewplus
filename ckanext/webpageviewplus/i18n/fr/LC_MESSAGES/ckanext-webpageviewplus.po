@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-29 15:25+0000\n"
+"POT-Creation-Date: 2026-10-29 15:38+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -98,10 +98,10 @@ msgid "Strict: static HTML, no scripts"
 msgstr "Strict : HTML statique, sans scripts"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:5
-msgid "Interactive: scripts, popups and downloads, no storage"
+msgid "Interactive: scripts, forms, popups and downloads, no storage"
 msgstr ""
-"Interactif : scripts, fenêtres surgissantes et téléchargements, sans "
-"stockage"
+"Interactif : scripts, formulaires, fenêtres surgissantes et "
+"téléchargements, sans stockage"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:6
 msgid "External: a trusted third-party site, no sandbox"

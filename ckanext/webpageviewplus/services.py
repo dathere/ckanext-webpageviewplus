@@ -4,9 +4,9 @@ its embed needs. Pure code with no CKAN imports.
 
 The view form suggests these; nothing is rewritten at render, so what's
 saved is what's shown. Each service's embed was loaded in Chrome under each
-preset: Datawrapper, Flourish, Power BI and CARTO work sandboxed
-(interactive); YouTube, Vimeo, Observable, Tableau Public, ArcGIS
-StoryMaps and Plotly Cloud apps need scripts with their own origin, so they need external, which
+preset: Datawrapper, Flourish, Power BI, CARTO and Google Forms work
+sandboxed (interactive); YouTube, Vimeo, Observable, Tableau Public, ArcGIS
+StoryMaps, Plotly Cloud apps and Typeform need scripts with their own origin, so they need external, which
 needs a content origin.
 """
 from __future__ import annotations
@@ -197,9 +197,33 @@ def _plotly_cloud(host: str, path: str, query: dict[str, list[str]]) -> Optional
                       "external", "fixed", "800")
 
 
+def _google_forms(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
+    # A published form's /d/e/<id>/ address; /d/<id>/edit is the editor.
+    if host != "docs.google.com":
+        return None
+    m = re.fullmatch(r"/forms(?:/u/\d+)?/d/e/([A-Za-z0-9_-]{20,128})(?:/[a-zA-Z]*)?/?", path)
+    if not m:
+        return None
+    return Suggestion(
+        "Google Forms",
+        "https://docs.google.com/forms/d/e/{}/viewform?embedded=true".format(m.group(1)),
+        "interactive", "fixed", "800")
+
+
+def _typeform(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
+    # form.typeform.com or an account's own <name>.typeform.com.
+    if not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.typeform\.com", host):
+        return None
+    m = re.fullmatch(r"/to/([A-Za-z0-9]{4,32})/?", path)
+    if not m:
+        return None
+    return Suggestion("Typeform", "https://{}/to/{}".format(host, m.group(1)),
+                      "external", "fixed", "600")
+
+
 SERVICES: tuple[Callable[[str, str, dict[str, list[str]]], Optional[Suggestion]], ...] = (
     _youtube, _vimeo, _datawrapper, _flourish, _observable, _tableau,
-    _power_bi, _storymaps, _carto, _plotly_cloud,
+    _power_bi, _storymaps, _carto, _plotly_cloud, _google_forms, _typeform,
 )
 
 

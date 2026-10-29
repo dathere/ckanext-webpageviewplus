@@ -10,6 +10,8 @@ YT = "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"
 PBI = "eyJrIjoiYjRlZjg5YzItOWM4Ni00MGNkLWI1OGYtZDA4MDAxNGYyNDQyIiwidCI6ImQ2NDk2NzM4LWY5MTItNGExZS04NDE1LTQwY2E2ZjRhOTRlZCJ9"
 STORY = "https://storymaps.arcgis.com/stories/18b624c3fd3b461796341ce3bd2c14a7"
 CARTO = "https://clausa.app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63"
+GF_ID = "1FAIpQLSejGC-PLjdLLfHp9M6Ge2bJNbSr1JoWTC0n3RrcvUn1m2VqPw"
+GF = "https://docs.google.com/forms/d/e/{}/viewform?embedded=true".format(GF_ID)
 
 
 @pytest.mark.parametrize(
@@ -60,6 +62,14 @@ CARTO = "https://clausa.app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63"
          "https://oecd-pension-explorer.plotly.app/"),
         ("https://medical-imaging-demo.plotly.app/imaging?x=1#y", "Plotly Cloud",
          "https://medical-imaging-demo.plotly.app/imaging"),
+        ("https://docs.google.com/forms/d/e/{}/viewform?usp=sf_link".format(GF_ID),
+         "Google Forms", GF),
+        ("https://docs.google.com/forms/u/1/d/e/{}/viewform".format(GF_ID), "Google Forms", GF),
+        (GF, "Google Forms", GF),
+        ("https://form.typeform.com/to/NPUAWX7u?typeform-source=x", "Typeform",
+         "https://form.typeform.com/to/NPUAWX7u"),
+        ("https://acme.typeform.com/to/LhgLkLvN", "Typeform",
+         "https://acme.typeform.com/to/LhgLkLvN"),
     ],
 )
 def test_recognised(url, service, embed):
@@ -99,6 +109,12 @@ def test_recognised(url, service, embed):
         "https://app.plotly.app.evil.example/",
         "https://x.plotly.app/<script>",
         "https://x.plotly.app/a/../b",
+        "https://docs.google.com/forms/d/1mbs8CghPVV5Wx8-knLMqzLHBIiARh6Q2cwSvoeSNPpE/edit",
+        "https://docs.google.com/document/d/e/{}/pub".format(GF_ID),
+        "https://docs.google.com/forms/d/e/<x>/viewform",
+        "https://typeform.com/to/NPUAWX7u",
+        "https://form.typeform.com/to/<x>",
+        "https://a.b.typeform.com/to/NPUAWX7u",
     ],
 )
 def test_not_recognised(url):
@@ -119,6 +135,8 @@ def test_video_settings():
     assert services.suggest(CARTO).preset == "interactive"
     assert services.suggest(STORY).preset == "external"
     assert services.suggest("https://world-cup-goals.plotly.app/").preset == "external"
+    assert services.suggest(GF).preset == "interactive"
+    assert services.suggest("https://form.typeform.com/to/NPUAWX7u").preset == "external"
 
 
 def test_suggested_heights_are_valid():

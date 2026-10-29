@@ -140,7 +140,7 @@ Add a "Website (Plus)" view to an HTML resource and pick a security preset:
 | Preset           | Sandbox                                          | Use for |
 | ---------------- | ------------------------------------------------ | ------- |
 | `strict`         | everything restricted, no scripts                | static HTML: reports, notebooks without JS |
-| `interactive`    | `allow-scripts allow-popups allow-downloads`     | scripted pages that need no storage (the default) |
+| `interactive`    | `allow-scripts allow-forms allow-popups allow-downloads` | scripted pages that need no storage, forms included (the default) |
 | `external`       | none                                             | third-party sites you trust (dashboards, apps). Needs a content origin, else runs as `interactive`. Never for uploads or pages on CKAN's own host |
 | `data-schematic` | `interactive` + `allow-same-origin` and popups that escape the sandbox | qsv Data Schematics (maps, Tour, Explore). Needs a content origin, else runs as `interactive` and maps stay blank |
 
@@ -155,7 +155,8 @@ and height (fixed, share of the window, aspect ratio, auto). Sysadmins can also 
 tokens, allowed features and the referrer policy per view.
 
 **Well-known services.** Paste a YouTube, Vimeo, Datawrapper, Flourish, Observable, Tableau
-Public, Power BI, ArcGIS StoryMaps, CARTO or Plotly Cloud link as the page URL and the form offers the service's embed address, with the preset and
+Public, Power BI, ArcGIS StoryMaps, CARTO, Plotly Cloud, Google Forms or Typeform link as the
+page URL and the form offers the service's embed address, with the preset and
 height its embed needs ("Use them"). Nothing is changed until the editor accepts, and what's
 saved is what's shown. Each embed was checked in Chrome under each preset:
 
@@ -171,9 +172,11 @@ saved is what's shown. Each embed was checked in Chrome under each preset:
 | ArcGIS StoryMaps | `storymaps.arcgis.com/stories/<id>` | `external` | 800 px |
 | CARTO | public Builder maps, `app.carto.com/map/<id>` or a regional `<tenant>.app.carto.com` | `interactive` | 640 px |
 | Plotly Cloud | Dash apps, including Plotly Studio's, at `<name>.plotly.app` | `external` | 800 px |
+| Google Forms | published forms, `docs.google.com/forms/d/e/<id>/viewform` | `interactive` | 800 px |
+| Typeform | `form.typeform.com/to/<id>` or `<account>.typeform.com/to/<id>` | `external` | 600 px |
 
 YouTube, Vimeo, Observable, Tableau Public and ArcGIS StoryMaps fail inside a sandbox without
-`allow-same-origin`, as do some Plotly Cloud apps (it depends on the app), so they need `external`, and so a content origin. On a site without one,
+`allow-same-origin`, as do Typeform and some Plotly Cloud apps (it depends on the app), so they need `external`, and so a content origin. On a site without one,
 the form says so instead of offering settings that won't play.
 
 YouTube links become `www.youtube-nocookie.com` embeds, YouTube's privacy-enhanced mode, in

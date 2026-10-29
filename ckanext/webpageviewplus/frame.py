@@ -80,7 +80,9 @@ PRESETS: dict[str, Preset] = {
         height_value=str(FALLBACK_HEIGHT),
     ),
     "interactive": Preset(
-        sandbox=("allow-scripts", "allow-popups", "allow-downloads"),
+        # allow-forms adds nothing scripts here can't already do (send the same
+        # request), and CKAN's own forms need a CSRF token. Google Forms needs it.
+        sandbox=("allow-scripts", "allow-forms", "allow-popups", "allow-downloads"),
         allow=("fullscreen",),
         height_mode="auto",
     ),
@@ -94,6 +96,7 @@ PRESETS: dict[str, Preset] = {
         sandbox=(
             "allow-scripts",
             "allow-same-origin",
+            "allow-forms",
             "allow-popups",
             "allow-popups-to-escape-sandbox",
             "allow-downloads",
