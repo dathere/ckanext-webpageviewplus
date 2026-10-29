@@ -5,15 +5,19 @@ sysadmin from ckan-docker's .env (CKAN_DOCKER_ENV, default
 
     uv run --with playwright --no-project python demo/record_demo.py /tmp/wvp-video
 
-then turn the video it prints into the GIF:
+It ends with a montage of every well-known service: each loads on its own
+recorded page, and ffmpeg keeps the last CLIP seconds of each (the view shown,
+with its caption), joined after the main video. Then turn the video it prints
+into the GIF:
 
-    ffmpeg -ss 1.2 -i VIDEO.webm -vf "fps=6,scale=720:-1:flags=lanczos,split[a][b];\
+    ffmpeg -ss 1.2 -i VIDEO.mp4 -vf "fps=6,scale=720:-1:flags=lanczos,split[a][b];\
 [a]palettegen=max_colors=80:stats_mode=diff[p];[b][p]paletteuse=dither=none:diff_mode=rectangle" \
       -loop 0 docs/demo.gif
 """
 import json
 import os
 import shutil
+import subprocess
 import sys
 import urllib.request
 
@@ -22,6 +26,25 @@ from playwright.sync_api import sync_playwright
 B = "http://localhost:5001"
 OUT = sys.argv[1] if len(sys.argv) > 1 else "wvp-video"
 W, H = 1280, 800
+CLIP = 2.5
+# Seconds to let a service draw after the page's load event, before its clip.
+SETTLE = {"Observable": 9, "Power BI": 5, "CARTO": 4, "Plotly Cloud": 4}
+# The montage, one per well-known service: (resource in wvp-features, view
+# title, caption label if not the title).
+SERVICE_VIEWS = [
+    ("YouTube video", "External preset, 16:9", "YouTube (external)"),
+    ("Vimeo", "Vimeo (external)", None),
+    ("Datawrapper chart", "Interactive preset, fixed 500 px", "Datawrapper (interactive)"),
+    ("Flourish", "Flourish (interactive)", None),
+    ("Observable", "Observable (external)", None),
+    ("Tableau Public", "Tableau Public (external)", None),
+    ("Power BI", "Power BI (interactive)", None),
+    ("ArcGIS StoryMaps", "ArcGIS StoryMaps (external)", None),
+    ("CARTO", "CARTO (interactive)", None),
+    ("Plotly Cloud", "Plotly Cloud (external)", None),
+    ("Google Forms", "Google Forms (interactive)", None),
+    ("Typeform", "Typeform (external)", None),
+]
 ENV = dict(l.strip().split("=", 1) for l in open(os.path.expanduser(
     os.environ.get("CKAN_DOCKER_ENV", "~/GitHub/ckan-docker/.env")))
     if "=" in l and not l.startswith("#"))
@@ -167,9 +190,36 @@ def main():
         page.wait_for_timeout(3000)
 
         video = page.video.path()
+        page.close()
+
+        # 6. Every well-known service, one short clip each.
+        clips = []
+        for n, (resource, title, label) in enumerate(SERVICE_VIEWS, 1):
+            shot = ctx.new_page()
+            shot.goto(view_url("wvp-features", resource, title), wait_until="load")
+            shot.evaluate("""() => {
+              const v = document.querySelector('.webpageviewplus');
+              window.scrollTo(0, v.getBoundingClientRect().top + window.scrollY - 70);
+            }""")
+            shot.wait_for_timeout(int(SETTLE.get(resource, 2.5) * 1000))
+            caption(shot, "{} well-known services, each with the preset it needs. "
+                          "{}/{}: {}".format(len(SERVICE_VIEWS), n, len(SERVICE_VIEWS),
+                                             label or title))
+            shot.wait_for_timeout(int(CLIP * 1000) + 300)
+            clips.append(shot.video.path())
+            shot.close()
         ctx.close()
         browser.close()
-    print(video)
+
+    out = os.path.join(OUT, "demo.mp4")
+    inputs = ["-i", video]
+    for clip in clips:
+        inputs += ["-sseof", "-{}".format(CLIP), "-i", clip]
+    streams = "".join("[{}:v]".format(i) for i in range(len(clips) + 1))
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y"] + inputs + [
+        "-filter_complex", "{}concat=n={}:v=1:a=0[v]".format(streams, len(clips) + 1),
+        "-map", "[v]", "-c:v", "libx264", "-pix_fmt", "yuv420p", out], check=True)
+    print(out)
 
 
 if __name__ == "__main__":

@@ -18,6 +18,8 @@ from ckan.cli import load_config
 from ckan.config.middleware import make_app
 import ckan.plugins.toolkit as tk
 
+from ckanext.webpageviewplus import services
+
 DATASET = "wvp-features"
 ORG = "wvp-demo-org"
 FIXTURE = os.path.join(
@@ -127,6 +129,68 @@ RESOURCES = [
 ]
 
 
+# Google Forms and Typeform: the extension's own feedback form and community
+# survey, so anyone viewing the dataset can answer them. Point them at your
+# own with these variables (an empty value skips that resource).
+GOOGLE_FORM = os.environ.get(
+    "WVP_DEMO_GOOGLE_FORM",
+    "https://docs.google.com/forms/d/e/1FAIpQLSfSAqH6bNERmm7oc0LrGB6oaSpiOLxUgJN_u1l7luBXT7dyFA/viewform")
+TYPEFORM = os.environ.get("WVP_DEMO_TYPEFORM", "https://form.typeform.com/to/zdKXe3nl")
+
+# Well-known services, one resource each (YouTube and Datawrapper are above).
+# The resource URL is the page link an editor would paste; the view takes the
+# embed address, preset and height the view form would suggest for it.
+SERVICE_PAGES = [
+    ("Vimeo", "https://vimeo.com/76979871",
+     "Vimeo's player needs its own origin to play, so the form suggests `external` and "
+     "a 16:9 shape. The resource links to the video's page; the view frames the player "
+     "address the form worked out from it."),
+    ("Flourish", "https://public.flourish.studio/visualisation/11597006/",
+     "A Flourish visualisation runs in `interactive`: its scripts animate and answer the "
+     "mouse, but the frame has no origin, so it can't read anything of yours."),
+    ("Observable", "https://observablehq.com/@observablehq/plot-vertical-bar-chart",
+     "A notebook from the Observable Plot gallery. Observable's runtime needs its own "
+     "origin, so this one is `external`, which a site gets only with a content origin."),
+    ("Tableau Public", "https://public.tableau.com/views/RegionalSampleWorkbook/Storms",
+     "Tableau's sample storms workbook. Tableau Public needs its own origin to run, so "
+     "`external` at 800 px; hover the map for each storm's track."),
+    ("Power BI", "https://app.powerbi.com/view?r=eyJrIjoiYjRlZjg5YzItOWM4Ni00MGNkLWI1OGYtZDA4MDAxNGYyNDQyIiwidCI6ImQ2NDk2NzM4LWY5MTItNGExZS04NDE1LTQwY2E2ZjRhOTRlZCJ9",
+     "A report Ecuador's public procurement agency (SERCOP) published to the web. It runs "
+     "sandboxed in `interactive`: the filters work, no Microsoft login is involved, and "
+     "the report can't touch this page."),
+    ("ArcGIS StoryMaps", "https://storymaps.arcgis.com/stories/cb37f51514e04b389cdbb443f000992b",
+     "Five Esri cartographers on how they mapped the 2020 US Census. Without its own "
+     "origin a story shows its text but none of its maps, so StoryMaps is `external`. "
+     "Scroll inside the frame to move through it."),
+    ("CARTO", "https://clausa.app.carto.com/map/ef3f50e6-b954-45ac-94f1-9325a6a9cb20",
+     "Global photovoltaic power, a public Builder map from CARTO's gallery. It runs in "
+     "`interactive`, widgets and all; hold Cmd or Ctrl and scroll to zoom."),
+    ("Plotly Cloud", "https://oecd-pension-explorer.plotly.app/",
+     "A Dash app on Plotly Cloud, where Plotly Studio publishes too. Some Dash apps run "
+     "without an origin and some don't, so they all get `external`."),
+    ("Google Forms", GOOGLE_FORM,
+     "The extension's feedback form, answered right here. Google Forms sends a regular "
+     "form post, which is why `interactive` includes `allow-forms`. Google still sees who "
+     "you are if you're signed in: a sandbox doesn't make you anonymous."),
+    ("Typeform", TYPEFORM,
+     "The extension's community survey. Typeform never loads without its own origin, so "
+     "it's `external`, unlike Google Forms."),
+]
+
+
+def service_resources():
+    for name, page, story in SERVICE_PAGES:
+        if not page:
+            print("skipped (no link): {}".format(name))
+            continue
+        found = services.suggest(page)
+        assert found and found.service == name, (name, page)
+        fields = {"page_url": found.embed_url, "preset": found.preset}
+        if found.height_mode:
+            fields.update(height_mode=found.height_mode, height_value=found.height_value)
+        yield (name, page, [("{} ({})".format(name, found.preset), fields, story)])
+
+
 def main():
     app = make_app(load_config(os.environ["CKAN_INI"]))
     with app._wsgi_app.test_request_context():
@@ -149,7 +213,7 @@ def main():
             "notes": NOTES, "owner_org": org["id"], "private": False,
         })
         site = tk.config.get("ckan.site_url").rstrip("/")
-        for name, url, views in RESOURCES:
+        for name, url, views in RESOURCES + list(service_resources()):
             data = {"package_id": pkg["id"], "name": name, "format": "HTML"}
             if url:
                 data["url"] = url

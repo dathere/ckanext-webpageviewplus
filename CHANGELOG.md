@@ -35,7 +35,10 @@
 - README: why YouTube links become `youtube-nocookie.com` embeds, and that `allowed_hosts` must
   list that host.
 - README: the well-known services table links each service, and the demo GIF shows the new
-  consent card (Always load, then Ask me again) and the form's list of services.
+  consent card (Always load, then Ask me again), the form's list of services, and ends with a
+  montage of all 12 services.
+- `demo/seed_features.py` adds one view per well-known service, its settings taken from what
+  the view form would suggest.
 - README: embedding self-hosted Superset dashboards and Dash apps, and what isn't recognised
   (private Power BI, CARTO and Plotly Cloud embeds, the closed Plotly Chart Studio).
 

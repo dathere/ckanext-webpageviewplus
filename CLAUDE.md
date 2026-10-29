@@ -261,7 +261,10 @@ CKAN 2.11.5, http://localhost:5001.
   page. It's seeded by a script run inside the container that calls CKAN actions with
   `ignore_auth`; don't mint API tokens for this.
 - `demo/` seeds two showcase datasets, each view described as a short story of what to look for:
-  `wvp-features` (`demo/seed_features.py`, one resource per feature) and `wvp-schematics` (qsv Data
+  `wvp-features` (`demo/seed_features.py`, one resource per feature, plus one per well-known
+  service with the settings `services.suggest()` gives; its Google Form and Typeform default to
+  the extension's own feedback form and survey, overridable with `WVP_DEMO_GOOGLE_FORM` /
+  `WVP_DEMO_TYPEFORM`) and `wvp-schematics` (qsv Data
   Schematics; build the HTML on the host first with `demo/build_schematics.sh`, which needs a qsv
   with PR #4949 as `QSV`). Run the seeds in the container:
   `docker exec ckan-docker-ckan-dev-1 python /srv/app/src_extensions/ckanext-webpageviewplus/demo/seed_features.py`.
