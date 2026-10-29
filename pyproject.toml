@@ -1,6 +1,6 @@
 [project]
 name = "ckanext-webpageviewplus"
-version = "0.2.0"
+version = "0.2.1"
 description = "An enhanced web page resource view for CKAN"
 readme = "README.md"
 authors = [

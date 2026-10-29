@@ -1,12 +1,20 @@
 # Changelog
 
-## Unreleased
+## 0.2.1 (2026-10-29)
 
 ### Fixed
 
 - The view form labelled the External preset "runs as Interactive for now" on every site. It now
   says so only where uploads aren't yet isolated (no content origin, or `harden_downloads` off),
   which is when it's true.
+
+### Docs
+
+- The README opens with a demo GIF of the four presets, and explains how the plugin answers
+  CKAN's warning about `webpage_view`, including that `allowed_hosts` covers a view's own page
+  URL only, not a resource URL it falls back to.
+- `demo/` has scripts that seed a feature tour and a qsv Data Schematics gallery on a dev site,
+  each view described as a short story of what to look for.
 
 ## 0.2.0 (2026-10-28)
 
