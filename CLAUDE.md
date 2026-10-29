@@ -180,8 +180,9 @@ order now being built:
   (`preset_not_allowed`, `needs_content_origin`, `host_not_allowed`), and the form script
   offers "Use them", which fills page_url, preset and height. Nothing is rewritten at render.
   Each service's preset comes from loading a real embed in Chrome under each sandbox:
-  Datawrapper, Flourish, Power BI (Publish to web), CARTO and Google Forms work in
-  `interactive`; YouTube, Vimeo, Observable, Tableau Public, ArcGIS StoryMaps and Typeform need
+  Datawrapper, Flourish, Power BI (Publish to web), CARTO, Google Forms and Jupyter notebooks
+  (rendered by nbviewer; Colab's GitHub links too, as Colab sends `X-Frame-Options: DENY`)
+  work in `interactive`; YouTube, Vimeo, Observable, Tableau Public, ArcGIS StoryMaps and Typeform need
   `allow-same-origin`, hence `external`, and so do Plotly Cloud (`*.plotly.app`) apps: some work
   in `interactive`, some don't. `interactive` and `data-schematic` include `allow-forms` because
   Google Forms submits a real form post. Re-check that way before adding one (a local page framing the embed once per

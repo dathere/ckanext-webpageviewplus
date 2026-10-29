@@ -4,10 +4,11 @@ its embed needs. Pure code with no CKAN imports.
 
 The view form suggests these; nothing is rewritten at render, so what's
 saved is what's shown. Each service's embed was loaded in Chrome under each
-preset: Datawrapper, Flourish, Power BI, CARTO and Google Forms work
+preset: Datawrapper, Flourish, Power BI, CARTO, Google Forms and Jupyter
+notebooks (through nbviewer, also for Colab, which refuses every frame) work
 sandboxed (interactive); YouTube, Vimeo, Observable, Tableau Public, ArcGIS
-StoryMaps, Plotly Cloud apps and Typeform need scripts with their own origin, so they need external, which
-needs a content origin.
+StoryMaps, Plotly Cloud apps and Typeform need scripts with their own
+origin, so they need external, which needs a content origin.
 """
 from __future__ import annotations
 
@@ -229,15 +230,78 @@ def _typeform(host: str, path: str, query: dict[str, list[str]]) -> Optional[Sug
                       "external", "fixed", "600")
 
 
+# Jupyter notebooks, shown read-only through nbviewer (the Jupyter project's
+# renderer): it needs scripts for MathJax but no origin, so interactive.
+NBVIEWER = "https://nbviewer.org/"
+_SEGMENT = re.compile(r"[A-Za-z0-9._~%+-]{1,200}")
+
+
+def _segments_ok(parts: list[str]) -> bool:
+    return bool(parts) and all(
+        _SEGMENT.fullmatch(p) and p not in (".", "..") for p in parts)
+
+
+def _notebook(parts: list[str]) -> bool:
+    return _segments_ok(parts) and parts[-1].lower().endswith(".ipynb")
+
+
+def _nbviewer(name: str, rest: str) -> Suggestion:
+    return Suggestion(name, NBVIEWER + rest, "interactive", "fixed", "800")
+
+
+def _colab(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
+    # Colab refuses every frame (X-Frame-Options: DENY), so a notebook it
+    # opens from GitHub is shown through nbviewer. Drive notebooks can't be.
+    if host != "colab.research.google.com":
+        return None
+    parts = path.strip("/").split("/")
+    if len(parts) >= 6 and parts[0] == "github" and parts[3] == "blob" \
+            and _notebook(parts[1:3] + parts[4:]):
+        return _nbviewer("Google Colab", "github/" + "/".join(parts[1:]))
+    return None
+
+
+def _jupyter(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
+    parts = path.strip("/").split("/")
+    if host in ("github.com", "www.github.com"):
+        # /<owner>/<repo>/blob/<ref>/<path>.ipynb
+        if len(parts) >= 5 and parts[2] == "blob" and _notebook(parts[:2] + parts[3:]):
+            return _nbviewer("Jupyter", "github/" + "/".join(parts))
+        return None
+    if host == "raw.githubusercontent.com":
+        # /<owner>/<repo>/<ref>/<path>.ipynb
+        if len(parts) >= 4 and _notebook(parts):
+            return _nbviewer("Jupyter", "github/{}/{}/blob/{}".format(
+                parts[0], parts[1], "/".join(parts[2:])))
+        return None
+    if host == "gist.github.com":
+        if len(parts) == 2 and _segments_ok(parts[:1]) \
+                and re.fullmatch(r"[0-9a-f]{1,64}", parts[1]):
+            return _nbviewer("Jupyter", "gist/" + "/".join(parts))
+        return None
+    if host == "nbviewer.org":
+        if len(parts) >= 2 and parts[0] in ("github", "gist", "url", "urls") \
+                and _segments_ok(parts[1:]):
+            return _nbviewer("Jupyter", "/".join(parts))
+        return None
+    # Any other public notebook file, fetched by nbviewer over https.
+    if _notebook(parts) and re.fullmatch(r"[a-z0-9.-]{1,253}", host):
+        return _nbviewer("Jupyter", "urls/{}/{}".format(host, "/".join(parts)))
+    return None
+
+
 SERVICES: tuple[Callable[[str, str, dict[str, list[str]]], Optional[Suggestion]], ...] = (
     _youtube, _vimeo, _datawrapper, _flourish, _observable, _tableau,
     _power_bi, _storymaps, _carto, _plotly_cloud, _google_forms, _typeform,
+    # Last: _jupyter takes any public .ipynb URL.
+    _colab, _jupyter,
 )
 
 # The names suggestions carry, in SERVICES order, for the view form's help.
 NAMES: tuple[str, ...] = (
     "YouTube", "Vimeo", "Datawrapper", "Flourish", "Observable", "Tableau Public",
     "Power BI", "ArcGIS StoryMaps", "CARTO", "Plotly Cloud", "Google Forms", "Typeform",
+    "Google Colab", "Jupyter",
 )
 
 

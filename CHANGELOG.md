@@ -8,6 +8,9 @@
   with `interactive`, and ArcGIS StoryMaps and Plotly Cloud apps (`*.plotly.app`, including
   Plotly Studio's) with `external`, each checked in Chrome under every preset.
 - Well-known services: Google Forms (`interactive`) and Typeform (`external`).
+- Well-known services: Jupyter notebooks, any public `.ipynb` (GitHub, raw, Gist, nbviewer or
+  any https URL), and Google Colab notebooks opened from GitHub, all shown read-only through
+  nbviewer with `interactive` (Colab itself refuses every frame).
 - Observable links with a version (`@d3/bar-chart/2`, where D3's maintained examples live) and
   links from `old.observablehq.com` are recognised. The new Observable (September 2026) has no
   embeds; `observablehq.com/embed/` redirects to `old.observablehq.com` for every notebook.
@@ -39,7 +42,7 @@
   list that host.
 - README: the well-known services table links each service, and the demo GIF shows the new
   consent card (Always load, then Ask me again), the form's list of services, and ends with a
-  montage of all 12 services.
+  montage of all 14 services.
 - `demo/seed_features.py` adds one view per well-known service, its settings taken from what
   the view form would suggest.
 - README: embedding self-hosted Superset dashboards and Dash apps, and what isn't recognised

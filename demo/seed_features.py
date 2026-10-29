@@ -172,6 +172,16 @@ SERVICE_PAGES = [
      "The extension's feedback form, answered right here. Google Forms sends a regular "
      "form post, which is why `interactive` includes `allow-forms`. Google still sees who "
      "you are if you're signed in: a sandbox doesn't make you anonymous."),
+    ("Google Colab", "https://colab.research.google.com/github/CamDavidsonPilon/"
+     "Probabilistic-Programming-and-Bayesian-Methods-for-Hackers/blob/master/"
+     "Chapter1_Introduction/Ch1_Introduction_PyMC3.ipynb",
+     "A Colab link to a notebook on GitHub. Colab refuses to be framed at all, so the "
+     "form suggests the same notebook through nbviewer instead: read-only, with its "
+     "plots and equations, in `interactive` (MathJax needs scripts, nothing needs an "
+     "origin). Notebooks kept in Google Drive can't be shown this way."),
+    ("Jupyter", "https://jakevdp.github.io/downloads/notebooks/XKCD_plots.ipynb",
+     "Any public notebook file, here one on a personal site, rendered by nbviewer: "
+     "matplotlib in the style of xkcd. GitHub, Gist and raw links work the same way."),
     ("Typeform", TYPEFORM,
      "The extension's community survey. Typeform never loads without its own origin, so "
      "it's `external`, unlike Google Forms."),

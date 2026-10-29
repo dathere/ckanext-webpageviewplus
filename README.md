@@ -155,8 +155,8 @@ and height (fixed, share of the window, aspect ratio, auto). Sysadmins can also 
 tokens, allowed features and the referrer policy per view.
 
 **Well-known services.** Paste a YouTube, Vimeo, Datawrapper, Flourish, Observable, Tableau
-Public, Power BI, ArcGIS StoryMaps, CARTO, Plotly Cloud, Google Forms or Typeform link as the
-page URL and the form offers the service's embed address, with the preset and
+Public, Power BI, ArcGIS StoryMaps, CARTO, Plotly Cloud, Google Forms, Typeform, Google Colab
+or Jupyter notebook link as the page URL and the form offers the service's embed address, with the preset and
 height its embed needs ("Use them"). Nothing is changed until the editor accepts, and what's
 saved is what's shown. Each embed was checked in Chrome under each preset:
 
@@ -174,6 +174,8 @@ saved is what's shown. Each embed was checked in Chrome under each preset:
 | [Plotly Cloud](https://plotly.com/cloud/) | Dash apps, including Plotly Studio's, at `<name>.plotly.app` | `external` | 800 px |
 | [Google Forms](https://www.google.com/forms/about/) | published forms, `docs.google.com/forms/d/e/<id>/viewform` | `interactive` | 800 px |
 | [Typeform](https://www.typeform.com/) | `form.typeform.com/to/<id>` or `<account>.typeform.com/to/<id>` | `external` | 600 px |
+| [Google Colab](https://colab.research.google.com/) | notebooks Colab opens from GitHub, `colab.research.google.com/github/...`, shown read-only through [nbviewer](https://nbviewer.org/) (Colab itself refuses every frame; Drive notebooks can't be shown) | `interactive` | 800 px |
+| [Jupyter](https://jupyter.org/) | any public `.ipynb`: `github.com/.../blob/...`, `raw.githubusercontent.com/...`, `gist.github.com/<user>/<id>`, `nbviewer.org/...`, or any `https://` URL ending `.ipynb`, shown read-only through nbviewer | `interactive` | 800 px |
 
 YouTube, Vimeo, Observable, Tableau Public and ArcGIS StoryMaps fail inside a sandbox without
 `allow-same-origin`, as do Typeform and some Plotly Cloud apps (it depends on the app), so they need `external`, and so a content origin. On a site without one,

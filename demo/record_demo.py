@@ -44,6 +44,8 @@ SERVICE_VIEWS = [
     ("Plotly Cloud", "Plotly Cloud (external)", None),
     ("Google Forms", "Google Forms (interactive)", None),
     ("Typeform", "Typeform (external)", None),
+    ("Google Colab", "Google Colab (interactive)", "Google Colab, via nbviewer (interactive)"),
+    ("Jupyter", "Jupyter (interactive)", "Jupyter notebooks, via nbviewer (interactive)"),
 ]
 ENV = dict(l.strip().split("=", 1) for l in open(os.path.expanduser(
     os.environ.get("CKAN_DOCKER_ENV", "~/GitHub/ckan-docker/.env")))
@@ -176,8 +178,8 @@ def main():
         # 5. The view form recognises well-known services.
         page.goto(form)
         page.wait_for_timeout(800)
-        caption(page, "Paste a link from 12 well-known services, from YouTube to Power BI: "
-                      "the form suggests the embed and preset")
+        caption(page, "Paste a link from {} well-known services, from YouTube to Jupyter: "
+                      "the form suggests the embed and preset".format(len(SERVICE_VIEWS)))
         field = page.locator("#field-page_url")
         field.scroll_into_view_if_needed()
         page.mouse.wheel(0, 150)

@@ -12,6 +12,8 @@ STORY = "https://storymaps.arcgis.com/stories/18b624c3fd3b461796341ce3bd2c14a7"
 CARTO = "https://clausa.app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63"
 GF_ID = "1FAIpQLSejGC-PLjdLLfHp9M6Ge2bJNbSr1JoWTC0n3RrcvUn1m2VqPw"
 GF = "https://docs.google.com/forms/d/e/{}/viewform?embedded=true".format(GF_ID)
+NB_PATH = "CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers/blob/master/Chapter1_Introduction/Ch1_Introduction_PyMC3.ipynb"
+NBV = "https://nbviewer.org/github/" + NB_PATH
 
 
 RECOGNISED = [
@@ -20,6 +22,7 @@ RECOGNISED = [
     "https://observablehq.com/@d3/bar-chart", "https://public.tableau.com/views/A/B",
     "https://app.powerbi.com/view?r=" + PBI, STORY, CARTO, "https://x.plotly.app/", GF,
     "https://form.typeform.com/to/NPUAWX7u",
+    "https://colab.research.google.com/github/" + NB_PATH, "https://github.com/" + NB_PATH,
 ]
 
 
@@ -83,6 +86,15 @@ RECOGNISED = [
          "https://form.typeform.com/to/NPUAWX7u"),
         ("https://acme.typeform.com/to/LhgLkLvN", "Typeform",
          "https://acme.typeform.com/to/LhgLkLvN"),
+        ("https://colab.research.google.com/github/" + NB_PATH + "#scrollTo=x", "Google Colab", NBV),
+        ("https://github.com/" + NB_PATH, "Jupyter", NBV),
+        ("https://raw.githubusercontent.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers/master/Chapter1_Introduction/Ch1_Introduction_PyMC3.ipynb",
+         "Jupyter", NBV),
+        ("https://gist.github.com/fperez/9716279", "Jupyter",
+         "https://nbviewer.org/gist/fperez/9716279"),
+        (NBV, "Jupyter", NBV),
+        ("https://jakevdp.github.io/downloads/notebooks/XKCD_plots.ipynb", "Jupyter",
+         "https://nbviewer.org/urls/jakevdp.github.io/downloads/notebooks/XKCD_plots.ipynb"),
     ],
 )
 def test_recognised(url, service, embed):
@@ -131,6 +143,13 @@ def test_recognised(url, service, embed):
         "https://typeform.com/to/NPUAWX7u",
         "https://form.typeform.com/to/<x>",
         "https://a.b.typeform.com/to/NPUAWX7u",
+        "https://colab.research.google.com/drive/1j9Wq1gQo1K9yxOQ9Qd_A1lI2NvE-1V9n",
+        "https://colab.research.google.com/github/a/b/blob/main/notes.md",
+        "https://github.com/a/b/blob/main/notes.py",
+        "https://github.com/a/b/tree/main/x.ipynb",
+        "https://github.com/a/b/blob/main/../x.ipynb",
+        "https://example.com/a/<script>.ipynb",
+        "https://example.com/report.html",
     ],
 )
 def test_not_recognised(url):
@@ -160,6 +179,7 @@ def test_video_settings():
     assert services.suggest("https://world-cup-goals.plotly.app/").preset == "external"
     assert services.suggest(GF).preset == "interactive"
     assert services.suggest("https://form.typeform.com/to/NPUAWX7u").preset == "external"
+    assert services.suggest("https://github.com/" + NB_PATH).preset == "interactive"
 
 
 def test_suggested_heights_are_valid():
