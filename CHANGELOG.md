@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-10-28)
+
+Upgrading: run `ckan db upgrade -p webpage_view_plus` (a new table for stored frameability
+checks).
 
 ### New
 

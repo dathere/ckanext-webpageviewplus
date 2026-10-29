@@ -1,6 +1,7 @@
 # German translations for ckanext-webpageviewplus.
 # Copyright (C) 2026 ORGANIZATION
-# This file is distributed under the same license as the ckanext-webpageviewplus
+# This file is distributed under the same license as the
+# ckanext-webpageviewplus
 # project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
 #
@@ -8,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-28 19:44-0400\n"
+"POT-Creation-Date: 2026-10-29 00:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -17,7 +18,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.15.0\n"
 
 #: ckanext/webpageviewplus/actions.py:156
 msgid "Must be a whole number"
@@ -71,11 +72,11 @@ msgstr "Der Höhenwert passt nicht zum Höhenmodus"
 
 #: ckanext/webpageviewplus/validators.py:158
 msgid ""
-"External is for third-party sites: uploaded HTML always gets a sandbox. Use "
-"Data Schematic or Interactive"
+"External is for third-party sites: uploaded HTML always gets a sandbox. "
+"Use Data Schematic or Interactive"
 msgstr ""
-"Extern ist für Websites Dritter gedacht: Hochgeladenes HTML erhält immer eine"
-" Sandbox. Verwenden Sie Data Schematic oder Interaktiv"
+"Extern ist für Websites Dritter gedacht: Hochgeladenes HTML erhält immer "
+"eine Sandbox. Verwenden Sie Data Schematic oder Interaktiv"
 
 #: ckanext/webpageviewplus/validators.py:171
 msgid "This host isn't on the site's list of allowed hosts"
@@ -83,14 +84,14 @@ msgstr "Dieser Host steht nicht auf der Liste der erlaubten Hosts der Website"
 
 #: ckanext/webpageviewplus/validators.py:184
 msgid ""
-"This frame can't let scripts keep a real origin: don't combine allow-scripts "
-"with allow-same-origin. Pages on this site never may; other pages may once "
-"uploaded HTML is served from a separate content origin"
+"This frame can't let scripts keep a real origin: don't combine allow-"
+"scripts with allow-same-origin. Pages on this site never may; other pages"
+" may once uploaded HTML is served from a separate content origin"
 msgstr ""
-"Dieser Frame darf Skripten keinen echten Ursprung lassen: Kombinieren Sie "
-"allow-scripts nicht mit allow-same-origin. Seiten dieser Website dürfen das "
-"nie; andere Seiten dürfen es, sobald hochgeladenes HTML von einem separaten "
-"Content-Ursprung ausgeliefert wird"
+"Dieser Frame darf Skripten keinen echten Ursprung lassen: Kombinieren Sie"
+" allow-scripts nicht mit allow-same-origin. Seiten dieser Website dürfen "
+"das nie; andere Seiten dürfen es, sobald hochgeladenes HTML von einem "
+"separaten Content-Ursprung ausgeliefert wird"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:4
 msgid "Strict: static HTML, no scripts"
@@ -101,10 +102,12 @@ msgid "Interactive: scripts, popups and downloads, no storage"
 msgstr "Interaktiv: Skripte, Pop-ups und Downloads, kein Speicher"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:6
-msgid "External: a trusted third-party site, no sandbox (runs as Interactive for now)"
+msgid ""
+"External: a trusted third-party site, no sandbox (runs as Interactive for"
+" now)"
 msgstr ""
-"Extern: eine vertrauenswürdige Website Dritter, keine Sandbox (läuft vorerst "
-"als Interaktiv)"
+"Extern: eine vertrauenswürdige Website Dritter, keine Sandbox (läuft "
+"vorerst als Interaktiv)"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:7
 msgid "Data Schematic: qsv Data Schematics"
@@ -151,16 +154,18 @@ msgstr "URL der Webseite"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:26
 msgid "eg. http://example.com  (if blank uses resource url)"
-msgstr "z. B. http://example.com  (wenn leer, wird die URL der Ressource verwendet)"
+msgstr ""
+"z. B. http://example.com  (wenn leer, wird die URL der Ressource "
+"verwendet)"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:34
 #, python-brace-format
 msgid ""
-"This is a {service} page. Use its embed address and the settings its embed "
-"needs?"
+"This is a {service} page. Use its embed address and the settings its "
+"embed needs?"
 msgstr ""
-"Dies ist eine {service}-Seite. Ihre Einbettungsadresse und die Einstellungen "
-"verwenden, die die Einbettung braucht?"
+"Dies ist eine {service}-Seite. Ihre Einbettungsadresse und die "
+"Einstellungen verwenden, die die Einbettung braucht?"
 
 #. a button accepting the suggested embed address and settings.
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:36
@@ -170,8 +175,8 @@ msgstr "Verwenden"
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:37
 #, python-brace-format
 msgid ""
-"Using the embed address and settings for {service}. Save the view to keep "
-"them."
+"Using the embed address and settings for {service}. Save the view to keep"
+" them."
 msgstr ""
 "Einbettungsadresse und Einstellungen für {service} werden verwendet. "
 "Speichern Sie die Ansicht, um sie zu behalten."
@@ -180,37 +185,39 @@ msgstr ""
 #, python-brace-format
 msgid ""
 "{service} only works with the {preset} preset, which this site runs as "
-"Interactive until it serves uploads from a separate content origin, so it "
-"won't play here yet."
+"Interactive until it serves uploads from a separate content origin, so it"
+" won't play here yet."
 msgstr ""
-"{service} funktioniert nur mit dem Profil {preset}, das diese Website als "
-"Interaktiv ausführt, bis sie Uploads von einem separaten Content-Ursprung "
-"ausliefert. Hier wird es deshalb noch nicht abgespielt."
+"{service} funktioniert nur mit dem Profil {preset}, das diese Website als"
+" Interaktiv ausführt, bis sie Uploads von einem separaten Content-"
+"Ursprung ausliefert. Hier wird es deshalb noch nicht abgespielt."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:39
 #, python-brace-format
-msgid "{service} only works with the {preset} preset, which this site doesn't allow."
+msgid ""
+"{service} only works with the {preset} preset, which this site doesn't "
+"allow."
 msgstr ""
-"{service} funktioniert nur mit dem Profil {preset}, das diese Website nicht "
-"erlaubt."
+"{service} funktioniert nur mit dem Profil {preset}, das diese Website "
+"nicht erlaubt."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:40
 #, python-brace-format
 msgid ""
-"{service} embeds come from {host}, which isn't on this site's list of allowed"
-" hosts."
+"{service} embeds come from {host}, which isn't on this site's list of "
+"allowed hosts."
 msgstr ""
-"Einbettungen von {service} kommen von {host}, der nicht auf der Liste der "
-"erlaubten Hosts dieser Website steht."
+"Einbettungen von {service} kommen von {host}, der nicht auf der Liste der"
+" erlaubten Hosts dieser Website steht."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:46
 #, python-brace-format
 msgid ""
-"This site refuses to be embedded ({reason}), so the view will show an error. "
-"Consider linking to it instead."
+"This site refuses to be embedded ({reason}), so the view will show an "
+"error. Consider linking to it instead."
 msgstr ""
-"Diese Website lässt sich nicht einbetten ({reason}), daher zeigt die Ansicht "
-"einen Fehler. Verlinken Sie sie besser."
+"Diese Website lässt sich nicht einbetten ({reason}), daher zeigt die "
+"Ansicht einen Fehler. Verlinken Sie sie besser."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:47
 msgid "Couldn't check whether this site allows embedding."
@@ -222,8 +229,9 @@ msgstr "Sicherheitsprofil"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:64
 msgid ""
-"This preset needs uploaded HTML to be served from a separate content origin, "
-"which this site doesn't have yet, so the view runs as Interactive."
+"This preset needs uploaded HTML to be served from a separate content "
+"origin, which this site doesn't have yet, so the view runs as "
+"Interactive."
 msgstr ""
 "Dieses Profil braucht einen separaten Content-Ursprung für hochgeladenes "
 "HTML, den diese Website noch nicht hat, daher läuft die Ansicht als "
@@ -235,21 +243,21 @@ msgstr "Diagramme, die Tour und Explore funktionieren, aber Karten bleiben leer.
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:69
 msgid ""
-"This view's sandbox would let scripts keep a real origin, which isn't allowed"
-" here, so it runs as Strict."
+"This view's sandbox would let scripts keep a real origin, which isn't "
+"allowed here, so it runs as Strict."
 msgstr ""
-"Die Sandbox dieser Ansicht würde Skripten einen echten Ursprung lassen, was "
-"hier nicht erlaubt ist, daher läuft sie als Streng."
+"Die Sandbox dieser Ansicht würde Skripten einen echten Ursprung lassen, "
+"was hier nicht erlaubt ist, daher läuft sie als Streng."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:72
 msgid ""
 "In Chrome and Edge, this site loads pages with this preset without the "
-"visitor's cookies or saved data, so logins inside the page and sign-in popups"
-" won't work."
+"visitor's cookies or saved data, so logins inside the page and sign-in "
+"popups won't work."
 msgstr ""
 "In Chrome und Edge lädt diese Website Seiten mit diesem Profil ohne die "
-"Cookies und gespeicherten Daten der Besucher, daher funktionieren Anmeldungen"
-" innerhalb der Seite und Anmelde-Pop-ups nicht."
+"Cookies und gespeicherten Daten der Besucher, daher funktionieren "
+"Anmeldungen innerhalb der Seite und Anmelde-Pop-ups nicht."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:76
 msgid "Height"
@@ -285,11 +293,11 @@ msgstr ""
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:108
 #, python-brace-format
 msgid ""
-"Last 30 days. Shown: {impressions}. Seen: {seen}. Loaded: {loaded}. Used: "
-"{engaged}. Failed: {failed}."
+"Last 30 days. Shown: {impressions}. Seen: {seen}. Loaded: {loaded}. Used:"
+" {engaged}. Failed: {failed}."
 msgstr ""
-"Letzte 30 Tage. Angezeigt: {impressions}. Gesehen: {seen}. Geladen: {loaded}."
-" Genutzt: {engaged}. Fehlgeschlagen: {failed}."
+"Letzte 30 Tage. Angezeigt: {impressions}. Gesehen: {seen}. Geladen: "
+"{loaded}. Genutzt: {engaged}. Fehlgeschlagen: {failed}."
 
 #. heading of the advanced (sysadmin-only) settings.
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:117
@@ -322,8 +330,8 @@ msgstr "Wie auf der Website"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:8
 msgid ""
-"This page can't be shown here: it's served over http://, which browsers block"
-" inside https:// sites."
+"This page can't be shown here: it's served over http://, which browsers "
+"block inside https:// sites."
 msgstr ""
 "Diese Seite kann hier nicht angezeigt werden: Sie wird über http:// "
 "ausgeliefert, was Browser innerhalb von https://-Websites blockieren."
@@ -332,8 +340,8 @@ msgstr ""
 #, python-brace-format
 msgid "{host} doesn't allow its pages to be shown inside other sites."
 msgstr ""
-"{host} erlaubt nicht, dass seine Seiten innerhalb anderer Websites angezeigt "
-"werden."
+"{host} erlaubt nicht, dass seine Seiten innerhalb anderer Websites "
+"angezeigt werden."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:13
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:89
@@ -395,7 +403,8 @@ msgstr "Datenschutzerklärung"
 msgid "Embedded page"
 msgstr "Eingebettete Seite"
 
-#. "Expand" makes the embedded page fill the window; "Fullscreen" fills the screen.
+#. "Expand" makes the embedded page fill the window; "Fullscreen" fills the
+#. screen.
 #. Buttons.
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
 msgid "Expand"
@@ -422,15 +431,17 @@ msgstr "Teilen"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:119
 msgid ""
-"This page can't be embedded: its host isn't on this site's list of allowed "
-"hosts."
+"This page can't be embedded: its host isn't on this site's list of "
+"allowed hosts."
 msgstr ""
-"Diese Seite kann nicht eingebettet werden: Ihr Host steht nicht auf der Liste"
-" der erlaubten Hosts dieser Website."
+"Diese Seite kann nicht eingebettet werden: Ihr Host steht nicht auf der "
+"Liste der erlaubten Hosts dieser Website."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:121
-msgid "This page cannot be embedded: only http:// and https:// URLs are supported."
+msgid ""
+"This page cannot be embedded: only http:// and https:// URLs are "
+"supported."
 msgstr ""
-"Diese Seite kann nicht eingebettet werden: Nur http://- und https://-URLs "
-"werden unterstützt."
+"Diese Seite kann nicht eingebettet werden: Nur http://- und https://-URLs"
+" werden unterstützt."
 
