@@ -254,6 +254,8 @@ CKAN 2.11.5, http://localhost:5001.
   Schematics; build the HTML on the host first with `demo/build_schematics.sh`, which needs a qsv
   with PR #4949 as `QSV`). Run the seeds in the container:
   `docker exec ckan-docker-ckan-dev-1 python /srv/app/src_extensions/ckanext-webpageviewplus/demo/seed_features.py`.
+  `demo/record_demo.py` (host, Playwright) records the README's `docs/demo.gif` from those datasets;
+  its docstring has the ffmpeg step.
 - Re-run the editable install only after changing entry points / packaging:
   `docker exec -u root ckan-docker-ckan-dev-1 pip install --no-deps -e /srv/app/src_extensions/ckanext-webpageviewplus`
 - If ckan-dev crash-loops on boot, check `docker logs ckan-docker-ckan-dev-1`. A plugin that fails

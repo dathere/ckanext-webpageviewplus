@@ -78,17 +78,19 @@ RESOURCES = [
          "on this page. The resource links to the chart's page; the view frames its "
          "embed address, which is what the view form offers when you paste the link."),
     ]),
-    ("YouTube video", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", [
+    ("YouTube video", "https://www.youtube.com/watch?v=cuCS7QU_Rgk", [
         ("External preset, 16:9",
-         {"page_url": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+         {"page_url": "https://www.youtube-nocookie.com/embed/cuCS7QU_Rgk",
           "preset": "external", "height_mode": "aspect", "height_value": "16/9"},
+         "Neelie Kroes, then the European Commissioner for the Digital Agenda, on how "
+         "the EU supports open source, in the speech that named CKAN. "
          "YouTube needs its own origin to play, so this view uses `external`: no "
          "sandbox. That's safe only because uploads live on a separate content origin; "
          "without one, the view falls back to `interactive` and the player shows an "
          "error. It frames the privacy-enhanced youtube-nocookie.com player and keeps "
          "a 16:9 shape at any width."),
         ("Ask before loading",
-         {"page_url": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+         {"page_url": "https://www.youtube-nocookie.com/embed/cuCS7QU_Rgk",
           "preset": "external", "height_mode": "aspect", "height_value": "16/9",
           "consent_gate": True},
          "The same video behind a consent card: nothing loads from YouTube, and it "
