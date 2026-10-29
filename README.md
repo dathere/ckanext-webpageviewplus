@@ -172,6 +172,13 @@ YouTube, Vimeo, Observable and Tableau Public fail inside a sandbox without
 `allow-same-origin`, so they need `external`, and so a content origin. On a site without one,
 the form says so instead of offering settings that won't play.
 
+YouTube links become `www.youtube-nocookie.com` embeds, YouTube's privacy-enhanced mode, in
+which YouTube says it stores nothing about visitors until they play the video. It's still
+YouTube's player, though, so it's not consent: to load nothing from YouTube until a visitor
+agrees, turn on `consent_gate`. Hosts in `allowed_hosts` must match exactly, so a site that
+lists only `www.youtube.com` must also list `www.youtube-nocookie.com`, or the form reports
+that the suggested address isn't allowed.
+
 **Auto height.** With height "Auto", the frame takes the height the page reports, clamped to
 `min_height`/`max_height`; until it reports one, it keeps a fixed fallback height. Any page can
 report its height by posting `{type: "webpageviewplus:resize", height: <px>}` to its parent.
