@@ -155,7 +155,7 @@ and height (fixed, share of the window, aspect ratio, auto). Sysadmins can also 
 tokens, allowed features and the referrer policy per view.
 
 **Well-known services.** Paste a YouTube, Vimeo, Datawrapper, Flourish, Observable, Tableau
-Public, Power BI, ArcGIS StoryMaps or CARTO link as the page URL and the form offers the service's embed address, with the preset and
+Public, Power BI, ArcGIS StoryMaps, CARTO or Plotly Cloud link as the page URL and the form offers the service's embed address, with the preset and
 height its embed needs ("Use them"). Nothing is changed until the editor accepts, and what's
 saved is what's shown. Each embed was checked in Chrome under each preset:
 
@@ -170,9 +170,10 @@ saved is what's shown. Each embed was checked in Chrome under each preset:
 | Power BI | Publish to web links, `app.powerbi.com/view?r=...` (a `pageName` is kept) | `interactive` | 16/9 |
 | ArcGIS StoryMaps | `storymaps.arcgis.com/stories/<id>` | `external` | 800 px |
 | CARTO | public Builder maps, `app.carto.com/map/<id>` or a regional `<tenant>.app.carto.com` | `interactive` | 640 px |
+| Plotly Cloud | Dash apps, including Plotly Studio's, at `<name>.plotly.app` | `external` | 800 px |
 
 YouTube, Vimeo, Observable, Tableau Public and ArcGIS StoryMaps fail inside a sandbox without
-`allow-same-origin`, so they need `external`, and so a content origin. On a site without one,
+`allow-same-origin`, as do some Plotly Cloud apps (it depends on the app), so they need `external`, and so a content origin. On a site without one,
 the form says so instead of offering settings that won't play.
 
 YouTube links become `www.youtube-nocookie.com` embeds, YouTube's privacy-enhanced mode, in
@@ -183,12 +184,12 @@ lists only `www.youtube.com` must also list `www.youtube-nocookie.com`, or the f
 that the suggested address isn't allowed.
 
 Only public embeds are recognised. Power BI reports shared inside an organisation and private
-CARTO maps need the viewer's login or an access token, and Plotly's Chart Studio closed on
-31 October 2025. A Plotly chart saved as HTML (`fig.write_html`) can be uploaded and shown with
-`interactive` or `data-schematic`, like a qsv Data Schematic.
+CARTO maps need the viewer's login or an access token (as do private Plotly Cloud apps), and
+Plotly's Chart Studio closed on 31 October 2025. A Plotly chart saved as HTML (`fig.write_html`)
+can be uploaded and shown with `interactive` or `data-schematic`, like a qsv Data Schematic.
 
-**Dashboard apps (Apache Superset, Plotly Dash and Plotly Studio).** These have no fixed
-address to recognise, and whether they can be embedded is up to their own server:
+**Self-hosted dashboards (Apache Superset, Plotly Dash).** These have no fixed address to
+recognise, and whether they can be embedded is up to their own server:
 
 - **Superset**'s security headers (Talisman) usually refuse framing, so its admin has to allow
   the CKAN site as a frame ancestor, and either give the dashboard to a public role or use
@@ -196,10 +197,9 @@ address to recognise, and whether they can be embedded is up to their own server
   `external`, and add Superset's host to `allowed_hosts` if you use one. A dashboard that needs a
   login won't work in browsers that block third-party cookies: visitors see Superset's login
   page instead.
-- **Dash** apps, including those Plotly Studio builds and publishes to Plotly Cloud, fetch data
-  from their own server as you interact, which fails from a frame without an origin, so they
-  need `external`. The app's server must not send `X-Frame-Options` or a `frame-ancestors`
-  that excludes the CKAN site, and a private Plotly Cloud app shows its login instead.
+- **Dash** apps on your own server need `external`, as on Plotly Cloud: some work without an
+  origin and some don't. The app's server must not send `X-Frame-Options` or a
+  `frame-ancestors` that excludes the CKAN site.
 
 **Auto height.** With height "Auto", the frame takes the height the page reports, clamped to
 `min_height`/`max_height`; until it reports one, it keeps a fixed fallback height. Any page can

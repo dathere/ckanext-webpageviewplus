@@ -56,6 +56,10 @@ CARTO = "https://clausa.app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63"
         (CARTO, "CARTO", CARTO),
         ("https://app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63", "CARTO",
          "https://app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63"),
+        ("https://oecd-pension-explorer.plotly.app", "Plotly Cloud",
+         "https://oecd-pension-explorer.plotly.app/"),
+        ("https://medical-imaging-demo.plotly.app/imaging?x=1#y", "Plotly Cloud",
+         "https://medical-imaging-demo.plotly.app/imaging"),
     ],
 )
 def test_recognised(url, service, embed):
@@ -90,6 +94,11 @@ def test_recognised(url, service, embed):
         "https://evil.example/app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63",
         "https://a.b.app.carto.com/map/5d942679-411f-4ab7-afb7-0f6061c9af63",
         "https://clausa.app.carto.com/map/not-a-uuid",
+        "https://plotly.app/",
+        "https://a.b.plotly.app/",
+        "https://app.plotly.app.evil.example/",
+        "https://x.plotly.app/<script>",
+        "https://x.plotly.app/a/../b",
     ],
 )
 def test_not_recognised(url):
@@ -109,6 +118,7 @@ def test_video_settings():
     assert services.suggest("https://app.powerbi.com/view?r=" + PBI).preset == "interactive"
     assert services.suggest(CARTO).preset == "interactive"
     assert services.suggest(STORY).preset == "external"
+    assert services.suggest("https://world-cup-goals.plotly.app/").preset == "external"
 
 
 def test_suggested_heights_are_valid():

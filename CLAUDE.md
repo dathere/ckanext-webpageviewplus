@@ -178,7 +178,8 @@ order now being built:
   Each service's preset comes from loading a real embed in Chrome under each sandbox:
   Datawrapper, Flourish, Power BI (Publish to web) and CARTO work in `interactive`; YouTube,
   Vimeo, Observable, Tableau Public and ArcGIS StoryMaps need `allow-same-origin`, hence
-  `external`. Re-check that way before adding one (a local page framing the embed once per
+  `external`, and so do Plotly Cloud (`*.plotly.app`) apps: some work in `interactive`, some
+  don't. Re-check that way before adding one (a local page framing the embed once per
   preset's sandbox will do). Plotly Chart Studio closed in 2025; Superset and Dash are
   self-hosted, so the README explains them instead.
 - `health.py`: views whose page can't be shown. **Rendering never fetches**: with

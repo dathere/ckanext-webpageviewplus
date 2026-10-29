@@ -5,8 +5,8 @@ its embed needs. Pure code with no CKAN imports.
 The view form suggests these; nothing is rewritten at render, so what's
 saved is what's shown. Each service's embed was loaded in Chrome under each
 preset: Datawrapper, Flourish, Power BI and CARTO work sandboxed
-(interactive); YouTube, Vimeo, Observable, Tableau Public and ArcGIS
-StoryMaps need scripts with their own origin, so they need external, which
+(interactive); YouTube, Vimeo, Observable, Tableau Public, ArcGIS
+StoryMaps and Plotly Cloud apps need scripts with their own origin, so they need external, which
 needs a content origin.
 """
 from __future__ import annotations
@@ -185,9 +185,21 @@ def _carto(host: str, path: str, query: dict[str, list[str]]) -> Optional[Sugges
                       "interactive", "fixed", "640")
 
 
+def _plotly_cloud(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
+    # Dash apps on Plotly Cloud, including those Plotly Studio publishes. Some
+    # work in interactive and some don't (it depends on the app), so external.
+    if not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.plotly\.app", host):
+        return None
+    path = path or "/"
+    if not re.fullmatch(r"(?:/[A-Za-z0-9._~-]+)*/?", path) or "/." in path:
+        return None
+    return Suggestion("Plotly Cloud", "https://{}{}".format(host, path),
+                      "external", "fixed", "800")
+
+
 SERVICES: tuple[Callable[[str, str, dict[str, list[str]]], Optional[Suggestion]], ...] = (
     _youtube, _vimeo, _datawrapper, _flourish, _observable, _tableau,
-    _power_bi, _storymaps, _carto,
+    _power_bi, _storymaps, _carto, _plotly_cloud,
 )
 
 
