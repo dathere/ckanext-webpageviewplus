@@ -20,6 +20,7 @@ from ckanext.webpageviewplus import (
     health,
     stats,
     frame,
+    services,
     settings,
     validators as v,
 )
@@ -190,6 +191,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             # `external` runs as `interactive` until uploads are isolated.
             "isolated": settings.isolating_content_origin(),
             "allowed_hosts": settings.allowed_hosts(),
+            "service_names": services.NAMES,
             "view_counting": settings.view_counting(),
             # Only the view's edit form shows them.
             "view_counts": (

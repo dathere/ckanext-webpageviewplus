@@ -14,6 +14,15 @@ GF_ID = "1FAIpQLSejGC-PLjdLLfHp9M6Ge2bJNbSr1JoWTC0n3RrcvUn1m2VqPw"
 GF = "https://docs.google.com/forms/d/e/{}/viewform?embedded=true".format(GF_ID)
 
 
+RECOGNISED = [
+    "https://youtu.be/dQw4w9WgXcQ", "https://vimeo.com/76979871",
+    "https://datawrapper.dwcdn.net/XSj9X/", "https://flo.uri.sh/visualisation/11597006/embed",
+    "https://observablehq.com/@d3/bar-chart", "https://public.tableau.com/views/A/B",
+    "https://app.powerbi.com/view?r=" + PBI, STORY, CARTO, "https://x.plotly.app/", GF,
+    "https://form.typeform.com/to/NPUAWX7u",
+]
+
+
 @pytest.mark.parametrize(
     "url,service,embed",
     [
@@ -119,6 +128,13 @@ def test_recognised(url, service, embed):
 )
 def test_not_recognised(url):
     assert services.suggest(url) is None
+
+
+def test_names_cover_every_service():
+    # The view form lists NAMES; each one must be a name a suggestion carries.
+    assert len(services.NAMES) == len(services.SERVICES) == len(set(services.NAMES))
+    seen = {found.service for found in (services.suggest(url) for url in RECOGNISED)}
+    assert seen == set(services.NAMES)
 
 
 def test_embed_urls_carry_no_input_text():

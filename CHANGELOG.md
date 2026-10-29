@@ -26,13 +26,15 @@
   same requests, and CKAN's own forms need a CSRF token. `strict` is unchanged. Existing views
   pick this up without being edited.
 - The view form has help text under the page URL, preset, height, control bar, consent and
-  advanced fields, linked to each field for screen readers. Where `allowed_hosts` is set, the
-  page URL's help lists the accepted hosts. Translated into de, es, fr, it, ja and pt_BR.
+  advanced fields, linked to each field for screen readers. The page URL's help names every
+  well-known service (from `services.NAMES`, so it stays current), and where `allowed_hosts` is
+  set, it lists the accepted hosts. Translated into de, es, fr, it, ja and pt_BR.
 
 ### Docs
 
 - README: why YouTube links become `youtube-nocookie.com` embeds, and that `allowed_hosts` must
   list that host.
+- README: the well-known services table links each service.
 - README: embedding self-hosted Superset dashboards and Dash apps, and what isn't recognised
   (private Power BI, CARTO and Plotly Cloud embeds, the closed Plotly Chart Studio).
 

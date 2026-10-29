@@ -26,7 +26,8 @@
 {% asset 'webpageviewplus/webpageviewplus-js' %}
 {% call form.input('page_url', id='field-page_url', label=_('Web Page url'), placeholder=_('eg. http://example.com  (if blank uses resource url)'), value=data.page_url, error=errors.page_url, classes=['control-full', 'control-large'], attrs={'class': 'form-control', 'aria-describedby': 'help-page_url'}) %}
   <p class="form-text" id="help-page_url">
-    {{ _('Leave blank to show this resource\'s own address. Paste a link from a well-known service, such as YouTube, Datawrapper, Power BI or CARTO, and the form suggests its embed address and settings.') }}
+    {# TRANSLATORS: {services} is a comma-separated list of service names, such as "YouTube, Vimeo, Datawrapper". #}
+    {{ _('Leave blank to show this resource\'s own address. Paste a link from {services} and the form suggests its embed address and settings.').format(services=service_names | join(', ')) }}
     {% if allowed_hosts %}{{ _('This site accepts pages from these hosts only: {hosts}.').format(hosts=allowed_hosts | join(', ')) }}{% endif %}
   </p>
 {% endcall %}

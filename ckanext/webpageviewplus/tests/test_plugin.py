@@ -192,7 +192,10 @@ def test_form_help_text_is_linked_to_its_fields(app):
         control = html.find(id="field-" + field)
         assert control["aria-describedby"] == "help-" + field
         assert html.find(id="help-" + field).get_text(strip=True)
-    assert "pages.example.com, charts.example.org" in html.find(id="help-page_url").get_text()
+    help_text = html.find(id="help-page_url").get_text()
+    assert "pages.example.com, charts.example.org" in help_text
+    from ckanext.webpageviewplus import services
+    assert ", ".join(services.NAMES) in help_text
 
 
 @pytest.fixture

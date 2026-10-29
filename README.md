@@ -162,18 +162,18 @@ saved is what's shown. Each embed was checked in Chrome under each preset:
 
 | Service | Recognised links | Preset | Height |
 | --- | --- | --- | --- |
-| YouTube | `youtube.com/watch?v=`, `youtu.be/`, `/shorts/`, `/embed/` (a `t=` start time is kept) | `external` (`youtube-nocookie.com`) | 16/9 |
-| Vimeo | `vimeo.com/<id>`, unlisted `vimeo.com/<id>/<hash>`, `player.vimeo.com/video/<id>` | `external` | 16/9 |
-| Datawrapper | `datawrapper.dwcdn.net/<id>/`, `datawrapper.de/_/<id>/` | `interactive` | 500 px |
-| Flourish | `public.flourish.studio/visualisation/<id>/`, `flo.uri.sh/...` | `interactive` | 600 px |
-| Observable | `observablehq.com/@user/notebook`, `/d/<id>`, `/embed/...` | `external` | 600 px |
-| Tableau Public | `public.tableau.com/app/profile/.../viz/<workbook>/<sheet>`, `/views/...` | `external` | 800 px |
-| Power BI | Publish to web links, `app.powerbi.com/view?r=...` (a `pageName` is kept) | `interactive` | 16/9 |
-| ArcGIS StoryMaps | `storymaps.arcgis.com/stories/<id>` | `external` | 800 px |
-| CARTO | public Builder maps, `app.carto.com/map/<id>` or a regional `<tenant>.app.carto.com` | `interactive` | 640 px |
-| Plotly Cloud | Dash apps, including Plotly Studio's, at `<name>.plotly.app` | `external` | 800 px |
-| Google Forms | published forms, `docs.google.com/forms/d/e/<id>/viewform` | `interactive` | 800 px |
-| Typeform | `form.typeform.com/to/<id>` or `<account>.typeform.com/to/<id>` | `external` | 600 px |
+| [YouTube](https://www.youtube.com/) | `youtube.com/watch?v=`, `youtu.be/`, `/shorts/`, `/embed/` (a `t=` start time is kept) | `external` (`youtube-nocookie.com`) | 16/9 |
+| [Vimeo](https://vimeo.com/) | `vimeo.com/<id>`, unlisted `vimeo.com/<id>/<hash>`, `player.vimeo.com/video/<id>` | `external` | 16/9 |
+| [Datawrapper](https://www.datawrapper.de/) | `datawrapper.dwcdn.net/<id>/`, `datawrapper.de/_/<id>/` | `interactive` | 500 px |
+| [Flourish](https://flourish.studio/) | `public.flourish.studio/visualisation/<id>/`, `flo.uri.sh/...` | `interactive` | 600 px |
+| [Observable](https://observablehq.com/) | `observablehq.com/@user/notebook`, `/d/<id>`, `/embed/...` | `external` | 600 px |
+| [Tableau Public](https://public.tableau.com/) | `public.tableau.com/app/profile/.../viz/<workbook>/<sheet>`, `/views/...` | `external` | 800 px |
+| [Power BI](https://www.microsoft.com/power-platform/products/power-bi) | Publish to web links, `app.powerbi.com/view?r=...` (a `pageName` is kept) | `interactive` | 16/9 |
+| [ArcGIS StoryMaps](https://storymaps.arcgis.com/) | `storymaps.arcgis.com/stories/<id>` | `external` | 800 px |
+| [CARTO](https://carto.com/) | public Builder maps, `app.carto.com/map/<id>` or a regional `<tenant>.app.carto.com` | `interactive` | 640 px |
+| [Plotly Cloud](https://plotly.com/cloud/) | Dash apps, including Plotly Studio's, at `<name>.plotly.app` | `external` | 800 px |
+| [Google Forms](https://www.google.com/forms/about/) | published forms, `docs.google.com/forms/d/e/<id>/viewform` | `interactive` | 800 px |
+| [Typeform](https://www.typeform.com/) | `form.typeform.com/to/<id>` or `<account>.typeform.com/to/<id>` | `external` | 600 px |
 
 YouTube, Vimeo, Observable, Tableau Public and ArcGIS StoryMaps fail inside a sandbox without
 `allow-same-origin`, as do Typeform and some Plotly Cloud apps (it depends on the app), so they need `external`, and so a content origin. On a site without one,

@@ -226,6 +226,12 @@ SERVICES: tuple[Callable[[str, str, dict[str, list[str]]], Optional[Suggestion]]
     _power_bi, _storymaps, _carto, _plotly_cloud, _google_forms, _typeform,
 )
 
+# The names suggestions carry, in SERVICES order, for the view form's help.
+NAMES: tuple[str, ...] = (
+    "YouTube", "Vimeo", "Datawrapper", "Flourish", "Observable", "Tableau Public",
+    "Power BI", "ArcGIS StoryMaps", "CARTO", "Plotly Cloud", "Google Forms", "Typeform",
+)
+
 
 def suggest(url: str) -> Optional[Suggestion]:
     """The embed settings for a well-known service's page, or None."""

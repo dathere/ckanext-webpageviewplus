@@ -186,7 +186,9 @@ order now being built:
   in `interactive`, some don't. `interactive` and `data-schematic` include `allow-forms` because
   Google Forms submits a real form post. Re-check that way before adding one (a local page framing the embed once per
   preset's sandbox will do). Plotly Chart Studio closed in 2025; Superset and Dash are
-  self-hosted, so the README explains them instead.
+  self-hosted, so the README explains them instead. A new service also goes in
+  `services.NAMES` (the form's page URL help lists them; `test_names_cover_every_service`
+  fails otherwise) and in the README's table, linked.
 - `health.py`: views whose page can't be shown. **Rendering never fetches**: with
   `frameability_check` on, `resource_view_create`/`_update` are chained (`actions.py`) to probe
   the page once after the save (`health.after_save`, `SAVE_SECONDS` overall via
