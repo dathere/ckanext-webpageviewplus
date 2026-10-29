@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-29 16:03+0000\n"
+"POT-Creation-Date: 2026-10-29 16:19+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: pt_BR\n"
@@ -436,12 +436,13 @@ msgstr "Toque para interagir"
 msgid "This view loads content from {host}."
 msgstr "Esta visualização carrega conteúdo de {host}."
 
+# it
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:57
 msgid ""
-"Loading it lets {host} see that you are viewing this page, and it may "
+"Loading it lets {host} know you are visiting this site, and it may "
 "recognise you if you are signed in there."
 msgstr ""
-"Ao carregá-lo, {host} saberá que você está vendo esta página e poderá "
+"Ao carregá-lo, {host} saberá que você está visitando este site e poderá "
 "reconhecê-lo se você estiver conectado lá."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:58

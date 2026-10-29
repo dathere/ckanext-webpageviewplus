@@ -54,7 +54,7 @@
         {% if held_back == 'consent' %}
           <p>{{ _('This view loads content from {host}.').format(host=consent_host) }}</p>
           <p class="small text-muted">
-            {{ _('Loading it lets {host} see that you are viewing this page, and it may recognise you if you are signed in there.').format(host=consent_host) }}
+            {{ _('Loading it lets {host} know you are visiting this site, and it may recognise you if you are signed in there.').format(host=consent_host) }}
             {% if privacy_policy_url %}<a href="{{ privacy_policy_url }}">{{ _('Privacy policy') }}</a>{% endif %}
           </p>
         {% else %}
