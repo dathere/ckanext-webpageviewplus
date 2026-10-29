@@ -39,6 +39,18 @@ origin, so anyone who opens it runs its scripts as CKAN, with their login. Stock
 | Languages | CKAN's | English, German, Spanish, French, Italian, Japanese and Brazilian Portuguese |
 | Moving over | n/a | `ckan webpageviewplus migrate` converts existing views in place |
 
+**CKAN's warning about `webpage_view`.** CKAN's
+[data viewer docs](https://docs.ckan.org/en/latest/maintaining/data-viewer.html#web-page-view)
+say not to enable `webpage_view` unless you trust the URL sources, nor where all users can create
+datasets. This plugin removes the risk to CKAN itself: no framed page or upload can run scripts as
+CKAN, editors can't loosen a view's sandbox (`editor_can_loosen` is off by default), and sites can
+limit the presets (`presets`) and the hosts that can be framed (`allowed_hosts`). What a framed page
+shows is still up to its source: a sandbox limits what a page can reach, not its content, so a page
+can still be misleading, open popups (`interactive`) or load trackers (see the consent gate and
+`credentialless`). Where anyone can create datasets, set `content_origin`, keep
+`editor_can_loosen` off, set `allowed_hosts` to the sites you embed, and consider
+`ckanext.webpageviewplus.presets = strict interactive data-schematic`.
+
 
 ## Requirements
 
