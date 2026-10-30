@@ -275,8 +275,7 @@ the settings and commands, and how to contribute.
 
 ### How the protection works
 
-> [!NOTE]
-> **What sandboxing is.** Browsers keep websites apart by their
+> **Note: what sandboxing is.** Browsers keep websites apart by their
 > [origin](https://developer.mozilla.org/en-US/docs/Glossary/Origin) (scheme, host and port):
 > under the [same-origin policy](https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Same-origin_policy),
 > a page's scripts can read the cookies, storage and pages of their own origin, and act there as
