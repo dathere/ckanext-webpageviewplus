@@ -26,6 +26,11 @@ import ckan.model as model
 import ckan.plugins.toolkit as toolkit
 from ckan.lib.uploader import ResourceUpload, get_resource_uploader
 
+try:  # CKAN 2.12+: uploads go through ckan.files storages
+    from ckan.lib.files.default.fs import FsStorage
+except ImportError:
+    FsStorage = None
+
 from ckanext.webpageviewplus import connections, events, frame, settings
 
 log = logging.getLogger(__name__)
@@ -68,10 +73,33 @@ def serves(resource: dict[str, Any]) -> bool:
     so their uploads stay framed from CKAN's origin, sandboxed."""
     if not settings.content_origin() or not is_html_upload(resource):
         return False
+    return _local_uploader(resource) is not None
+
+
+def _local_uploader(resource: dict[str, Any]) -> Any:
+    """The resource's uploader if its files are on CKAN's own filesystem:
+    the classic ResourceUpload, or, on CKAN 2.12+, one whose ckan.files
+    storage is a filesystem storage. None for anything else (cloud, memory)."""
     try:
-        return isinstance(get_resource_uploader(resource), ResourceUpload)
+        upload = get_resource_uploader(resource)
     except Exception:
-        return False
+        return None
+    if isinstance(upload, ResourceUpload):
+        return upload
+    if FsStorage is not None and isinstance(getattr(upload, "storage", None), FsStorage):
+        return upload
+    return None
+
+
+def _local_path(resource: dict[str, Any]) -> Optional[str]:
+    upload = _local_uploader(resource)
+    if upload is None:
+        return None
+    path = upload.get_path(resource["id"])
+    if isinstance(upload, ResourceUpload):
+        return path
+    # A ckan.files location; full_path refuses traversal and null bytes.
+    return upload.storage.full_path(path)
 
 
 def _window(now: Optional[float] = None) -> int:
@@ -163,7 +191,7 @@ def serve(resource_id: str, filename: str):
         abort(404)  # not 403: don't confirm that a private resource exists
 
     try:
-        path = get_resource_uploader(resource).get_path(resource_id)
+        path = _local_path(resource)
     except Exception:
         log.warning("webpageviewplus: no local file for resource %s", resource_id)
         abort(404)

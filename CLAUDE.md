@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A CKAN extension (scaffolded with `ckan generate extension`) meant as a drop-in replacement for core's
 `webpage_view`. It adds safe, modern iframe embedding: sandbox presets, Permissions Policy `allow`,
-self-sizing, a control bar, and a separate content origin for uploaded HTML. Targets CKAN 2.10 and
-2.11 (Python 3.10+).
+self-sizing, a control bar, and a separate content origin for uploaded HTML. Targets CKAN 2.10,
+2.11 and 2.12 (Python 3.10+; 2.12's image runs 3.14).
 
 **The design spec is the source of truth for features:** the Claude Docs doc
 "ckanext-webpageviewplus: design spec" (https://claude.ai/artifact/DFvE8C8NViiMK8Yvses1PV). Read it
@@ -132,7 +132,10 @@ order now being built:
   `src` from `resource_view`/`resource` in templates.
 - `content.py`: the content origin.
   - **The route** `/webpageviewplus/content/<id>/<file>` serves HTML uploads, but only on the
-    content host and only for filesystem `ResourceUpload`s (`content.serves`). Public means an
+    content host and only for filesystem uploads (`content.serves`): a `ResourceUpload`, or on
+    CKAN 2.12 an uploader whose `ckan.files` storage is an `FsStorage` (paths via its
+    `full_path`). 2.12's test config uses memory storage, so tests that need a local upload use
+    the `local_storage` fixture (`tests/conftest.py`), which also rebuilds CKAN's storages. Public means an
     anonymous `package_show` succeeds. Private needs an HMAC over `resource_id:window`, accepting
     the current and previous `url_ttl` window.
   - **`ContentHostMiddleware`** (WSGI, via `IMiddleware`) confines the content host to that route
@@ -318,7 +321,7 @@ path in every `ckan/ckan-dev` image. That's why CI runs it without rewriting.
 
 ### CI
 
-`.github/workflows/test.yml` runs the suite on a CKAN 2.10 / 2.11 matrix in `ckan/ckan-dev` images,
+`.github/workflows/test.yml` runs the suite on a CKAN 2.10 / 2.11 / 2.12 matrix in `ckan/ckan-dev` images,
 with throwaway Postgres, Solr and Redis services. `pytest-ckan` comes from `dev-requirements.txt`.
 A second job, `browser`, runs `browser_tests/` (Playwright) in Chromium, Firefox and WebKit
 against a real CKAN 2.11 started with `browser_tests/ci.ini` (CKAN on `localhost:5000`, content

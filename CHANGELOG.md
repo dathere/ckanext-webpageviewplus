@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- CKAN 2.12 support. Its new file storage (`ckan.files`) is recognised: uploads in a
+  filesystem storage (`ckan:fs`) are served from the content origin, like uploads in CKAN's
+  upload folder before; other storages stay sandboxed on CKAN's origin. CI tests 2.10, 2.11
+  and 2.12.
+
 ## 0.4.0 (2026-10-30)
 
 ### Added

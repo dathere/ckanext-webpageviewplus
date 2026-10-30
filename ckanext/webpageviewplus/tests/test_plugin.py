@@ -299,7 +299,7 @@ class TestViewValidation:
         assert "preset" in e.value.error_dict
 
     def test_data_schematic_with_same_origin_allowed_on_upload_with_content_origin(
-        self, content_origin
+        self, content_origin, local_storage
     ):
         resource = factories.Resource(url_type="upload", url="schematic.html")
         view = _view(factories.Sysadmin(), resource["id"], preset="data-schematic")

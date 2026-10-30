@@ -24,8 +24,8 @@ pytestmark = [
 
 
 @pytest.fixture
-def storage(tmp_path, ckan_config, monkeypatch):
-    monkeypatch.setitem(ckan_config, "ckan.storage_path", str(tmp_path))
+def storage(local_storage):
+    return local_storage
 
 
 def _upload():

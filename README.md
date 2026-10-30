@@ -61,6 +61,7 @@ loading third-party pages, and opt in to anonymous view counts.
 | 2.9 and earlier | no          |
 | 2.10            | yes         |
 | 2.11            | yes         |
+| 2.12            | yes         |
 
 **Browsers: Chrome and Edge 88+, Firefox 89+ and Safari 15+ (macOS, iOS and iPadOS)**, all from
 2021. The security protection works in every browser still in use; older browsers just show
@@ -521,8 +522,9 @@ How content is served:
   copies already in a viewer's browser last until their `max-age` runs out.
 - Responses send `frame-ancestors` (only CKAN's hosts may frame them) and `nosniff`, and never
   set a cookie.
-- **Only filesystem uploads are served** for now. With a cloud storage uploader (for example
-  ckanext-cloudstorage), uploads stay framed from CKAN's origin under the sandbox.
+- **Only filesystem uploads are served** for now: CKAN's own upload folder, or on CKAN 2.12 a
+  `ckan.files` storage of type `ckan:fs`. With cloud storage (for example ckanext-cloudstorage,
+  or a cloud `ckan.files` storage), uploads stay framed from CKAN's origin under the sandbox.
 - **Rollback:** unset `content_origin` and restart. No data changes, and views fall back to the
   sandboxed behaviour.
 

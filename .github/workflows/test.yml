@@ -8,9 +8,6 @@ jobs:
         ckan-version: ["2.10", "2.11", "2.12"]
     name: CKAN ${{ matrix.ckan-version }}
     runs-on: ubuntu-latest
-    # 2.12 is experimental until its new file storage (ckan.files) is
-    # supported: its failures don't fail the run.
-    continue-on-error: ${{ matrix.ckan-version == '2.12' }}
     container:
       # The CKAN version tag of the Solr and Postgres containers should match
       # the one of the container the tests run on.

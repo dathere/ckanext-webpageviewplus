@@ -67,3 +67,44 @@ def counts_table(non_clean_db):
                 except sa.exc.ProgrammingError:
                     pass  # its table is already there
         module = by_parent.get(module.revision)
+
+
+_MISSING = object()
+
+
+def _reset_storages():
+    try:  # CKAN 2.12+
+        from ckan.lib import files
+    except ImportError:
+        return
+    files.storages.reset()
+    files.storages.collect()
+
+
+@pytest.fixture
+def local_storage(tmp_path, ckan_config):
+    """Keep uploads on the local filesystem under tmp_path. CKAN 2.12 stores
+    them through ckan.files storages (its test config uses memory storage)
+    and ignores ckan.storage_path; earlier versions ignore the ckan.files
+    keys. Storages are rebuilt now and again afterwards, so later tests don't
+    keep one pointing at this test's deleted folder."""
+    values = {
+        "ckan.storage_path": str(tmp_path),
+        "ckan.files.default_storages.default": "wvp_local",
+        "ckan.files.storage.wvp_local.type": "ckan:fs",
+        "ckan.files.storage.wvp_local.path": str(tmp_path),
+        "ckan.files.storage.wvp_local.initialize": True,
+    }
+    old = {key: ckan_config.get(key, _MISSING) for key in values}
+    ckan_config.update(values)
+    _reset_storages()
+    yield tmp_path
+    # Loading the app adds the storage's declared defaults too: drop them all.
+    for key in [k for k in ckan_config if k.startswith("ckan.files.storage.wvp_local.")]:
+        ckan_config.pop(key, None)
+    for key, value in old.items():
+        if value is _MISSING:
+            ckan_config.pop(key, None)
+        else:
+            ckan_config[key] = value
+    _reset_storages()
