@@ -14,7 +14,7 @@ on a resource's page, with a security setting per view, a height that fits the p
 buttons to open it in a new tab or full screen. It runs beside `webpage_view`, so you can move
 your views over when you're ready.
 
-![The four presets: a qsv Data Schematic of Allegheny County dog licences sizing itself to fit, Wikipedia in Strict, a Datawrapper chart in Interactive, YouTube in External behind a consent card, and the view form suggesting a Vimeo embed](https://raw.githubusercontent.com/dathere/ckanext-webpageviewplus/main/docs/demo.gif)
+![The four presets: a qsv Data Schematic of Allegheny County dog licences sizing itself to fit, Wikipedia in Strict, a Datawrapper chart in Interactive, YouTube in External behind a consent card, the view form suggesting a Vimeo embed, then a short clip of each of the 29 well-known services with the preset it needs](https://raw.githubusercontent.com/dathere/ckanext-webpageviewplus/main/docs/demo.gif)
 
 ## Why use it
 
