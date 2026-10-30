@@ -405,7 +405,8 @@ def _streamlit(host: str, path: str, query: dict[str, list[str]]) -> Optional[Su
 def _hugging_face(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
     # A Space's own host can't be worked out from its name (long or clashing
     # names get a hash), so the page's /embed, which redirects there.
-    if re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.hf\.space", host):
+    # Static Spaces (plain HTML) live on <name>.static.hf.space.
+    if re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.(?:static\.)?hf\.space", host):
         path, state = _app_path(path), _state(query)
         return None if path is None or state is None else Suggestion(
             "Hugging Face Spaces", _with_query("https://{}{}".format(host, path), state),

@@ -401,7 +401,7 @@ checked in Chrome under each preset:
 | [Google Slides](https://www.google.com/slides/about/) | presentations published to the web, `docs.google.com/presentation/d/e/<id>/pub` or `/embed` (`start`, `loop`, `delayms` and `slide` are kept) | `interactive` | 960/569 |
 | [Our World in Data](https://ourworldindata.org/) | charts and explorers, `ourworldindata.org/grapher/<chart>` and `/explorers/<name>`, with the query that picks countries, years and tab | `interactive` | 600 px |
 | [Streamlit](https://streamlit.io/cloud) | public apps on Community Cloud, `<name>.streamlit.app` (embedded with `?embed=true`) | `external` | 800 px |
-| [Hugging Face Spaces](https://huggingface.co/spaces) | `huggingface.co/spaces/<owner>/<name>` (embedded through its `/embed` address, which redirects to the Space's `<name>.hf.space` host, so `allowed_hosts` needs both), or a `<name>.hf.space` address | `external` | 800 px |
+| [Hugging Face Spaces](https://huggingface.co/spaces) | `huggingface.co/spaces/<owner>/<name>` (embedded through its `/embed` address, which redirects to the Space's `<name>.hf.space` host, so `allowed_hosts` needs both), or a `<name>.hf.space` (or static `<name>.static.hf.space`) address | `external` | 800 px |
 | [shinyapps.io](https://www.shinyapps.io/) | Shiny apps at `<account>.shinyapps.io/<app>/` | `external` | 800 px |
 | [Infogram](https://infogram.com/) | `infogram.com/<name>` (embedded from `e.infogram.com`) | `external` | 600 px |
 | [Felt](https://felt.com/) | public maps, `felt.com/map/<name>` (a `loc` and display options are kept, a private map's `token` isn't) | `interactive` | 600 px |

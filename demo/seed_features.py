@@ -184,8 +184,8 @@ SERVICE_PAGES = [
     ("Typeform", TYPEFORM,
      "The extension's community survey. Typeform never loads without its own origin, so "
      "it's `external`, unlike Google Forms."),
-    ("ArcGIS Online", "https://www.arcgis.com/apps/dashboards/87a5fe2d397e4140add84f50d8bdafd3",
-     "Andalusia's emergency agency tracks this year's wildfires on an ArcGIS Dashboard. "
+    ("ArcGIS Online", "https://www.arcgis.com/apps/dashboards/94054353efa943b781cc5d6176ca8283",
+     "Esri's dashboard of severe weather reports across the USA, updated through the day. "
      "Dashboards can run sandboxed, but web maps and Instant Apps can't, so everything "
      "from ArcGIS Online gets `external`."),
     ("Looker Studio", "https://lookerstudio.google.com/reporting/"
@@ -210,9 +210,10 @@ SERVICE_PAGES = [
     ("Streamlit", "https://gdp-dashboard-template.streamlit.app/",
      "Streamlit's GDP dashboard template on Community Cloud. Streamlit apps need their own "
      "origin, so `external`; the form adds `?embed=true`, which drops Streamlit's frame."),
-    ("Hugging Face Spaces", "https://huggingface.co/spaces/NimaBoscarino/hotdog-gradio",
-     "A Gradio app on Hugging Face: is it a hot dog? Spaces are apps that call their own "
-     "server, so `external`. The view loads the Space's own address through Hugging Face."),
+    ("Hugging Face Spaces", "https://huggingface.co/spaces/HuggingFaceFW/blogpost-fineweb-v1",
+     "The story of FineWeb, a public dataset of web text, told in a Hugging Face Space with "
+     "interactive charts. Spaces are often apps that call their own server, so they're all "
+     "`external`. The view loads the Space's own address through Hugging Face."),
     ("shinyapps.io", "https://gallery.shinyapps.io/050-kmeans-example/",
      "Posit's k-means example. Shiny apps draw nothing without their own origin, so "
      "`external`; change the variables and the clusters redraw."),
@@ -230,9 +231,10 @@ SERVICE_PAGES = [
      "The Eiffel Tower, from OpenStreetMap's Share dialog. Without its own origin the "
      "map's tiles carry no Referer and OpenStreetMap blocks them, so it's `external`. "
      "Paste the dialog's embed address: a map page's position isn't in its URL."),
-    ("Internet Archive", "https://archive.org/details/night_of_the_living_dead_dvd",
-     "Night of the Living Dead (1968), in the public domain. The Archive's players need "
-     "their own origin, so `external`; its book reader works the same way."),
+    ("Internet Archive", "https://archive.org/details/adventuresoftoms00twaiiala",
+     "The Adventures of Tom Sawyer in the Archive's book reader: turn the pages, or open "
+     "it full screen. The Archive's readers and players need their own origin, so "
+     "`external`; films and audio work the same way."),
     ("Sketchfab", "https://sketchfab.com/3d-models/batmobile-hJ91ZS1d5kqX9N8HLqwfcHVKC9h",
      "A 3D model on Sketchfab. Its viewer refuses to run without its own origin, so "
      "`external`; press play, then drag to turn the model."),
