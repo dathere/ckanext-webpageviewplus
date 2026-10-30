@@ -186,7 +186,8 @@ SERVICE_PAGES = [
      "it's `external`, unlike Google Forms."),
     ("ArcGIS Online", "https://www.arcgis.com/apps/dashboards/87a5fe2d397e4140add84f50d8bdafd3",
      "Andalusia's emergency agency tracks this year's wildfires on an ArcGIS Dashboard. "
-     "ArcGIS apps and web maps need their own origin, so they're `external`."),
+     "Dashboards can run sandboxed, but web maps and Instant Apps can't, so everything "
+     "from ArcGIS Online gets `external`."),
     ("Looker Studio", "https://lookerstudio.google.com/reporting/"
      "e1efb265-1581-4bfe-961c-e7c3b1795208/page/kIV1C",
      "iDigBio's public web analytics report. Looker Studio shows nothing without its own "

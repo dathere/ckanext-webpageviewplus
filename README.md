@@ -128,7 +128,7 @@ the embed address, preset and height that service needs:
 - **Documents and forms:** Google Sheets, Docs, Slides and Forms, Typeform
 - **Video and collections:** YouTube, Vimeo, Internet Archive, Sketchfab
 
-Click "Use them" to accept; nothing changes until you do. Only public embeds work. About half
+Click "Use them" to accept; nothing changes until you do. Only public embeds work. More than half
 of these need the `external` preset, and so a separate domain for uploads; on a site without
 one, the form says so. The links recognised for
 each service, and notes on self-hosted Superset and Dash dashboards, are under
