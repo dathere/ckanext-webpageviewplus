@@ -5,6 +5,8 @@ sysadmin from ckan-docker's .env (CKAN_DOCKER_ENV, default
 
     uv run --with playwright --no-project python demo/record_demo.py /tmp/wvp-video
 
+The destination directory must be empty or not exist yet.
+
 It ends with a montage of every well-known service: each loads on its own
 recorded page, and ffmpeg keeps the last CLIP seconds of each (the view shown,
 with its caption), joined after the main video. Then turn the video it prints
@@ -16,7 +18,6 @@ into the GIF:
 """
 import json
 import os
-import shutil
 import subprocess
 import sys
 import urllib.request
@@ -90,7 +91,12 @@ def scroll(page, total, steps=40, pause=60):
 
 
 def main():
-    shutil.rmtree(OUT, ignore_errors=True)
+    os.makedirs(OUT, exist_ok=True)
+    if os.listdir(OUT):
+        sys.exit("{} isn't empty: pass an empty or new directory".format(OUT))
+    # Seeding skips a form whose link is set empty, so leave out what's missing.
+    present = {r["name"] for r in api("package_show", id="wvp-features")["resources"]}
+    services = [s for s in SERVICE_VIEWS if s[0] in present]
     schematic = view_url("wvp-schematics", "Allegheny County dog licences: Data Schematic",
                          "Data Schematic (self-sizing)")
     strict = view_url("wvp-features", "Wikipedia: Open data",
@@ -196,7 +202,7 @@ def main():
 
         # 6. Every well-known service, one short clip each.
         clips = []
-        for n, (resource, title, label) in enumerate(SERVICE_VIEWS, 1):
+        for n, (resource, title, label) in enumerate(services, 1):
             shot = ctx.new_page()
             shot.goto(view_url("wvp-features", resource, title), wait_until="load")
             shot.evaluate("""() => {
@@ -205,7 +211,7 @@ def main():
             }""")
             shot.wait_for_timeout(int(SETTLE.get(resource, 2.5) * 1000))
             caption(shot, "{} well-known services, each with the preset it needs. "
-                          "{}/{}: {}".format(len(SERVICE_VIEWS), n, len(SERVICE_VIEWS),
+                          "{}/{}: {}".format(len(services), n, len(services),
                                              label or title))
             shot.wait_for_timeout(int(CLIP * 1000) + 300)
             clips.append(shot.video.path())

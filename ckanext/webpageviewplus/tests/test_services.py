@@ -95,6 +95,7 @@ RECOGNISED = [
         (NBV, "Jupyter", NBV),
         ("https://jakevdp.github.io/downloads/notebooks/XKCD_plots.ipynb", "Jupyter",
          "https://nbviewer.org/urls/jakevdp.github.io/downloads/notebooks/XKCD_plots.ipynb"),
+        ("https://github.com/" + NB_PATH + "?plain=1", "Jupyter", NBV),
     ],
 )
 def test_recognised(url, service, embed):
@@ -150,6 +151,9 @@ def test_recognised(url, service, embed):
         "https://github.com/a/b/blob/main/../x.ipynb",
         "https://example.com/a/<script>.ipynb",
         "https://example.com/report.html",
+        # nbviewer's urls/ form would drop a query that may pick the file.
+        "https://example.com/get/x.ipynb?download=1",
+        "https://example.com/get/x.ipynb?download",
     ],
 )
 def test_not_recognised(url):

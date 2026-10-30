@@ -547,7 +547,10 @@
       var hosts = rememberedHosts().filter(function (h) { return h !== host; });
       if (on) hosts.push(host);
       window.localStorage.setItem(CONSENT_KEY, JSON.stringify(hosts));
-    } catch (e) { /* not stored: the card asks next time */ }
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   function showRemembered(wrapper) {
@@ -555,7 +558,9 @@
     if (note) note.hidden = false;
   }
 
-  function loadCard(card, focus) {
+  // A remembered card opens without a click, and its frame is lazy: it may
+  // not start loading for a while, so no failure timer.
+  function loadCard(card, focus, auto) {
     var wrapper = card.closest(".webpageviewplus");
     var stage = wrapper && wrapper.querySelector("template[data-webpageviewplus-stage]");
     if (!stage) return;
@@ -563,7 +568,7 @@
     stage.parentNode.removeChild(stage);
     var iframe = wrapper.querySelector("iframe.webpageviewplus-frame");
     if (!iframe) return;
-    setup(iframe, true);
+    setup(iframe, !auto);
     var held = wrapper.querySelectorAll(
       '[data-webpageviewplus-action="fullscreen"], [data-webpageviewplus-action="reload"]');
     for (var j = 0; j < held.length; j++) held[j].hidden = false;
@@ -581,8 +586,7 @@
         var wrapper = card.closest(".webpageviewplus");
         loadCard(card, true);
         if (host && button.getAttribute("data-webpageviewplus-load") === "always") {
-          setRemembered(host, true);
-          if (wrapper) showRemembered(wrapper);
+          if (setRemembered(host, true) && wrapper) showRemembered(wrapper);
           loadRemembered();
         }
       });
@@ -614,7 +618,7 @@
       if (remembered.indexOf(card.getAttribute("data-host")) === -1) continue;
       var wrapper = card.closest(".webpageviewplus");
       if (wrapper) showRemembered(wrapper);
-      loadCard(card, false);
+      loadCard(card, false, true);
     }
   }
 

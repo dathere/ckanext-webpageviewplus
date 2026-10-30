@@ -285,8 +285,9 @@ def _jupyter(host: str, path: str, query: dict[str, list[str]]) -> Optional[Sugg
                 and _segments_ok(parts[1:]):
             return _nbviewer("Jupyter", "/".join(parts))
         return None
-    # Any other public notebook file, fetched by nbviewer over https.
-    if _notebook(parts) and re.fullmatch(r"[a-z0-9.-]{1,253}", host):
+    # Any other public notebook file, fetched by nbviewer over https. Its
+    # urls/ form drops the query, which could pick the file, so none is taken.
+    if not query and _notebook(parts) and re.fullmatch(r"[a-z0-9.-]{1,253}", host):
         return _nbviewer("Jupyter", "urls/{}/{}".format(host, "/".join(parts)))
     return None
 
@@ -318,7 +319,7 @@ def suggest(url: str) -> Optional[Suggestion]:
     if parts.username or parts.password or port not in (None, 80, 443):
         return None
     host = parts.hostname.lower().rstrip(".")
-    query = parse_qs(parts.query)
+    query = parse_qs(parts.query, keep_blank_values=True)
     for service in SERVICES:
         found = service(host, parts.path, query)
         if found:

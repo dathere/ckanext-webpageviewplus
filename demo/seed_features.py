@@ -49,9 +49,8 @@ RESOURCES = [
          {"preset": "data-schematic", "height_mode": "auto"},
          "An uploaded HTML page, the kind that core CKAN would serve from its own "
          "address, where its scripts could act with your login. Here it's served from "
-         "the content origin instead. The page prints where it thinks it lives and "
-         "tries to reach this page: it reports its own origin, not CKAN's, and fails. "
-         "It also reports its height, so the frame fits it exactly. Without "
+         "the content origin instead. The page prints the origin it runs on: the "
+         "content origin, not CKAN's, so its scripts can't act as you. It also reports its height, so the frame fits it exactly. Without "
          "`content_origin` set, it still runs, sandboxed with no origin at all."),
         ("Strict preset: no scripts",
          {"preset": "strict"},
