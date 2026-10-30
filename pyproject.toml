@@ -1,6 +1,6 @@
 [project]
 name = "ckanext-webpageviewplus"
-version = "0.4.0"
+version = "0.5.0"
 description = "An enhanced web page resource view for CKAN"
 readme = "README.md"
 authors = [
@@ -14,6 +14,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 
 keywords = [ "CKAN", "webpage", "view", "iframe", ]

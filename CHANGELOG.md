@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 (2026-10-30)
 
 ### Added
 
@@ -11,6 +11,10 @@
   too.
 - Pasted static Hugging Face Space addresses (`<name>.static.hf.space`) are recognised as
   Hugging Face Spaces (`external`).
+
+### Changed
+
+- The demo GIF's ArcGIS Online, Hugging Face and Internet Archive clips use clearer examples.
 
 ## 0.4.0 (2026-10-30)
 
