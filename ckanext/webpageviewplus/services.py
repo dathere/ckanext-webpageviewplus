@@ -5,12 +5,12 @@ its embed needs. Pure code with no CKAN imports.
 The view form suggests these; nothing is rewritten at render, so what's
 saved is what's shown. Each service's embed was loaded in Chrome under each
 preset: Datawrapper, Flourish, Power BI, CARTO, Google Sheets, Docs and
-Slides, Our World in Data, Felt, OpenStreetMap and Jupyter notebooks
+Slides, Our World in Data, Felt and Jupyter notebooks
 (through nbviewer, also for Colab, which refuses every frame) work sandboxed
 (interactive); YouTube, Vimeo, Observable, Tableau Public, ArcGIS StoryMaps
 and Online, Looker Studio, Plotly Cloud, Streamlit, Hugging Face and
-shinyapps.io apps, Google Forms, Typeform, Infogram, uMap, the Internet
-Archive and Sketchfab need scripts with their own origin, so they need
+shinyapps.io apps, Google Forms, Typeform, Infogram, uMap, OpenStreetMap,
+the Internet Archive and Sketchfab need scripts with their own origin, so they need
 external, which needs a content origin.
 """
 from __future__ import annotations
@@ -486,7 +486,9 @@ def _umap(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggest
 
 def _openstreetmap(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
     # Only the Share dialog's embed address: a map page keeps its place in the
-    # URL's #fragment, which never reaches the server.
+    # URL's #fragment, which never reaches the server. External: without an
+    # origin the map's tile requests carry no Referer, and OpenStreetMap's tile
+    # servers block those ("Access blocked").
     if host not in ("openstreetmap.org", "www.openstreetmap.org") or path != "/export/embed.html":
         return None
     params = _kept(query, {
@@ -497,7 +499,7 @@ def _openstreetmap(host: str, path: str, query: dict[str, list[str]]) -> Optiona
         return None
     return Suggestion("OpenStreetMap", _with_query(
         "https://www.openstreetmap.org/export/embed.html", params),
-        "interactive", "fixed", "500")
+        "external", "fixed", "500")
 
 
 def _internet_archive(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:

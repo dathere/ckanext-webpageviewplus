@@ -227,8 +227,9 @@ SERVICE_PAGES = [
      "scripts don't load without an origin, so `external`, with uMap's own embed options."),
     ("OpenStreetMap", "https://www.openstreetmap.org/export/embed.html"
      "?bbox=2.29%2C48.85%2C2.30%2C48.86&layer=mapnik&marker=48.8584%2C2.2945",
-     "The Eiffel Tower, from OpenStreetMap's Share dialog. The plain map runs in "
-     "`interactive`. Paste the dialog's embed address: a map page's position isn't in its URL."),
+     "The Eiffel Tower, from OpenStreetMap's Share dialog. Without its own origin the "
+     "map's tiles carry no Referer and OpenStreetMap blocks them, so it's `external`. "
+     "Paste the dialog's embed address: a map page's position isn't in its URL."),
     ("Internet Archive", "https://archive.org/details/night_of_the_living_dead_dvd",
      "Night of the Living Dead (1968), in the public domain. The Archive's players need "
      "their own origin, so `external`; its book reader works the same way."),

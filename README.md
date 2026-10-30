@@ -406,7 +406,7 @@ checked in Chrome under each preset:
 | [Infogram](https://infogram.com/) | `infogram.com/<name>` (embedded from `e.infogram.com`) | `external` | 600 px |
 | [Felt](https://felt.com/) | public maps, `felt.com/map/<name>` (a `loc` and display options are kept, a private map's `token` isn't) | `interactive` | 600 px |
 | [uMap](https://umap.openstreetmap.fr/) | maps on `umap.openstreetmap.fr` and `umap.openstreetmap.de`, `/<lang>/map/<name>_<id>`, with uMap's own embed options | `external` | 600 px |
-| [OpenStreetMap](https://www.openstreetmap.org/) | the Share dialog's embed address, `openstreetmap.org/export/embed.html?bbox=...` (a map page's `#map=` position never reaches the server, so it can't be recognised) | `interactive` | 500 px |
+| [OpenStreetMap](https://www.openstreetmap.org/) | the Share dialog's embed address, `openstreetmap.org/export/embed.html?bbox=...` (a map page's `#map=` position never reaches the server, so it can't be recognised) | `external` | 500 px |
 | [Internet Archive](https://archive.org/) | `archive.org/details/<id>`: films, audio and books | `external` | 600 px |
 | [Sketchfab](https://sketchfab.com/) | 3D models, `sketchfab.com/3d-models/<name>-<id>` or `sketchfab.com/models/<id>` | `external` | 16/9 |
 | [Google Colab](https://colab.research.google.com/) | notebooks Colab opens from GitHub, `colab.research.google.com/github/...`, shown read-only through [nbviewer](https://nbviewer.org/) (Colab itself refuses every frame; Drive notebooks can't be shown) | `interactive` | 800 px |
@@ -414,7 +414,8 @@ checked in Chrome under each preset:
 
 YouTube, Vimeo, Observable, Tableau Public, ArcGIS StoryMaps and ArcGIS Online, Looker
 Studio, Infogram, uMap, the Internet Archive and Sketchfab fail inside a sandbox without
-`allow-same-origin`, as do Google Forms and Typeform (without it a Google Form shows but its
+`allow-same-origin`, and so does OpenStreetMap (its map tiles then carry no Referer, which
+its tile servers block), as do Google Forms and Typeform (without it a Google Form shows but its
 inputs stay disabled), and Streamlit, shinyapps.io and some Plotly Cloud apps (it depends on
 the app). They need `external`, and so a content origin; Hugging Face Spaces get it too, as
 apps that call their own server. On a site without one, the form says so instead of

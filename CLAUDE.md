@@ -181,10 +181,11 @@ order now being built:
   offers "Use them", which fills page_url, preset and height. Nothing is rewritten at render.
   Each service's preset comes from loading a real embed in Chrome under each sandbox:
   Datawrapper, Flourish, Power BI (Publish to web), CARTO, published Google Sheets/Docs/Slides,
-  Our World in Data, Felt, OpenStreetMap (its embed address only: a page's position is in the
-  #fragment) and Jupyter notebooks (rendered by nbviewer; Colab's GitHub links too, as Colab
+  Our World in Data, Felt and Jupyter notebooks (rendered by nbviewer; Colab's GitHub links too, as Colab
   sends `X-Frame-Options: DENY`) work in `interactive`; YouTube, Vimeo, Observable, Tableau
-  Public, ArcGIS StoryMaps and Online, Looker Studio, Infogram, uMap, Internet Archive,
+  Public, ArcGIS StoryMaps and Online, Looker Studio, Infogram, uMap, OpenStreetMap (its embed
+  address only: a page's position is in the #fragment; sandboxed, its tiles carry no Referer
+  and its tile servers block them), Internet Archive,
   Sketchfab, Google Forms (renders without an origin but its inputs stay disabled) and
   Typeform need `allow-same-origin`, hence `external`, and so do Plotly Cloud, Streamlit,
   Hugging Face Spaces and shinyapps.io apps: some work in `interactive`, some don't. A query
@@ -192,7 +193,11 @@ order now being built:
   suggestion is declined, never dropped. `interactive` and `data-schematic` include `allow-forms` so plain
   HTML forms can submit. Check a service by clicking into it, not only by looking: Google Forms
   looked fine under `interactive` until an option was clicked. Re-check that way before adding one (a local page framing the embed once per
-  preset's sandbox will do). Plotly Chart Studio closed in 2025; Superset and Dash are
+  preset's sandbox will do). A sandbox without `allow-same-origin` also strips the Referer from
+  the page's own requests, and services may block those only some of the time (OpenStreetMap's
+  tiles did), so check the requests, not just a screenshot. Streamlit Cloud leaves apps blank in
+  headless Chrome, so confirm a blank result in a visible browser (`demo/record_demo.py` records
+  in one for that reason). Plotly Chart Studio closed in 2025; Superset and Dash are
   self-hosted, so the README explains them instead. A new service also goes in
   `services.NAMES` (the form's page URL help lists them; `test_names_cover_every_service`
   fails otherwise) and in the README's table, linked.

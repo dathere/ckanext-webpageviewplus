@@ -22,7 +22,7 @@ import subprocess
 import sys
 import urllib.request
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import TimeoutError as PlaywrightTimeout, sync_playwright
 
 B = "http://localhost:5001"
 OUT = sys.argv[1] if len(sys.argv) > 1 else "wvp-video"
@@ -30,7 +30,7 @@ W, H = 1280, 800
 CLIP = 2.5
 # Seconds to let a service draw after the page's load event, before its clip.
 SETTLE = {"Observable": 9, "Power BI": 5, "CARTO": 4, "Plotly Cloud": 4, "ArcGIS Online": 6,
-          "Looker Studio": 6, "Streamlit": 8, "Hugging Face Spaces": 5, "shinyapps.io": 6}
+          "Looker Studio": 14, "Streamlit": 8, "Hugging Face Spaces": 5, "shinyapps.io": 6}
 # The montage, one per well-known service: (resource in wvp-features, view
 # title, caption label if not the title).
 SERVICE_VIEWS = [
@@ -60,7 +60,7 @@ SERVICE_VIEWS = [
     ("Infogram", "Infogram (external)", None),
     ("Felt", "Felt (interactive)", None),
     ("uMap", "uMap (external)", None),
-    ("OpenStreetMap", "OpenStreetMap (interactive)", None),
+    ("OpenStreetMap", "OpenStreetMap (external)", None),
     ("Internet Archive", "Internet Archive (external)", None),
     ("Sketchfab", "Sketchfab (external)", None),
 ]
@@ -96,6 +96,12 @@ CAPTION_JS = """text => {
 }"""
 
 
+TO_VIEW_JS = """() => {
+  const v = document.querySelector('.webpageviewplus');
+  window.scrollTo(0, v.getBoundingClientRect().top + window.scrollY - 70);
+}"""
+
+
 def caption(page, text):
     page.evaluate(CAPTION_JS, text)
 
@@ -123,7 +129,8 @@ def main():
     form = view_url("wvp-features", "Try the view form", "Paste a link to see a suggestion",
                     edit=True)
     with sync_playwright() as p:
-        browser = p.chromium.launch(channel="chrome")
+        # A visible window: Streamlit Cloud leaves its app blank in headless Chrome.
+        browser = p.chromium.launch(channel="chrome", headless=False)
         login = browser.new_context()
         page = login.new_page()
         page.goto(B + "/user/login")
@@ -220,12 +227,16 @@ def main():
         clips = []
         for n, (resource, title, label) in enumerate(services, 1):
             shot = ctx.new_page()
-            shot.goto(view_url("wvp-features", resource, title), wait_until="load")
-            shot.evaluate("""() => {
-              const v = document.querySelector('.webpageviewplus');
-              window.scrollTo(0, v.getBoundingClientRect().top + window.scrollY - 70);
-            }""")
+            try:
+                shot.goto(view_url("wvp-features", resource, title), wait_until="load",
+                          timeout=45000)
+            except PlaywrightTimeout:
+                # A slow embed holds up the load event; record what's there by now.
+                print("slow to load, recording anyway: " + resource)
+            shot.evaluate(TO_VIEW_JS)
             shot.wait_for_timeout(int(SETTLE.get(resource, 2.5) * 1000))
+            # Again, in case the page grew above the view while it loaded.
+            shot.evaluate(TO_VIEW_JS)
             caption(shot, "{} well-known services, each with the preset it needs. "
                           "{}/{}: {}".format(len(services), n, len(services),
                                              label or title))

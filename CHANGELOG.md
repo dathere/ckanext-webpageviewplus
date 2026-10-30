@@ -7,11 +7,11 @@
 - Fifteen more well-known services, each checked in Chrome with and without the
   `interactive` sandbox, and by clicking into it:
   - `interactive`: Google Sheets, Docs and Slides published to the web, Our World in Data
-    charts and explorers (the query that picks countries and years is kept), Felt maps, and
-    OpenStreetMap's embed address.
+    charts and explorers (the query that picks countries and years is kept), and Felt maps.
   - `external`: ArcGIS Online (Dashboards, Experience Builder, Instant Apps and web maps),
-    Looker Studio, Streamlit, Hugging Face Spaces and shinyapps.io apps, Infogram, uMap, the
-    Internet Archive and Sketchfab.
+    Looker Studio, Streamlit, Hugging Face Spaces and shinyapps.io apps, Infogram, uMap,
+    OpenStreetMap's embed address (sandboxed, its tiles carry no Referer and OpenStreetMap
+    blocks them), the Internet Archive and Sketchfab.
 
 ### Fixed
 

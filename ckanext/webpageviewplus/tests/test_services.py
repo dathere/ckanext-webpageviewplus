@@ -284,15 +284,14 @@ def test_video_settings():
     assert services.suggest("https://form.typeform.com/to/NPUAWX7u").preset == "external"
     assert services.suggest("https://github.com/" + NB_PATH).preset == "interactive"
     for url in ("https://docs.google.com/presentation/d/e/{}/pub".format(PUB),
-                "https://ourworldindata.org/grapher/life-expectancy", "https://felt.com/map/" + FELT,
-                OSM):
+                "https://ourworldindata.org/grapher/life-expectancy", "https://felt.com/map/" + FELT):
         assert services.suggest(url).preset == "interactive", url
     for url in ("https://www.arcgis.com/apps/dashboards/" + AG,
                 "https://lookerstudio.google.com/reporting/" + LOOKER,
                 "https://gallery.shinyapps.io/050-kmeans-example/",
                 "https://infogram.com/10-years-since-lehman-1hkv2nvzgnop6x3",
                 "https://umap.openstreetmap.fr/en/map/" + UMAP,
-                "https://sketchfab.com/models/" + SKETCH):
+                "https://sketchfab.com/models/" + SKETCH, OSM):
         assert services.suggest(url).preset == "external", url
 
 
