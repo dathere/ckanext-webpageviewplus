@@ -320,7 +320,11 @@ def _looker_studio(host: str, path: str, query: dict[str, list[str]]) -> Optiona
     url = "https://lookerstudio.google.com/embed/reporting/" + m.group(1)
     if m.group(2):
         url += "/page/" + m.group(2)
-    return Suggestion("Looker Studio", url, "external", "aspect", "4/3")
+    # params: the report's filter values, as JSON.
+    state = _state({k: v for k, v in query.items() if k == "params"})
+    if state is None:
+        return None
+    return Suggestion("Looker Studio", _with_query(url, state), "external", "aspect", "4/3")
 
 
 def _published(kind: str, path: str) -> Optional[tuple[str, str]]:
@@ -402,10 +406,12 @@ def _hugging_face(host: str, path: str, query: dict[str, list[str]]) -> Optional
     # A Space's own host can't be worked out from its name (long or clashing
     # names get a hash), so the page's /embed, which redirects there.
     if re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.hf\.space", host):
-        path = _app_path(path)
-        return None if path is None else Suggestion(
-            "Hugging Face Spaces", "https://{}{}".format(host, path), "external", "fixed", "800")
-    if host not in ("huggingface.co", "www.huggingface.co"):
+        path, state = _app_path(path), _state(query)
+        return None if path is None or state is None else Suggestion(
+            "Hugging Face Spaces", _with_query("https://{}{}".format(host, path), state),
+            "external", "fixed", "800")
+    # The /embed redirect may not carry a query along, so none is taken.
+    if host not in ("huggingface.co", "www.huggingface.co") or query:
         return None
     parts = path.strip("/").split("/")
     name = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,95}")
