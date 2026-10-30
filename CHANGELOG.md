@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 (2026-10-30)
 
 ### Added
 
@@ -23,6 +23,7 @@
 ### Changed
 
 - The README leads with a plain-language overview; the technical details are under Advanced.
+- The demo GIF ends with a clip of each of the 29 well-known services.
 
 ## 0.3.0 (2026-10-29)
 
