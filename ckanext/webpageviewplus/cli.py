@@ -7,7 +7,6 @@ from typing import Optional
 import click
 
 import ckan.model as model
-from ckan.lib.uploader import get_resource_uploader
 
 from ckanext.webpageviewplus import content, frame, frameability, health, settings
 
@@ -36,16 +35,14 @@ def file_contains(path: str, marker: bytes, limit: int = SCAN_LIMIT) -> bool:
 
 def looks_like_schematic(resource: model.Resource) -> bool:
     """A qsv Data Schematic carries a qsv-schematic-source block. Only uploads
-    are checked: linked pages aren't fetched."""
+    on CKAN's own filesystem are checked: linked pages aren't fetched, and
+    cloud or memory storages count as not a schematic."""
     if resource.url_type != "upload":
         return False
     try:
-        uploader = get_resource_uploader(
-            {"id": resource.id, "url": resource.url, "url_type": resource.url_type}
-        )
-        path = uploader.get_path(resource.id)
-        return file_contains(path, SCHEMATIC_MARKER)
-    except Exception:  # cloud uploaders, missing files: treat as not a schematic
+        path = content.local_path(content.resource_dict(resource))
+        return bool(path) and file_contains(path, SCHEMATIC_MARKER)
+    except Exception:  # missing files: treat as not a schematic
         return False
 
 

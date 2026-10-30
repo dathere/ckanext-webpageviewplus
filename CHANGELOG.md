@@ -6,8 +6,11 @@
 
 - CKAN 2.12 support. Its new file storage (`ckan.files`) is recognised: uploads in a
   filesystem storage (`ckan:fs`) are served from the content origin, like uploads in CKAN's
-  upload folder before; other storages stay sandboxed on CKAN's origin. CI tests 2.10, 2.11
-  and 2.12.
+  upload folder before, and `ckan webpageviewplus migrate` finds qsv schematics in them; other
+  storages stay sandboxed on CKAN's origin. CI runs the tests and the browser tests on 2.12
+  too.
+- Pasted static Hugging Face Space addresses (`<name>.static.hf.space`) are recognised as
+  Hugging Face Spaces (`external`).
 
 ## 0.4.0 (2026-10-30)
 

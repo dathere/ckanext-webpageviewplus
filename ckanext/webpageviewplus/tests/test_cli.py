@@ -1,5 +1,9 @@
-import pytest
+import io
 
+import pytest
+from werkzeug.datastructures import FileStorage
+
+import ckan.model as model
 from ckan.cli.cli import ckan
 from ckan.tests import factories, helpers
 
@@ -94,6 +98,18 @@ class TestMigrate:
         result = cli.invoke(ckan, ["webpageviewplus", "migrate"])
         assert result.exit_code == 0, result.output
         assert _show(view)["preset"] == "data-schematic"
+
+    def test_schematic_detected_in_a_real_upload(self, local_storage):
+        # Reads the file itself, so it runs against CKAN 2.12's storage too.
+        # Called directly: the CLI reloads test.ini, losing local_storage.
+        def upload(body):
+            resource = factories.Resource(
+                url="s.html", url_type="upload",
+                upload=FileStorage(io.BytesIO(body), filename="s.html"))
+            return model.Resource.get(resource["id"])
+        assert wvp_cli.looks_like_schematic(
+            upload(b'<script id="qsv-schematic-source">{}</script>'))
+        assert not wvp_cli.looks_like_schematic(upload(b"<p>Not a schematic</p>"))
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.presets", "strict")
     @pytest.mark.ckan_config("ckanext.webpageviewplus.default_preset", "strict")

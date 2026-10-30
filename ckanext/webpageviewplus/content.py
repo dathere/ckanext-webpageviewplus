@@ -91,7 +91,7 @@ def _local_uploader(resource: dict[str, Any]) -> Any:
     return None
 
 
-def _local_path(resource: dict[str, Any]) -> Optional[str]:
+def local_path(resource: dict[str, Any]) -> Optional[str]:
     upload = _local_uploader(resource)
     if upload is None:
         return None
@@ -191,7 +191,7 @@ def serve(resource_id: str, filename: str):
         abort(404)  # not 403: don't confirm that a private resource exists
 
     try:
-        path = _local_path(resource)
+        path = local_path(resource)
     except Exception:
         log.warning("webpageviewplus: no local file for resource %s", resource_id)
         abort(404)
