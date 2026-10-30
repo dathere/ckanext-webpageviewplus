@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Fifteen more well-known services, each checked in Chrome with and without the
+  `interactive` sandbox, and by clicking into it:
+  - `interactive`: Google Sheets, Docs and Slides published to the web, Our World in Data
+    charts and explorers (the query that picks countries and years is kept), Felt maps, and
+    OpenStreetMap's embed address.
+  - `external`: ArcGIS Online (Dashboards, Experience Builder, Instant Apps and web maps),
+    Looker Studio, Streamlit, Hugging Face Spaces and shinyapps.io apps, Infogram, uMap, the
+    Internet Archive and Sketchfab.
+
+### Fixed
+
+- A notebook URL with a query isn't turned into nbviewer's `urls/` form, which would drop it.
+- A remembered consent card opening on its own no longer starts the failure timer, so a lazy
+  frame below the fold doesn't count as failed; "Always load" shows as remembered only when
+  the browser saved it.
+
+### Changed
+
+- The README leads with a plain-language overview; the technical details are under Advanced.
+
 ## 0.3.0 (2026-10-29)
 
 ### Added

@@ -29,7 +29,8 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else "wvp-video"
 W, H = 1280, 800
 CLIP = 2.5
 # Seconds to let a service draw after the page's load event, before its clip.
-SETTLE = {"Observable": 9, "Power BI": 5, "CARTO": 4, "Plotly Cloud": 4}
+SETTLE = {"Observable": 9, "Power BI": 5, "CARTO": 4, "Plotly Cloud": 4, "ArcGIS Online": 6,
+          "Looker Studio": 6, "Streamlit": 8, "Hugging Face Spaces": 5, "shinyapps.io": 6}
 # The montage, one per well-known service: (resource in wvp-features, view
 # title, caption label if not the title).
 SERVICE_VIEWS = [
@@ -47,6 +48,21 @@ SERVICE_VIEWS = [
     ("Typeform", "Typeform (external)", None),
     ("Google Colab", "Google Colab (interactive)", "Google Colab, via nbviewer (interactive)"),
     ("Jupyter", "Jupyter (interactive)", "Jupyter notebooks, via nbviewer (interactive)"),
+    ("ArcGIS Online", "ArcGIS Online (external)", None),
+    ("Looker Studio", "Looker Studio (external)", None),
+    ("Google Sheets", "Google Sheets (interactive)", None),
+    ("Google Docs", "Google Docs (interactive)", None),
+    ("Google Slides", "Google Slides (interactive)", None),
+    ("Our World in Data", "Our World in Data (interactive)", None),
+    ("Streamlit", "Streamlit (external)", None),
+    ("Hugging Face Spaces", "Hugging Face Spaces (external)", None),
+    ("shinyapps.io", "shinyapps.io (external)", None),
+    ("Infogram", "Infogram (external)", None),
+    ("Felt", "Felt (interactive)", None),
+    ("uMap", "uMap (external)", None),
+    ("OpenStreetMap", "OpenStreetMap (interactive)", None),
+    ("Internet Archive", "Internet Archive (external)", None),
+    ("Sketchfab", "Sketchfab (external)", None),
 ]
 ENV = dict(l.strip().split("=", 1) for l in open(os.path.expanduser(
     os.environ.get("CKAN_DOCKER_ENV", "~/GitHub/ckan-docker/.env")))

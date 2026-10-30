@@ -184,6 +184,56 @@ SERVICE_PAGES = [
     ("Typeform", TYPEFORM,
      "The extension's community survey. Typeform never loads without its own origin, so "
      "it's `external`, unlike Google Forms."),
+    ("ArcGIS Online", "https://www.arcgis.com/apps/dashboards/87a5fe2d397e4140add84f50d8bdafd3",
+     "Andalusia's emergency agency tracks this year's wildfires on an ArcGIS Dashboard. "
+     "ArcGIS apps and web maps need their own origin, so they're `external`."),
+    ("Looker Studio", "https://lookerstudio.google.com/reporting/"
+     "e1efb265-1581-4bfe-961c-e7c3b1795208/page/kIV1C",
+     "iDigBio's public web analytics report. Looker Studio shows nothing without its own "
+     "origin, so `external`, and only reports whose owner allowed embedding work at all."),
+    ("Google Sheets", "https://docs.google.com/spreadsheets/d/e/2PACX-1vS4CmyhVsSYtVtK8MwyZ6Wqkc"
+     "Ef1oxCx15zq-dZDitvCZt7alqYBy-ydnxJiApR-gD7oLsDY4s4V_sa/pubhtml",
+     "A sheet published to the web, with its tabs along the bottom. Published Google files "
+     "run in `interactive`; links to a file's editor need a Google login and aren't offered."),
+    ("Google Docs", "https://docs.google.com/document/d/e/2PACX-1vSG44o2kP9YalCpqd4Kx3Q-WpgS6mzg"
+     "rF6ZMAh71KFIk2t_PNJCtx7yePvuVnfC0r7H1WyjaXDWL_jo/pub",
+     "A user manual written in Google Docs and published to the web, in `interactive`."),
+    ("Google Slides", "https://docs.google.com/presentation/d/e/2PACX-1vSvEbWoZ7v3W0nEsckVmNsSj2"
+     "65C68s5YuwwD5K9EKISBGnQW8DD0J4MhA2TAbgai4-B00ePB9TLRdP/pub",
+     "Malaysia's Ministry of Health published this COVID-19 summary deck. The form swaps "
+     "the published link for the deck's player; click the arrows to step through it."),
+    ("Our World in Data", "https://ourworldindata.org/grapher/life-expectancy"
+     "?tab=chart&country=USA~GBR~JPN",
+     "Life expectancy in three countries. The link's query picks the countries and tab, and "
+     "the view keeps it. Charts run in `interactive`: hover for each year's values."),
+    ("Streamlit", "https://gdp-dashboard-template.streamlit.app/",
+     "Streamlit's GDP dashboard template on Community Cloud. Streamlit apps need their own "
+     "origin, so `external`; the form adds `?embed=true`, which drops Streamlit's frame."),
+    ("Hugging Face Spaces", "https://huggingface.co/spaces/NimaBoscarino/hotdog-gradio",
+     "A Gradio app on Hugging Face: is it a hot dog? Spaces are apps that call their own "
+     "server, so `external`. The view loads the Space's own address through Hugging Face."),
+    ("shinyapps.io", "https://gallery.shinyapps.io/050-kmeans-example/",
+     "Posit's k-means example. Shiny apps draw nothing without their own origin, so "
+     "`external`; change the variables and the clusters redraw."),
+    ("Infogram", "https://infogram.com/10-years-since-lehman-1hkv2nvzgnop6x3",
+     "An Infogram slide story. Infogram's embed never loads without its own origin, so "
+     "it's `external`."),
+    ("Felt", "https://felt.com/map/Global-Human-Settlement-5FzbIDg4RA9B5XnhuPnGgzC?loc=20.1,5.3,2.5z",
+     "Built-up land worldwide, on a public Felt map. It runs in `interactive`: zoom and pan "
+     "work, though Felt can't keep its own settings without an origin."),
+    ("uMap", "https://umap.openstreetmap.fr/en/map/carte-des-reseaux-express-velo-de-france_894719",
+     "France's planned express cycle networks on uMap, OpenStreetMap's map maker. uMap's "
+     "scripts don't load without an origin, so `external`, with uMap's own embed options."),
+    ("OpenStreetMap", "https://www.openstreetmap.org/export/embed.html"
+     "?bbox=2.29%2C48.85%2C2.30%2C48.86&layer=mapnik&marker=48.8584%2C2.2945",
+     "The Eiffel Tower, from OpenStreetMap's Share dialog. The plain map runs in "
+     "`interactive`. Paste the dialog's embed address: a map page's position isn't in its URL."),
+    ("Internet Archive", "https://archive.org/details/night_of_the_living_dead_dvd",
+     "Night of the Living Dead (1968), in the public domain. The Archive's players need "
+     "their own origin, so `external`; its book reader works the same way."),
+    ("Sketchfab", "https://sketchfab.com/3d-models/batmobile-hJ91ZS1d5kqX9N8HLqwfcHVKC9h",
+     "A 3D model on Sketchfab. Its viewer refuses to run without its own origin, so "
+     "`external`; press play, then drag to turn the model."),
 ]
 
 

@@ -14,6 +14,17 @@ GF_ID = "1FAIpQLSejGC-PLjdLLfHp9M6Ge2bJNbSr1JoWTC0n3RrcvUn1m2VqPw"
 GF = "https://docs.google.com/forms/d/e/{}/viewform?embedded=true".format(GF_ID)
 NB_PATH = "CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers/blob/master/Chapter1_Introduction/Ch1_Introduction_PyMC3.ipynb"
 NBV = "https://nbviewer.org/github/" + NB_PATH
+AG = "02b63130e0ad4462a904215858213ee7"
+PUB = "2PACX-1vS4CmyhVsSYtVtK8MwyZ6WqkcEf1oxCx15zq-dZDitvCZt7alqYBy-ydnxJiApR-gD7oLsDY4s4V_sa"
+LOOKER = "e1efb265-1581-4bfe-961c-e7c3b1795208"
+FELT = "Global-Human-Settlement-5FzbIDg4RA9B5XnhuPnGgzC"
+UMAP = "carte-des-reseaux-express-velo-de-france_894719"
+UMAP_OPTS = ("scaleControl=false&miniMapControl=false&scrollWheelZoom=false&zoomControl=true"
+             "&editMode=disabled&moreControl=true&searchControl=null&tilelayersControl=null"
+             "&embedControl=null&datalayersControl=true&onLoadPanel=none&captionBar=false"
+             "&captionMenus=true")
+OSM = "https://www.openstreetmap.org/export/embed.html?bbox=2.29,48.85,2.30,48.86&layer=mapnik"
+SKETCH = "hJ91ZS1d5kqX9N8HLqwfcHVKC9h"
 
 
 RECOGNISED = [
@@ -22,6 +33,18 @@ RECOGNISED = [
     "https://observablehq.com/@d3/bar-chart", "https://public.tableau.com/views/A/B",
     "https://app.powerbi.com/view?r=" + PBI, STORY, CARTO, "https://x.plotly.app/", GF,
     "https://form.typeform.com/to/NPUAWX7u",
+    "https://www.arcgis.com/apps/dashboards/" + AG,
+    "https://lookerstudio.google.com/reporting/" + LOOKER,
+    "https://docs.google.com/spreadsheets/d/e/{}/pubhtml".format(PUB),
+    "https://docs.google.com/document/d/e/{}/pub".format(PUB),
+    "https://docs.google.com/presentation/d/e/{}/pub".format(PUB),
+    "https://ourworldindata.org/grapher/life-expectancy", "https://gdp-dashboard-template.streamlit.app/",
+    "https://huggingface.co/spaces/NimaBoscarino/hotdog-gradio",
+    "https://gallery.shinyapps.io/050-kmeans-example/",
+    "https://infogram.com/10-years-since-lehman-1hkv2nvzgnop6x3", "https://felt.com/map/" + FELT,
+    "https://umap.openstreetmap.fr/en/map/" + UMAP, OSM,
+    "https://archive.org/details/night_of_the_living_dead_dvd",
+    "https://sketchfab.com/models/" + SKETCH,
     "https://colab.research.google.com/github/" + NB_PATH, "https://github.com/" + NB_PATH,
 ]
 
@@ -84,6 +107,55 @@ RECOGNISED = [
         (GF, "Google Forms", GF),
         ("https://form.typeform.com/to/NPUAWX7u?typeform-source=x", "Typeform",
          "https://form.typeform.com/to/NPUAWX7u"),
+        ("https://www.arcgis.com/apps/dashboards/" + AG, "ArcGIS Online",
+         "https://www.arcgis.com/apps/dashboards/" + AG),
+        ("https://csse.maps.arcgis.com/apps/dashboards/" + AG, "ArcGIS Online",
+         "https://csse.maps.arcgis.com/apps/dashboards/" + AG),
+        ("https://experience.arcgis.com/experience/{}/page/Home/".format(AG), "ArcGIS Online",
+         "https://experience.arcgis.com/experience/{}/page/Home/".format(AG)),
+        ("https://noaa.maps.arcgis.com/apps/instant/basic/index.html?appid={}&x=1".format(AG),
+         "ArcGIS Online",
+         "https://noaa.maps.arcgis.com/apps/instant/basic/index.html?appid=" + AG),
+        ("https://arcgis.com/home/webmap/viewer.html?webmap={}&center=-118.7,37.2&level=12".format(AG),
+         "ArcGIS Online", "https://www.arcgis.com/apps/mapviewer/index.html?configurableview=true"
+         "&webmap={}&center=-118.7,37.2&level=12".format(AG)),
+        ("https://lookerstudio.google.com/u/0/reporting/{}/page/kIV1C".format(LOOKER), "Looker Studio",
+         "https://lookerstudio.google.com/embed/reporting/{}/page/kIV1C".format(LOOKER)),
+        ("https://datastudio.google.com/reporting/1se-9ZRSukdgQUiRqYTSjT8nFLTV0v8Uq", "Looker Studio",
+         "https://lookerstudio.google.com/embed/reporting/1se-9ZRSukdgQUiRqYTSjT8nFLTV0v8Uq"),
+        ("https://docs.google.com/spreadsheets/d/e/{}/pubhtml?gid=7&single=true&x=1".format(PUB),
+         "Google Sheets", "https://docs.google.com/spreadsheets/d/e/{}/pubhtml?widget=true"
+         "&headers=false&gid=7&single=true".format(PUB)),
+        ("https://docs.google.com/document/d/e/{}/pub".format(PUB), "Google Docs",
+         "https://docs.google.com/document/d/e/{}/pub?embedded=true".format(PUB)),
+        ("https://docs.google.com/presentation/d/e/{}/pub?start=true&delayms=5000".format(PUB),
+         "Google Slides", "https://docs.google.com/presentation/d/e/{}/embed?start=true"
+         "&loop=false&delayms=5000".format(PUB)),
+        ("https://ourworldindata.org/grapher/life-expectancy?tab=chart&country=USA~GBR",
+         "Our World in Data",
+         "https://ourworldindata.org/grapher/life-expectancy?tab=chart&country=USA~GBR"),
+        ("https://ourworldindata.org/explorers/co2?Gas+or+warming=CO2", "Our World in Data",
+         "https://ourworldindata.org/explorers/co2?Gas+or+warming=CO2"),
+        ("https://gdp-dashboard-template.streamlit.app/?embed_options=dark_theme", "Streamlit",
+         "https://gdp-dashboard-template.streamlit.app/?embed=true"),
+        ("https://huggingface.co/spaces/NimaBoscarino/hotdog-gradio", "Hugging Face Spaces",
+         "https://huggingface.co/spaces/NimaBoscarino/hotdog-gradio/embed"),
+        ("https://nimaboscarino-hotdog-gradio.hf.space/", "Hugging Face Spaces",
+         "https://nimaboscarino-hotdog-gradio.hf.space/"),
+        ("https://gallery.shinyapps.io/050-kmeans-example", "shinyapps.io",
+         "https://gallery.shinyapps.io/050-kmeans-example/"),
+        ("https://infogram.com/10-years-since-lehman-1hkv2nvzgnop6x3", "Infogram",
+         "https://e.infogram.com/10-years-since-lehman-1hkv2nvzgnop6x3?src=embed"),
+        ("https://felt.com/map/{}?loc=20.1,5.3,2.5z&token=secret".format(FELT), "Felt",
+         "https://felt.com/embed/map/{}?loc=20.1,5.3,2.5z".format(FELT)),
+        ("https://umap.openstreetmap.fr/en/map/" + UMAP, "uMap",
+         "https://umap.openstreetmap.fr/en/map/{}?{}".format(UMAP, UMAP_OPTS)),
+        (OSM.replace(",", "%2C") + "&marker=48.8584%2C2.2945", "OpenStreetMap",
+         OSM + "&marker=48.8584,2.2945"),
+        ("https://archive.org/details/night_of_the_living_dead_dvd", "Internet Archive",
+         "https://archive.org/embed/night_of_the_living_dead_dvd"),
+        ("https://sketchfab.com/3d-models/batmobile-" + SKETCH, "Sketchfab",
+         "https://sketchfab.com/models/{}/embed".format(SKETCH)),
         ("https://acme.typeform.com/to/LhgLkLvN", "Typeform",
          "https://acme.typeform.com/to/LhgLkLvN"),
         ("https://colab.research.google.com/github/" + NB_PATH + "#scrollTo=x", "Google Colab", NBV),
@@ -151,6 +223,28 @@ def test_recognised(url, service, embed):
         "https://github.com/a/b/blob/main/../x.ipynb",
         "https://example.com/a/<script>.ipynb",
         "https://example.com/report.html",
+        "https://www.arcgis.com/apps/dashboards/not-an-id",
+        "https://www.arcgis.com/apps/mapviewer/index.html",
+        "https://evil.example/maps.arcgis.com/apps/dashboards/" + AG,
+        "https://lookerstudio.google.com/reporting/<x>",
+        "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit",
+        "https://docs.google.com/spreadsheets/d/e/{}/pub?output=csv".format(PUB),
+        "https://docs.google.com/document/d/e/{}/edit".format(PUB),
+        # A query that picks the chart is kept whole, or no suggestion is made.
+        "https://ourworldindata.org/grapher/life-expectancy?country=a&country=b",
+        "https://ourworldindata.org/grapher/<x>",
+        "https://evil.example/x.streamlit.app/",
+        "https://x.streamlit.app/a/../b",
+        "https://huggingface.co/spaces/a",
+        "https://huggingface.co/spaces/a/b/settings",
+        "https://ab.shinyapps.io/x/",
+        "https://infogram.com/1hkv2nvzgnop6x3",
+        "https://felt.com/map/short",
+        "https://umap.example.org/en/map/x_1",
+        "https://www.openstreetmap.org/#map=15/48.8584/2.2945",
+        "https://www.openstreetmap.org/export/embed.html?layer=mapnik",
+        "https://archive.org/details/x",
+        "https://sketchfab.com/3d-models/not-a-model",
         # nbviewer's urls/ form would drop a query that may pick the file.
         "https://example.com/get/x.ipynb?download=1",
         "https://example.com/get/x.ipynb?download",
@@ -184,12 +278,21 @@ def test_video_settings():
     assert services.suggest(GF).preset == "external"
     assert services.suggest("https://form.typeform.com/to/NPUAWX7u").preset == "external"
     assert services.suggest("https://github.com/" + NB_PATH).preset == "interactive"
+    for url in ("https://docs.google.com/presentation/d/e/{}/pub".format(PUB),
+                "https://ourworldindata.org/grapher/life-expectancy", "https://felt.com/map/" + FELT,
+                OSM):
+        assert services.suggest(url).preset == "interactive", url
+    for url in ("https://www.arcgis.com/apps/dashboards/" + AG,
+                "https://lookerstudio.google.com/reporting/" + LOOKER,
+                "https://gallery.shinyapps.io/050-kmeans-example/",
+                "https://infogram.com/10-years-since-lehman-1hkv2nvzgnop6x3",
+                "https://umap.openstreetmap.fr/en/map/" + UMAP,
+                "https://sketchfab.com/models/" + SKETCH):
+        assert services.suggest(url).preset == "external", url
 
 
 def test_suggested_heights_are_valid():
-    for url in ("https://youtu.be/dQw4w9WgXcQ", "https://datawrapper.dwcdn.net/XSj9X/",
-                "https://public.tableau.com/views/A/B", "https://app.powerbi.com/view?r=" + PBI,
-                STORY, CARTO):
+    for url in RECOGNISED:
         found = services.suggest(url)
         assert frame.height_value_valid(found.height_mode, found.height_value)
 

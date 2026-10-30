@@ -47,7 +47,7 @@ loading third-party pages, and opt in to anonymous view counts.
 | Controls | CKAN's Fullscreen and Embed links | the same, plus a bar under the view: Open in new tab, Fullscreen (Expand on iPhone), Reload, Share |
 | Accessibility | a generic "Webpage view" title | the view's title read out, a skip link, announcements, works at 400% zoom |
 | Pages that can't be shown | a blank frame | a card saying why, with Open in new tab |
-| Editor help | none | paste a link from one of 14 well-known services and the form fills in the embed settings; optional warning when a site refuses to be embedded |
+| Editor help | none | paste a link from one of 29 well-known services and the form fills in the embed settings; optional warning when a site refuses to be embedded |
 | Finding broken views | none | one command lists views (core's too) whose page is gone or refuses to be embedded |
 | Telemetry | none | none by default; opt-in view counting |
 | Languages | CKAN's | English, German, Spanish, French, Italian, Japanese and Brazilian Portuguese |
@@ -117,13 +117,20 @@ as 16:9 for video), or Auto. With Auto, the frame takes the height the page repo
 Schematics from the release after 27.0.1 report their height themselves; other pages can too
 (see [Auto height for your own pages](#auto-height-for-your-own-pages)).
 
-**Well-known services.** Paste a YouTube, Vimeo, Datawrapper, Flourish, Observable, Tableau
-Public, Power BI, ArcGIS StoryMaps, CARTO, Plotly Cloud, Google Forms, Typeform, Google Colab
-or Jupyter notebook link as the page URL, and the form offers the embed address, preset and
-height that service needs. Click "Use them" to accept; nothing changes until you do. Only
-public embeds work. Some services (YouTube, Vimeo, Observable, Tableau Public, ArcGIS
-StoryMaps, Google Forms, Typeform and some Plotly Cloud apps) need `external`, and so a
-separate domain for uploads; on a site without one, the form says so. The links recognised for
+**Well-known services.** Paste a link from one of these as the page URL, and the form offers
+the embed address, preset and height that service needs:
+
+- **Charts and dashboards:** Datawrapper, Flourish, Infogram, Our World in Data, Observable,
+  Tableau Public, Power BI, Looker Studio
+- **Maps:** ArcGIS Online, ArcGIS StoryMaps, CARTO, Felt, uMap, OpenStreetMap
+- **Apps and notebooks:** Plotly Cloud, Streamlit, Hugging Face Spaces, shinyapps.io, Jupyter
+  notebooks, Google Colab
+- **Documents and forms:** Google Sheets, Docs, Slides and Forms, Typeform
+- **Video and collections:** YouTube, Vimeo, Internet Archive, Sketchfab
+
+Click "Use them" to accept; nothing changes until you do. Only public embeds work. About half
+of these need the `external` preset, and so a separate domain for uploads; on a site without
+one, the form says so. The links recognised for
 each service, and notes on self-hosted Superset and Dash dashboards, are under
 [Well-known services: recognised links](#well-known-services-recognised-links).
 
@@ -387,13 +394,30 @@ checked in Chrome under each preset:
 | [Plotly Cloud](https://plotly.com/cloud/) | Dash apps, including Plotly Studio's, at `<name>.plotly.app` | `external` | 800 px |
 | [Google Forms](https://www.google.com/forms/about/) | published forms, `docs.google.com/forms/d/e/<id>/viewform` | `external` | 800 px |
 | [Typeform](https://www.typeform.com/) | `form.typeform.com/to/<id>` or `<account>.typeform.com/to/<id>` | `external` | 600 px |
+| [ArcGIS Online](https://www.arcgis.com/) | public Dashboards (`arcgis.com/apps/dashboards/<id>`), Experience Builder apps (`experience.arcgis.com/experience/<id>`), Instant Apps (`.../apps/instant/<template>/index.html?appid=<id>`) and web maps (`.../apps/mapviewer/index.html?webmap=<id>`, shown in Map Viewer's embeddable view), on `www.arcgis.com` or an organisation's `<org>.maps.arcgis.com` | `external` | 800 px (maps 640 px) |
+| [Looker Studio](https://lookerstudio.google.com/) | `lookerstudio.google.com/reporting/<id>` (or `datastudio.google.com`), with or without `/page/<page>`; the owner must allow embedding | `external` | 4/3 |
+| [Google Sheets](https://www.google.com/sheets/about/) | sheets published to the web, `docs.google.com/spreadsheets/d/e/<id>/pubhtml` (a `gid`, `single` and `range` are kept) | `interactive` | 600 px |
+| [Google Docs](https://www.google.com/docs/about/) | documents published to the web, `docs.google.com/document/d/e/<id>/pub` | `interactive` | 800 px |
+| [Google Slides](https://www.google.com/slides/about/) | presentations published to the web, `docs.google.com/presentation/d/e/<id>/pub` or `/embed` (`start`, `loop`, `delayms` and `slide` are kept) | `interactive` | 960/569 |
+| [Our World in Data](https://ourworldindata.org/) | charts and explorers, `ourworldindata.org/grapher/<chart>` and `/explorers/<name>`, with the query that picks countries, years and tab | `interactive` | 600 px |
+| [Streamlit](https://streamlit.io/cloud) | public apps on Community Cloud, `<name>.streamlit.app` (embedded with `?embed=true`) | `external` | 800 px |
+| [Hugging Face Spaces](https://huggingface.co/spaces) | `huggingface.co/spaces/<owner>/<name>` (embedded through its `/embed` address, which redirects to the Space's `<name>.hf.space` host, so `allowed_hosts` needs both), or a `<name>.hf.space` address | `external` | 800 px |
+| [shinyapps.io](https://www.shinyapps.io/) | Shiny apps at `<account>.shinyapps.io/<app>/` | `external` | 800 px |
+| [Infogram](https://infogram.com/) | `infogram.com/<name>` (embedded from `e.infogram.com`) | `external` | 600 px |
+| [Felt](https://felt.com/) | public maps, `felt.com/map/<name>` (a `loc` and display options are kept, a private map's `token` isn't) | `interactive` | 600 px |
+| [uMap](https://umap.openstreetmap.fr/) | maps on `umap.openstreetmap.fr` and `umap.openstreetmap.de`, `/<lang>/map/<name>_<id>`, with uMap's own embed options | `external` | 600 px |
+| [OpenStreetMap](https://www.openstreetmap.org/) | the Share dialog's embed address, `openstreetmap.org/export/embed.html?bbox=...` (a map page's `#map=` position never reaches the server, so it can't be recognised) | `interactive` | 500 px |
+| [Internet Archive](https://archive.org/) | `archive.org/details/<id>`: films, audio and books | `external` | 600 px |
+| [Sketchfab](https://sketchfab.com/) | 3D models, `sketchfab.com/3d-models/<name>-<id>` or `sketchfab.com/models/<id>` | `external` | 16/9 |
 | [Google Colab](https://colab.research.google.com/) | notebooks Colab opens from GitHub, `colab.research.google.com/github/...`, shown read-only through [nbviewer](https://nbviewer.org/) (Colab itself refuses every frame; Drive notebooks can't be shown) | `interactive` | 800 px |
 | [Jupyter](https://jupyter.org/) | any public `.ipynb`: `github.com/.../blob/...`, `raw.githubusercontent.com/...`, `gist.github.com/<user>/<id>`, `nbviewer.org/...`, or any `https://` URL ending `.ipynb` (without a query), shown read-only through nbviewer | `interactive` | 800 px |
 
-YouTube, Vimeo, Observable, Tableau Public and ArcGIS StoryMaps fail inside a sandbox without
+YouTube, Vimeo, Observable, Tableau Public, ArcGIS StoryMaps and ArcGIS Online, Looker
+Studio, Infogram, uMap, the Internet Archive and Sketchfab fail inside a sandbox without
 `allow-same-origin`, as do Google Forms and Typeform (without it a Google Form shows but its
-inputs stay disabled) and some Plotly Cloud apps (it depends on the app), so they need
-`external`, and so a content origin. On a site without one, the form says so instead of
+inputs stay disabled), and Streamlit, shinyapps.io and some Plotly Cloud apps (it depends on
+the app). They need `external`, and so a content origin; Hugging Face Spaces get it too, as
+apps that call their own server. On a site without one, the form says so instead of
 offering settings that won't play.
 
 YouTube links become `www.youtube-nocookie.com` embeds, YouTube's privacy-enhanced mode, in
