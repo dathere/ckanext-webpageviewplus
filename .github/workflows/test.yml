@@ -81,16 +81,20 @@ jobs:
   browser:
     # A real CKAN served on localhost with a content origin on 127.0.0.1,
     # driven by Playwright in Chromium, Firefox and WebKit (browser_tests/).
-    name: Browsers (CKAN 2.11)
+    strategy:
+      fail-fast: false
+      matrix:
+        ckan-version: ["2.11", "2.12"]
+    name: Browsers (CKAN ${{ matrix.ckan-version }})
     runs-on: ubuntu-latest
     container:
-      image: ckan/ckan-dev:2.11
+      image: ckan/ckan-dev:${{ matrix.ckan-version }}
       options: --user root
     services:
       solr:
-        image: ckan/ckan-solr:2.11-solr9
+        image: ckan/ckan-solr:${{ matrix.ckan-version }}-solr9
       postgres:
-        image: ckan/ckan-postgres-dev:2.11
+        image: ckan/ckan-postgres-dev:${{ matrix.ckan-version }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

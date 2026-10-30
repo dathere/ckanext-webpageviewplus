@@ -324,7 +324,7 @@ path in every `ckan/ckan-dev` image. That's why CI runs it without rewriting.
 `.github/workflows/test.yml` runs the suite on a CKAN 2.10 / 2.11 / 2.12 matrix in `ckan/ckan-dev` images,
 with throwaway Postgres, Solr and Redis services. `pytest-ckan` comes from `dev-requirements.txt`.
 A second job, `browser`, runs `browser_tests/` (Playwright) in Chromium, Firefox and WebKit
-against a real CKAN 2.11 started with `browser_tests/ci.ini` (CKAN on `localhost:5000`, content
+against a real CKAN 2.11 and 2.12 started with `browser_tests/ci.ini` (CKAN on `localhost:5000`, content
 origin `127.0.0.1:5000`) and seeded by `browser_tests/seed.py`.
 
 The dev DB needs the plugin's tables for view counting:
