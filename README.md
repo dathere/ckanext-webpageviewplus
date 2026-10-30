@@ -204,8 +204,6 @@ on CKAN's own disk, not cloud storage.
 
 ## Optional features
 
-All of these are off until a sysadmin turns them on.
-
 **Warn about pages that refuse to be embedded.** With
 `ckanext.webpageviewplus.frameability_check = true`, the view form warns as an editor types the
 address of a site that refuses to be embedded, and suggests linking to it instead. Saving a
