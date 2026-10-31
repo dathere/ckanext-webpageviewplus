@@ -91,7 +91,9 @@ order now being built:
    `webpage_view_plus_thumbnails`, the table (fourth migration), the route, the template
    override, editor-picked uploaded images (`thumbnail_resource`) and service logos and names.
    Next: the fetch behind `thumbnail_fetch` (`og:image`, linked images, `auto_thumbnail`), then
-   services' fixed thumbnail addresses, then `service_format`.
+   services' fixed thumbnail addresses, then `service_format`. A picked upload that's replaced
+   or deleted keeps its old copy until the view is saved again: stage 2's `check-views`
+   refresh should cover picked uploads too, not only fetched images.
 
 ## The security model (read before touching frame, validator, content or download code)
 

@@ -3,6 +3,7 @@ import io
 import sys
 
 import pytest
+from PIL import Image
 from werkzeug.datastructures import FileStorage
 
 from ckan.exceptions import CkanConfigurationException
@@ -10,9 +11,6 @@ from ckan.plugins.toolkit import ValidationError, url_for
 from ckan.tests import factories, helpers
 
 from ckanext.webpageviewplus import plugin, thumbnails
-
-PIL = pytest.importorskip("PIL")
-from PIL import Image  # noqa: E402
 
 YOUTUBE = "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"
 DATAWRAPPER = "https://datawrapper.dwcdn.net/AbC12/1/"
