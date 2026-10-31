@@ -329,7 +329,10 @@ CKAN 2.11.5, http://localhost:5001.
   the extension's own feedback form and survey, overridable with `WVP_DEMO_GOOGLE_FORM` /
   `WVP_DEMO_TYPEFORM`) and `wvp-schematics` (qsv Data
   Schematics; build the HTML on the host first with `demo/build_schematics.sh`, which needs a qsv
-  with PR #4949 as `QSV`). Run the seeds in the container:
+  with PR #4949 as `QSV`, and with its `viz_static` feature, Chrome and chromedriver also
+  writes a PNG preview per file, which the seed picks as each view's thumbnail).
+  `wvp-features` seeds thumbnail examples too: a picked "Chart preview image", a view with
+  `no_auto_thumbnail`, and a view with `count_views`. Run the seeds in the container:
   `docker exec ckan-docker-ckan-dev-1 python /srv/app/src_extensions/ckanext-webpageviewplus/demo/seed_features.py`.
   `demo/record_demo.py` (host, Playwright) records the README's `docs/demo.gif` from those datasets;
   its docstring has the ffmpeg step.

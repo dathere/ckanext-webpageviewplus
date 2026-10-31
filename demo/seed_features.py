@@ -39,19 +39,33 @@ Also try:
   the page still scrolls, and Fullscreen becomes Expand on iPhone.
 - `ckan webpageviewplus check-views --dataset wvp-features` in the container:
   it reports the page that refuses framing and the one that's gone.
+
+Thumbnails: with the `webpage_view_plus_thumbnails` plugin, this list shows a
+small image instead of the format icon. The uploaded page shows the "Chart
+preview image" its view picks, and services show their logo. With
+`thumbnail_fetch` on (run the seed again after turning it on), YouTube,
+Datawrapper and others show their own thumbnail and other pages their preview
+image, except the one whose view opts out. With `service_format` on, the
+services' formats read "YouTube", "Vimeo" and so on.
 """
+
+# Picked as the uploaded page's thumbnail (a view's `thumbnail_resource`).
+PREVIEW = "Chart preview image"
+
 
 # (resource name, resource url or None for the upload, views)
 # Each view: (title, fields, description). Descriptions are Markdown.
 RESOURCES = [
     ("Uploaded HTML on the content origin", None, [
         ("Data Schematic preset, self-sizing",
-         {"preset": "data-schematic", "height_mode": "auto"},
+         {"preset": "data-schematic", "height_mode": "auto", "thumbnail_resource": PREVIEW},
          "An uploaded HTML page, the kind that core CKAN would serve from its own "
          "address, where its scripts could act with your login. Here it's served from "
          "the content origin instead. The page prints the origin it runs on: the "
          "content origin, not CKAN's, so its scripts can't act as you. It also reports its height, so the frame fits it exactly. Without "
-         "`content_origin` set, it still runs, sandboxed with no origin at all."),
+         "`content_origin` set, it still runs, sandboxed with no origin at all. "
+         "In the dataset's resource list, it shows the \"Chart preview image\" this "
+         "view picks as its thumbnail."),
         ("Strict preset: no scripts",
          {"preset": "strict"},
          "The same upload with scripts switched off entirely. What's left is the "
@@ -73,11 +87,13 @@ RESOURCES = [
     ("Datawrapper chart", "https://www.datawrapper.de/_/XSj9X/", [
         ("Interactive preset, fixed 500 px",
          {"page_url": "https://datawrapper.dwcdn.net/XSj9X/", "preset": "interactive",
-          "height_mode": "fixed", "height_value": "500"},
+          "height_mode": "fixed", "height_value": "500", "count_views": True},
          "A chart from Datawrapper. Its scripts run so the tooltips work, but the "
          "frame has no origin of its own: it can't read cookies, storage, or anything "
          "on this page. The resource links to the chart's page; the view frames its "
-         "embed address, which is what the view form offers when you paste the link."),
+         "embed address, which is what the view form offers when you paste the link. "
+         "It counts visits too: with `view_counting` on and a `privacy_policy_url`, "
+         "the view says so, and the view form shows daily totals."),
     ]),
     ("YouTube video", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", [
         ("External preset, 16:9",
@@ -124,6 +140,16 @@ RESOURCES = [
          "`ckan webpageviewplus check-views` can: run it from cron and it lists every "
          "view whose page is gone, unreachable or refuses framing, core "
          "`webpage_view` views included, and exits with status 1 when it finds any."),
+    ]),
+    ("No preview image, by choice",
+     "https://ourworldindata.org/grapher/share-of-population-in-extreme-poverty", [
+        ("Interactive preset, thumbnail turned off",
+         {"preset": "interactive", "height_mode": "fixed", "height_value": "600",
+          "no_auto_thumbnail": True},
+         "Our World in Data names a picture of this chart for link previews, and with "
+         "`thumbnail_fetch` on CKAN would fetch it once and show it in the resource "
+         "list. This view ticks \"Don't use the page's own preview image\", so the "
+         "list keeps the format icon and CKAN never fetches the page."),
     ]),
 ]
 
@@ -254,6 +280,22 @@ def service_resources():
         yield (name, page, [("{} ({})".format(name, found.preset), fields, story)])
 
 
+def preview_png() -> bytes:
+    """A bar chart like the uploaded page's, drawn with Pillow (which the
+    thumbnails plugin needs anyway)."""
+    from PIL import Image, ImageDraw
+
+    im = Image.new("RGB", (640, 360), "white")
+    draw = ImageDraw.Draw(im)
+    draw.line([(40, 320), (600, 320)], fill="#444444", width=2)
+    for i, height in enumerate((120, 200, 160, 260, 230, 290)):
+        x = 70 + i * 88
+        draw.rectangle([x, 320 - height, x + 56, 319], fill="#1f77b4")
+    out = io.BytesIO()
+    im.save(out, "PNG")
+    return out.getvalue()
+
+
 def main():
     app = make_app(load_config(os.environ["CKAN_INI"]))
     with app._wsgi_app.test_request_context():
@@ -276,6 +318,9 @@ def main():
             "notes": NOTES, "owner_org": org["id"], "private": False,
         })
         site = tk.config.get("ckan.site_url").rstrip("/")
+        # Resources first, then the preview image (last in the list), then the
+        # views, which may pick the image as their thumbnail.
+        created = []
         for name, url, views in RESOURCES + list(service_resources()):
             data = {"package_id": pkg["id"], "name": name, "format": "HTML"}
             if url:
@@ -290,8 +335,23 @@ def main():
             res = act("resource_create")(ctx(), data)
             for v in act("resource_view_list")(ctx(), {"id": res["id"]}):
                 act("resource_view_delete")(ctx(), {"id": v["id"]})
+            created.append((name, res, views))
+        image = act("resource_create")(ctx(), {
+            "package_id": pkg["id"], "name": PREVIEW, "format": "PNG",
+            "url": "chart-preview.png",
+            "description": "A static picture of the uploaded page's chart, picked as its "
+                           "thumbnail in this list. qsv Data Schematics export one with "
+                           "`qsv viz ... -o chart.png`.",
+            "upload": FileStorage(io.BytesIO(preview_png()), filename="chart-preview.png",
+                                  content_type="image/png"),
+        })
+        for v in act("resource_view_list")(ctx(), {"id": image["id"]}):
+            act("resource_view_delete")(ctx(), {"id": v["id"]})
+        for name, res, views in created:
             print(name)
             for title, fields, description in views:
+                if fields.get("thumbnail_resource") == PREVIEW:
+                    fields = dict(fields, thumbnail_resource=image["id"])
                 view = act("resource_view_create")(ctx(), dict(
                     resource_id=res["id"], view_type="webpage_view_plus",
                     title=title, description=description, **fields))

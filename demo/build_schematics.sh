@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Build the HTML that demo/seed_schematics.py uploads: qsv Data Schematics and
-# charts made from qsv's test CSVs. Runs on the host (where qsv is), writing to
-# demo/schematics/ (gitignored), which the dev container sees through the
-# repo's bind mount.
+# charts made from qsv's test CSVs, and a static PNG preview of each. Runs on
+# the host (where qsv is), writing to demo/schematics/ (gitignored), which the
+# dev container sees through the repo's bind mount.
 #
 #   QSV=~/GitHub/qsv/target/debug/qsv QSV_RELEASE=/usr/local/bin/qsv demo/build_schematics.sh
 #
@@ -43,3 +43,29 @@ if [ -n "$QSV_RELEASE" ]; then
         -o "$OUT/boston311-smart-release.html" 2>/dev/null
 fi
 ls -la "$OUT"/*.html
+
+# Static previews, 16:9, which seed_schematics.py uploads and picks as each view's
+# thumbnail in the resource list. They need a qsv built with the viz_static feature,
+# plus Chrome and a matching chromedriver (see `qsv viz --help`); without them,
+# they're skipped. A schematic's preview shows its first four panels.
+if "$QSV" --version 2>/dev/null | grep -q viz_static; then
+    png() {
+        "$QSV" viz "$@" --width 1280 --height 720 2>/dev/null \
+            || echo "static export failed: $*" >&2
+    }
+    SMART=(--max-charts 4 --grid-cols 4)
+    dogs="$OUT/csv/allegheny_dog_licenses.csv"
+    [ -s "$dogs" ] || curl -fsSL "$RAW/examples/viz/allegheny_dog_licenses.csv" -o "$dogs"
+    png smart "$dogs" "${SMART[@]}" -o "$OUT/allegheny-dogs-smart.png"
+    png smart "$OUT/csv/nyc311-100.csv" "${SMART[@]}" -o "$OUT/nyc311-smart.png"
+    png smart "$OUT/csv/boston311-100.csv" "${SMART[@]}" -o "$OUT/boston311-smart.png"
+    png smart "$OUT/csv/us-states-lookup.csv" "${SMART[@]}" -o "$OUT/us-states-smart.png"
+    png smart "$OUT/csv/adur-public-toilets.csv" "${SMART[@]}" -o "$OUT/adur-toilets-smart.png"
+    png pie "$OUT/csv/nyc311-100.csv" --x Borough \
+        --title "NYC 311 requests by borough" -o "$OUT/nyc311-pie.png"
+    png map "$OUT/csv/nyc311-100.csv" --lat Latitude --lon Longitude \
+        --title "NYC 311 requests (100-row sample)" -o "$OUT/nyc311-map.png"
+    ls -la "$OUT"/*.png
+else
+    echo "no static previews: $QSV lacks the viz_static feature" >&2
+fi

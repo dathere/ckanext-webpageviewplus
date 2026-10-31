@@ -8,7 +8,9 @@ inside the CKAN container, where the repo is mounted:
 
 Idempotent: the dataset is purged and recreated. Actions run as the site user
 with ignore_auth, so no API token is needed. Files that weren't built (the
-release-qsv schematic is optional) are skipped.
+release-qsv schematic is optional) are skipped. Each resource's static preview
+(<name>.png, from the build's viz_static export) is uploaded too and picked as
+its views' thumbnail in the resource list (webpage_view_plus_thumbnails).
 """
 import io
 import os
@@ -28,6 +30,12 @@ HEAD = "a qsv that includes PR #4949, so it reports its height when framed"
 REL = "a qsv release without PR #4949 (27.0.1 or older), so it doesn't report its height"
 
 AUTO = {"preset": "data-schematic", "height_mode": "auto"}
+
+# Variants built from the same CSV share its preview.
+PREVIEW_OF = {
+    "nyc311-smart-nocompress.html": "nyc311-smart.png",
+    "boston311-smart-release.html": "boston311-smart.png",
+}
 
 # (file, resource name, how it was made, source CSV, built with, views)
 # Each view: (title, fields, description). Descriptions are Markdown.
@@ -142,11 +150,14 @@ def main():
             "name": DATASET, "title": "qsv Data Schematics (webpageviewplus demo)",
             "notes": "Data Schematics and charts made with `qsv viz` from qsv's test "
                      "CSVs, uploaded as HTML and shown with the `data-schematic` "
-                     "preset on the content origin.",
+                     "preset on the content origin. Each has a static PNG preview "
+                     "(`qsv viz ... -o chart.png`), uploaded at the end of the list "
+                     "and picked as its thumbnail in this list.",
             "owner_org": org["id"], "private": False,
         })
         site = tk.config.get("ckan.site_url").rstrip("/")
         directory = os.path.join(HERE, "schematics")
+        created = []
         for filename, name, how, csv, build, views in RESOURCES:
             path = os.path.join(directory, filename)
             if not os.path.exists(path):
@@ -164,8 +175,33 @@ def main():
             })
             for v in act("resource_view_list")(ctx(), {"id": res["id"]}):
                 act("resource_view_delete")(ctx(), {"id": v["id"]})
+            created.append((filename, name, res, views))
+        # The previews go after the schematics, so they don't crowd the list.
+        previews = {}
+        for filename, name, res, views in created:
+            png = PREVIEW_OF.get(filename, filename[:-len(".html")] + ".png")
+            path = os.path.join(directory, png)
+            if png in previews or not os.path.exists(path):
+                continue
+            with open(path, "rb") as f:
+                body = f.read()
+            image = act("resource_create")(ctx(), {
+                "package_id": pkg["id"], "name": "Preview: " + png, "format": "PNG",
+                "url": png,
+                "description": "A static picture of {} (`qsv viz ... -o {}`), picked as "
+                               "its thumbnail in the resource list.".format(name, png),
+                "upload": FileStorage(io.BytesIO(body), filename=png,
+                                      content_type="image/png"),
+            })
+            for v in act("resource_view_list")(ctx(), {"id": image["id"]}):
+                act("resource_view_delete")(ctx(), {"id": v["id"]})
+            previews[png] = image["id"]
+        for filename, name, res, views in created:
             print(name)
+            png = PREVIEW_OF.get(filename, filename[:-len(".html")] + ".png")
             for title, fields, description in views:
+                if png in previews:
+                    fields = dict(fields, thumbnail_resource=previews[png])
                 view = act("resource_view_create")(ctx(), dict(
                     resource_id=res["id"], view_type="webpage_view_plus",
                     title=title, description=description, **fields))
