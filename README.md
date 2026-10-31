@@ -48,6 +48,7 @@ loading third-party pages, and opt in to anonymous view counts.
 | Accessibility | a generic "Webpage view" title | the view's title read out, a skip link, announcements, works at 400% zoom |
 | Pages that can't be shown | a blank frame | a card saying why, with Open in new tab |
 | Editor help | none | paste a link from one of 29 well-known services and the form fills in the embed settings; optional warning when a site refuses to be embedded |
+| Resource list | a format label | optionally a thumbnail: an image the editor picks, the page's own preview image, or the service's thumbnail or logo |
 | Finding broken views | none | one command lists views (core's too) whose page is gone or refuses to be embedded |
 | Telemetry | none | none by default; opt-in view counting |
 | Languages | CKAN's | English, German, Spanish, French, Italian, Japanese and Brazilian Portuguese |
@@ -752,7 +753,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | Command | Does |
 | --- | --- |
 | `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME]` | Convert `webpage_view` views, see [Migrating from webpage_view](#migrating-from-webpage_view) |
-| `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views) (cron) |
+| `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails, except with `--no-store` (cron) |
 | `ckan webpageviewplus purge-stats` | Delete view counts and reported hosts older than the retention period (cron) |
 | `ckan webpageviewplus stats-summary [--limit N]` | Site-wide view counts, busiest first |
 | `ckan webpageviewplus connections [--limit N]` | Hosts uploaded pages were seen contacting, site-wide |
