@@ -403,6 +403,18 @@ class TestFetchOff:
         with pytest.raises(ValidationError):
             _view(page["id"], thumbnail_resource=linked["id"])
 
+    def test_opt_out_kept_while_fetching_is_off(self, app):
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        view = _view(page["id"], no_auto_thumbnail=True)
+        sysadmin = factories.SysadminWithToken()
+        body = app.get(
+            url_for("dataset_resource.edit_view", id=dataset["name"],
+                    resource_id=page["id"], view_id=view["id"]),
+            headers={"Authorization": sysadmin["token"]},
+        ).body
+        assert '<input type="hidden" name="no_auto_thumbnail" value="true">' in body
+
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus webpage_view_plus_thumbnails")
 @pytest.mark.ckan_config("ckan.views.default_views", "")

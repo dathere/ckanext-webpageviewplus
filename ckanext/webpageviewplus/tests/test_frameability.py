@@ -287,6 +287,82 @@ def test_probe_records_redirect_chain(dns):
     assert result.urls == ("https://pages.example.com/a", "http://pages.example.com/b")
 
 
+
+@pytest.fixture
+def local_server(monkeypatch):
+    """Start a server on 127.0.0.1 whose GET is ``handle(request_handler)``,
+    with the address checks passing it (as a public host would)."""
+    import http.server
+    import threading
+
+    servers = []
+
+    def start(handle):
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                handle(self)
+
+            def log_message(self, *args):
+                pass
+
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        server.daemon_threads = True
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        servers.append(server)
+        return "http://127.0.0.1:{}/x".format(server.server_port)
+
+    monkeypatch.setattr(fa, "_address_kind", lambda url, deadline=None: "public")
+    monkeypatch.setattr(fa, "_is_public_address", lambda address: True)
+    for name in ("http_proxy", "HTTP_PROXY", "all_proxy", "ALL_PROXY"):
+        monkeypatch.delenv(name, raising=False)
+    yield start
+    for server in servers:
+        server.shutdown()
+
+
+def _drip(data):
+    def handle(request):
+        try:
+            for byte in data:
+                request.wfile.write(bytes([byte]))
+                request.wfile.flush()
+                time.sleep(0.2)
+        except OSError:
+            pass
+    return handle
+
+
+def test_dripped_body_cut_at_the_deadline(local_server):
+    url = local_server(_drip(b"HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\n" + b"x" * 100))
+    start = time.monotonic()
+    assert fa.fetch_body(url, start + 1, 1000, "test") is None
+    assert time.monotonic() - start < 2.5
+
+
+def test_dripped_headers_cut_at_the_deadline(local_server):
+    url = local_server(_drip(b"HTTP/1.1 200 OK\r\nX-Slow: " + b"y" * 100 + b"\r\n\r\n"))
+    start = time.monotonic()
+    assert fa.probe(url, CKAN, deadline=start + 1).problem == "unreachable"
+    assert time.monotonic() - start < 2.5
+
+
+def test_no_cookies_kept_between_fetches(local_server):
+    seen = []
+
+    def handle(request):
+        seen.append(request.headers.get("Cookie"))
+        request.send_response(200)
+        request.send_header("Set-Cookie", "track=1; Path=/")
+        request.send_header("Content-Length", "2")
+        request.end_headers()
+        request.wfile.write(b"ok")
+
+    url = local_server(handle)
+    for _ in range(2):
+        assert fa.fetch_body(url, time.monotonic() + 5, 100, "test").data == b"ok"
+    assert seen == [None, None]
+
+
 def test_rebinding_refused_at_connect(monkeypatch):
     """A host that passed the check but resolves to a private address when
     CKAN connects (DNS rebinding) gets nothing sent to it."""

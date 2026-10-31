@@ -128,6 +128,10 @@
     {% endif %}
   </div>
 {% endif %}
+{# Kept while fetching is off, so turning it back on doesn't undo an opt-out. #}
+{% if not thumbnail_fetch and data.no_auto_thumbnail in (true, 'true', 'True') %}
+  <input type="hidden" name="no_auto_thumbnail" value="true">
+{% endif %}
 
 <div class="form-group control-medium">
   <div class="form-check">

@@ -13,17 +13,24 @@ internal address. Every connection is therefore checked again once it's
 open, before anything is sent: its peer must be a public address too
 (_PublicAdapter). Through an egress proxy the peer is the proxy, which does
 the lookup itself, so that check doesn't apply there.
+
+Each fetch has a fresh session (no cookies kept) and, given a deadline, its
+direct connections are cut when it passes (_guarded), so a server can't
+hold CKAN by dripping its answer. Through a proxy, only the per-read
+timeout applies.
 """
 from __future__ import annotations
 
+import http.cookiejar
 import ipaddress
 import logging
 import re
 import socket
 import threading
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
+from typing import Any, Iterator, Mapping, Optional
 from urllib.parse import urljoin, urlsplit
 
 import requests
@@ -222,6 +229,7 @@ class _PublicHTTPConnection(HTTPConnection):
     def _new_conn(self):
         sock = super()._new_conn()
         _check_peer(sock)
+        _record(sock)
         return sock
 
 
@@ -229,6 +237,7 @@ class _PublicHTTPSConnection(HTTPSConnection):
     def _new_conn(self):
         sock = super()._new_conn()
         _check_peer(sock)
+        _record(sock)
         return sock
 
 
@@ -253,13 +262,53 @@ class _PublicAdapter(HTTPAdapter):
 _local = threading.local()
 
 
+def _record(sock: socket.socket) -> None:
+    fetch = getattr(_local, "fetch", None)
+    if fetch is not None:
+        fetch[1].append(sock)
+
+
+def _cut(sockets: list[socket.socket]) -> None:
+    # shutdown, not close: it wakes a read blocked in another thread.
+    for sock in list(sockets):
+        try:
+            sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+
+
+@contextmanager
+def _guarded(deadline: Optional[float]) -> Iterator[None]:
+    """One fetch, redirects included: a fresh session (no cookies kept
+    between fetches, no pooled connections), and at ``deadline`` every
+    direct connection it opened is cut, so a server that drips its answer
+    a byte at a time can't outlast the per-read timeout."""
+    session = requests.Session()
+    session.cookies.set_policy(http.cookiejar.DefaultCookiePolicy(allowed_domains=[]))
+    session.mount("http://", _PublicAdapter())
+    session.mount("https://", _PublicAdapter())
+    sockets: list[socket.socket] = []
+    previous = getattr(_local, "fetch", None)
+    _local.fetch = (session, sockets)
+    timer = None
+    if deadline is not None:
+        timer = threading.Timer(max(0.0, deadline - time.monotonic()), _cut, (sockets,))
+        timer.daemon = True
+        timer.start()
+    try:
+        yield
+    finally:
+        if timer is not None:
+            timer.cancel()
+        _local.fetch = previous
+        session.close()
+
+
 def _http_get(url: str, **kwargs: Any) -> requests.Response:
-    session = getattr(_local, "session", None)
-    if session is None:
-        session = _local.session = requests.Session()
-        session.mount("http://", _PublicAdapter())
-        session.mount("https://", _PublicAdapter())
-    return session.get(url, **kwargs)
+    fetch = getattr(_local, "fetch", None)
+    if fetch is None:
+        raise RuntimeError("_http_get outside _guarded")
+    return fetch[0].get(url, **kwargs)
 
 
 @dataclass(frozen=True)
@@ -282,7 +331,8 @@ def fetch_body(
     it) and read at most ``max_bytes`` of a 200 answer: more is None, or
     the first ``max_bytes`` with ``truncate``. None for every failure."""
     try:
-        return _fetch_body(url, deadline, max_bytes, user_agent, truncate)
+        with _guarded(deadline):
+            return _fetch_body(url, deadline, max_bytes, user_agent, truncate)
     except Exception:
         log.debug("webpageviewplus: fetch failed", exc_info=True)
         return None
@@ -351,7 +401,8 @@ def probe(
     """Fetch ``url``'s headers (no body) and judge them. ``deadline`` is a
     time.monotonic() value bounding the whole check, redirects included."""
     try:
-        return _probe(url, ckan, deadline)
+        with _guarded(deadline):
+            return _probe(url, ckan, deadline)
     except Exception:  # malformed redirects etc.: one answer for every failure
         log.debug("webpageviewplus: frameability check failed", exc_info=True)
         return Probe(UNKNOWN, problem="unreachable")
