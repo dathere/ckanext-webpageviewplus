@@ -220,10 +220,28 @@ def main():
         suggestion.get_by_role("button", name="Use them").click()
         page.wait_for_timeout(3000)
 
+        # 6. Thumbnails in the resource list (webpage_view_plus_thumbnails).
+        page.goto(B + "/dataset/wvp-features")
+        page.wait_for_timeout(800)
+        caption(page, "Thumbnails: a picked image, a page's own preview image, or the "
+                      "service's thumbnail or logo, instead of a format icon")
+        page.locator(".resource-list").scroll_into_view_if_needed()
+        page.mouse.wheel(0, -120)
+        page.wait_for_timeout(2200)
+        scroll(page, 1500, steps=60, pause=70)
+        page.wait_for_timeout(1500)
+        page.goto(B + "/dataset/wvp-schematics")
+        page.wait_for_timeout(800)
+        caption(page, "qsv Data Schematics with their static previews "
+                      "(qsv viz ... -o chart.png), each picked as its thumbnail")
+        page.locator(".resource-list").scroll_into_view_if_needed()
+        page.mouse.wheel(0, -120)
+        page.wait_for_timeout(4000)
+
         video = page.video.path()
         page.close()
 
-        # 6. Every well-known service, one short clip each.
+        # 7. Every well-known service, one short clip each.
         clips = []
         for n, (resource, title, label) in enumerate(services, 1):
             shot = ctx.new_page()

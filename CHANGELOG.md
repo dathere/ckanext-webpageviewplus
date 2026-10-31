@@ -25,6 +25,8 @@
   it's open, before sending anything, so a host whose DNS answer changes to an internal
   address after the check (DNS rebinding) is refused. Through an egress proxy, the proxy does
   the lookup.
+- The demo GIF shows thumbnails in the resource lists of the feature tour and the qsv Data
+  Schematics gallery.
 
 ## 0.5.0 (2026-10-30)
 
