@@ -40,6 +40,10 @@ def thumbnail_fetch() -> bool:
     return toolkit.asbool(_get("thumbnail_fetch"))
 
 
+def service_format() -> bool:
+    return toolkit.asbool(_get("service_format"))
+
+
 def editor_can_loosen() -> bool:
     return toolkit.asbool(_get("editor_can_loosen"))
 

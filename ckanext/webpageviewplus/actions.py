@@ -126,6 +126,7 @@ def thumbnails_view_create(
 ) -> dict[str, Any]:
     view = original(context, data_dict)
     thumbnails.after_save(view)
+    thumbnails.service_format(context, view)
     return view
 
 
@@ -135,6 +136,7 @@ def thumbnails_view_update(
 ) -> dict[str, Any]:
     view = original(context, data_dict)
     thumbnails.after_save(view)
+    thumbnails.service_format(context, view)
     return view
 
 

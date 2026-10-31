@@ -16,6 +16,8 @@
   `ckan webpageviewplus check-views` remakes thumbnails too, keeping a copy when remaking it fails.
 - With `thumbnail_fetch` on, YouTube, Datawrapper, Flourish, Tableau Public and Internet Archive
   views take the thumbnail each service publishes at a fixed address.
+- `ckanext.webpageviewplus.service_format` (off by default): saving a view on a resource whose
+  only view is a well-known service's sets an empty or `HTML` format to the service's name.
 
 ### Changed
 

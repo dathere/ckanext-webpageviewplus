@@ -86,14 +86,16 @@ order now being built:
      `ckan webpageviewplus connections`, `purge-stats` also purges them, and
      `show_connections` (default off: anyone can post a report) adds "This page connects to".
 
-9. In progress: thumbnails in the resource list (spec section "Proposed: thumbnails in the
+9. Done: thumbnails in the resource list (spec section "Proposed: thumbnails in the
    resource list"; its Build order gives the stages). Stage 1 done: the second plugin
    `webpage_view_plus_thumbnails`, the table (fourth migration), the route, the template
    override, editor-picked uploaded images (`thumbnail_resource`) and service logos and names.
    Stage 2 done: the fetch behind `thumbnail_fetch` (`og:image`/`twitter:image`, linked images,
    the per-view opt-out `no_auto_thumbnail`, `check-views` remaking copies). Stage 3 done:
    services' fixed thumbnail addresses (`services.thumbnail_address`: YouTube, Datawrapper,
-   Flourish, Tableau Public, Internet Archive; source `service:<url>`). Next: `service_format`.
+   Flourish, Tableau Public, Internet Archive; source `service:<url>`). Stage 4 done:
+   `service_format` (`thumbnails.service_format`, after each view save: `resource_patch`
+   with `ignore_auth`, only for an empty or HTML format and a resource's only view).
 
 ## The security model (read before touching frame, validator, content or download code)
 

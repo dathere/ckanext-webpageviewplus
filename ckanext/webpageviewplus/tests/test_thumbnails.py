@@ -586,3 +586,60 @@ class TestFetch:
         assert result.exception is None or isinstance(result.exception, SystemExit)
         assert thumbnails.stored(picked["id"])["digest"] == old
         assert thumbnails.stored(fetched["id"])["digest"] == kept  # the 503 keeps it
+
+
+# --- stage 4: service_format -------------------------------------------------
+
+
+def _format(resource):
+    return helpers.call_action("resource_show", id=resource["id"])["format"]
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus webpage_view_plus_thumbnails")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.ckan_config("ckanext.webpageviewplus.service_format", "true")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins", "counts_table", "local_storage")
+class TestServiceFormat:
+    @pytest.mark.parametrize("fmt", ["", "HTML", "html"])
+    def test_names_the_service(self, fmt):
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format=fmt)
+        view = _view(page["id"], page_url=YOUTUBE, preset="external")
+        assert _format(page) == "YouTube"
+        # The view survives the resource update.
+        assert helpers.call_action("resource_view_show", id=view["id"])["page_url"] == YOUTUBE
+
+    def test_from_the_resource_url(self):
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=DATAWRAPPER, format="")
+        _view(page["id"])
+        assert _format(page) == "Datawrapper"
+
+    def test_other_formats_kept(self):
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="CSV")
+        _view(page["id"], page_url=YOUTUBE, preset="external")
+        assert _format(page) == "CSV"
+
+    def test_only_with_one_view(self):
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        _view(page["id"])
+        _view(page["id"], page_url=YOUTUBE, preset="external")
+        assert _format(page) == "HTML"
+
+    def test_not_a_service(self):
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        _view(page["id"])
+        assert _format(page) == "HTML"
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus webpage_view_plus_thumbnails")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins", "counts_table", "local_storage")
+def test_service_format_off_by_default():
+    dataset = factories.Dataset()
+    page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+    _view(page["id"], page_url=YOUTUBE, preset="external")
+    assert _format(page) == "HTML"

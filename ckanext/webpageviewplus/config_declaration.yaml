@@ -76,6 +76,19 @@ groups:
           URLs, only those resolving to public addresses (at most 512 KB of a
           page, 2 MB of an image). Editors can turn it off per view.
 
+      - key: ckanext.webpageviewplus.service_format
+        default: false
+        type: bool
+        description: |
+          With the webpage_view_plus_thumbnails plugin: when a view is saved
+          on a resource whose only view shows a well-known service's page,
+          and whose format is empty or HTML, set the resource's format to the
+          service's name (YouTube, Datawrapper...), so the Formats facet can
+          list them. Off by default: format is published as DCAT's
+          dct:format, where profiles expect a media type, and it's in the
+          API. It never overwrites any other format, and isn't reverted if
+          the view changes later.
+
       - key: ckanext.webpageviewplus.editor_can_loosen
         default: false
         type: bool

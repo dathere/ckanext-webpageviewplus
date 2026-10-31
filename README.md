@@ -634,7 +634,8 @@ image comes from, first match wins:
 
 A resource with several Website (Plus) views uses the first one in view order. When a resource
 has exactly one view and it's a well-known service's, screen readers hear the service's name
-("YouTube") instead of the format; the resource's `format` itself isn't changed. Visitors only
+("YouTube") instead of the format; the resource's `format` itself isn't changed unless
+`service_format` is on (below). Visitors only
 ever load images from CKAN, never from the service, and a dataset page looks up all its
 resources' thumbnails in one query.
 
@@ -647,6 +648,13 @@ open, before anything is sent, so a host whose DNS answer changes to an internal
 between (DNS rebinding) gets nothing. Through an egress proxy (`HTTPS_PROXY`), the proxy looks
 up the address, so filtering internal addresses is up to it. Only PNG, JPEG, WebP and GIF are
 decoded, never SVG, and CKAN never serves the fetched bytes as they came.
+
+**Service names as formats.** With `ckanext.webpageviewplus.service_format = true` (off by
+default), saving a view on a resource whose only view is a well-known service's, and whose
+`format` is empty or `HTML`, sets `format` to the service's name. The Formats facet then lists
+them ("YouTube: 12"). It's off by default because `format` is also in the API and is published
+as DCAT's `dct:format`, where profiles expect a media type. It never overwrites any other
+format, and isn't undone if the view changes later.
 
 `ckan webpageviewplus check-views` remakes every Website (Plus) view's thumbnail too, so run
 from cron it picks up changed pages and images replaced through `package_update`. When
@@ -727,6 +735,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.controls` | `open fullscreen reload share` | Buttons in the control bar; empty hides it |
 | `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing, check pages when views are saved, and show a card for those that refuse. Makes CKAN request editor-typed URLs, see [Frameability check](#frameability-check) |
 | `ckanext.webpageviewplus.thumbnail_fetch` | `false` | With the `webpage_view_plus_thumbnails` plugin, fetch thumbnails when views are saved: the page's own preview image, and linked images editors pick. Makes CKAN request page and image URLs, see [Thumbnails in the resource list](#thumbnails-in-the-resource-list) |
+| `ckanext.webpageviewplus.service_format` | `false` | With the `webpage_view_plus_thumbnails` plugin, set an empty or `HTML` format to the service's name when a resource's only view is a well-known service's, see [Thumbnails in the resource list](#thumbnails-in-the-resource-list) |
 | `ckanext.webpageviewplus.color_scheme` | `auto` | `light` or `dark`: the colour scheme framed pages see (Firefox only so far) |
 | `ckanext.webpageviewplus.narrow_width` | `576` | View width, in px, below which aspect and viewport heights become 80% of the screen; `0` turns it off |
 | `ckanext.webpageviewplus.privacy_profile` | `default` | `eu` puts the consent card on every third-party page, whatever its preset |

@@ -473,6 +473,35 @@ def refresh_from(resource_id: str) -> None:
                         resource_id=view.resource_id))
 
 
+def service_format(context: dict[str, Any], view: dict[str, Any]) -> None:
+    """With service_format on: name the service in the resource's format
+    when a view is saved on a resource whose only view shows a well-known
+    service's page, and whose format is empty or HTML. Never overwrites
+    another format, never reverted, never fails the save."""
+    if view.get("view_type") != VIEW_TYPE or not settings.service_format():
+        return
+    try:
+        resource = model.Resource.get(view.get("resource_id"))
+        if resource is None or (resource.format or "").strip().lower() not in ("", "html"):
+            return
+        views = model.Session.query(model.ResourceView).filter(
+            model.ResourceView.resource_id == resource.id).count()
+        if views != 1:
+            return
+        found = services.suggest(view.get("page_url") or resource.url or "")
+        if found is None:
+            return
+        # The editor may already change this resource (adding views needs
+        # it); auth is skipped so a theme's stricter resource_update rules
+        # can't fail a save that already succeeded.
+        toolkit.get_action("resource_patch")(
+            {"user": context.get("user"), "ignore_auth": True},
+            {"id": resource.id, "format": found.service},
+        )
+    except Exception:
+        log.warning("webpageviewplus: setting the service's format failed", exc_info=True)
+
+
 def for_resource(pkg: dict[str, Any], res: dict[str, Any]) -> Optional[dict[str, Any]]:
     """What the resource list shows for ``res`` instead of CKAN's icon and
     format: ``src`` (an image, or None for the icon) and ``service`` (a
