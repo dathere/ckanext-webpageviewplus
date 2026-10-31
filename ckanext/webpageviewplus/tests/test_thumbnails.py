@@ -518,17 +518,12 @@ class TestFetch:
         assert thumbnails.stored(_view(page["id"])["id"]) is None
 
     def test_changed_page_url_hides_the_copy(self, app, web):
-        import ckan.model as model
-
         dataset = factories.Dataset()
         page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
         view = _view(page["id"])
         row = thumbnails.stored(view["id"])
-        # Changed without going through the actions, as a direct DB edit or a
-        # package_update would.
-        resource = model.Resource.get(page["id"])
-        resource.url = "https://pages.example.com/other.html"
-        model.Session.commit()
+        helpers.call_action("resource_patch", id=page["id"],
+                            url="https://pages.example.com/other.html")
         src = url_for("webpageviewplus_thumbnails.serve", view_id=view["id"],
                       v=row["digest"][:16])
         assert app.get(src, status=404)

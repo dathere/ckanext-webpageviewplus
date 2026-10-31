@@ -1,3 +1,4 @@
+import os
 import time
 
 import pytest
@@ -346,20 +347,18 @@ def test_dripped_headers_cut_at_the_deadline(local_server):
     assert time.monotonic() - start < 2.5
 
 
-def test_dripped_https_body_cut_at_the_deadline(monkeypatch, tmp_path):
+def test_dripped_https_body_cut_at_the_deadline(monkeypatch):
     """TLS wraps (and detaches) the socket the connection opened, so the
     cut must still reach the live connection."""
     import http.server
     import ssl
-    import subprocess
     import threading
 
-    cert, key = tmp_path / "cert.pem", tmp_path / "key.pem"
-    subprocess.run(
-        ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1",
-         "-subj", "/CN=127.0.0.1", "-addext", "subjectAltName=IP:127.0.0.1",
-         "-keyout", str(key), "-out", str(cert)],
-        check=True, capture_output=True)
+    # A self-signed certificate for 127.0.0.1 valid until 2126, for tests
+    # only (not every CKAN image has the openssl command to make one).
+    fixtures = os.path.join(os.path.dirname(__file__), "fixtures")
+    cert = os.path.join(fixtures, "test_tls_cert.pem")
+    key = os.path.join(fixtures, "test_tls_key.pem")
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):

@@ -94,6 +94,8 @@ def local_storage(tmp_path, ckan_config):
         "ckan.files.storage.wvp_local.type": "ckan:fs",
         "ckan.files.storage.wvp_local.path": str(tmp_path),
         "ckan.files.storage.wvp_local.initialize": True,
+        # Replacing a resource's upload writes to the same location.
+        "ckan.files.storage.wvp_local.overwrite_existing": True,
     }
     old = {key: ckan_config.get(key, _MISSING) for key in values}
     ckan_config.update(values)
