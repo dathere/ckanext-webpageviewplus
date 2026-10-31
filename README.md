@@ -654,7 +654,8 @@ default), saving a view on a resource whose only view is a well-known service's,
 `format` is empty or `HTML`, sets `format` to the service's name. The Formats facet then lists
 them ("YouTube: 12"). It's off by default because `format` is also in the API and is published
 as DCAT's `dct:format`, where profiles expect a media type. It never overwrites any other
-format, and isn't undone if the view changes later.
+format, and isn't undone if the view changes later. It's a resource update, so it shows in
+the dataset's activity stream and runs other plugins' resource hooks.
 
 `ckan webpageviewplus check-views` remakes every Website (Plus) view's thumbnail too, so run
 from cron it picks up changed pages and images replaced through `package_update`. When
