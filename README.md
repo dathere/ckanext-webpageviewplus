@@ -87,8 +87,8 @@ name. See [A separate domain for uploads](#a-separate-domain-for-uploads).
 3. Add `webpage_view_plus` to `ckan.plugins` in your CKAN config file (by default
    `/etc/ckan/default/ckan.ini`). Keep `webpage_view` enabled until you've migrated.
 
-4. Create the plugin's tables (used only by opt-in view counting, connection reports and the
-   frameability check, but run it anyway so turning those on later just works). Run it again after every upgrade:
+4. Create the plugin's tables (used only by opt-in view counting, connection reports, the
+   frameability check and thumbnails, but run it anyway so turning those on later just works). Run it again after every upgrade:
 
        ckan -c /etc/ckan/default/ckan.ini db upgrade -p webpage_view_plus
 
@@ -239,6 +239,12 @@ Uploads and CKAN's own pages never need it. See [Privacy and telemetry](#privacy
 **Count views.** With `view_counting = true` and a `privacy_policy_url`, editors can tick "Count
 visits" on a view. Only daily totals per view are kept, with nothing about the visitor, and the
 view says it counts visits. See [Opt-in view counting](#opt-in-view-counting).
+
+**Show thumbnails in the resource list.** Install with Pillow
+(`pip install ckanext-webpageviewplus[thumbnails]`) and add `webpage_view_plus_thumbnails` to
+`ckan.plugins` after `webpage_view_plus`. A dataset's resource list then shows a small image,
+instead of the format icon, beside each resource with a Website (Plus) view. See
+[Thumbnails in the resource list](#thumbnails-in-the-resource-list).
 
 **See what uploaded pages contact.** With `connection_reports = true` and a content origin,
 CKAN notes which other sites uploaded pages fetch from (map tiles, a CDN), and
@@ -585,6 +591,36 @@ has a problem, so it fits a cron job that mails its output.
 
 It also saves each `webpage_view_plus` view's answer, which with `frameability_check` on decides
 which views show the "doesn't allow" card.
+
+### Thumbnails in the resource list
+
+The `webpage_view_plus_thumbnails` plugin replaces the format icon in a dataset's resource
+list for resources with a Website (Plus) view. It's a plugin of its own, so a site that
+doesn't enable it never loads its override of `package/snippets/resource_item.html` (the
+`resource_item_title` block), which could clash with a theme's. It needs Pillow
+(`pip install ckanext-webpageviewplus[thumbnails]`), and CKAN won't start without it. The
+image comes from, first match wins:
+
+1. **An image the editor picks** in the view form ("Thumbnail in the resource list"): a PNG,
+   JPEG, WebP or GIF uploaded to the same dataset. When the view is saved, CKAN reads it from
+   its storage, shrinks it to fit 320 x 180, drops its metadata and stores it as a small JPEG
+   in the database (table `webpage_view_plus_thumbnails`). It's served from
+   `/webpageviewplus/thumbnail/<view_id>` to whoever may see the dataset. Uploads on a
+   2.12 cloud storage can't be read yet, so they get no thumbnail. A good source for qsv Data
+   Schematics is their static image export (`viz_static`), uploaded as a second resource.
+2. **The service's logo**, when the resource has only this one view and its address is a
+   [well-known service](#well-known-services-recognised-links)'s. The logos ship with the
+   extension (from [Simple Icons](https://simpleicons.org/) 16.36.0, CC0; each brand's
+   trademark rules still apply). Datawrapper, Flourish, Tableau Public, Power BI, Our World
+   in Data, shinyapps.io, Infogram, Felt and uMap have none there, so they keep the format
+   icon. Looker Studio shows Looker's logo.
+3. Otherwise CKAN's format icon stays.
+
+A resource with several Website (Plus) views uses the first one in view order. When a resource
+has exactly one view and it's a well-known service's, screen readers hear the service's name
+("YouTube") instead of the format; the resource's `format` itself isn't changed. Visitors only
+ever load images from CKAN, never from the service, and a dataset page looks up all its
+resources' thumbnails in one query.
 
 ### Privacy and telemetry
 

@@ -611,6 +611,35 @@ NAMES: tuple[str, ...] = (
 )
 
 
+# Logos for the resource list (webpage_view_plus_thumbnails), by the name
+# suggest() gives a view's stored embed URL, as files in
+# public/webpageviewplus/logos/. They're Simple Icons 16.36.0 (CC0; each brand's
+# trademark rules still apply), with the brand colour as their fill. Services
+# missing here have no Simple Icons logo, and keep CKAN's format icon.
+LOGOS: dict[str, str] = {
+    "YouTube": "youtube",
+    "Vimeo": "vimeo",
+    "Observable": "observable",
+    "ArcGIS StoryMaps": "arcgis",
+    "ArcGIS Online": "arcgis",
+    "CARTO": "carto",
+    "Plotly Cloud": "plotly",
+    "Google Forms": "googleforms",
+    "Typeform": "typeform",
+    # Simple Icons has Looker's logo only, close enough for Looker Studio.
+    "Looker Studio": "looker",
+    "Google Sheets": "googlesheets",
+    "Google Docs": "googledocs",
+    "Google Slides": "googleslides",
+    "Streamlit": "streamlit",
+    "Hugging Face Spaces": "huggingface",
+    "OpenStreetMap": "openstreetmap",
+    "Internet Archive": "internetarchive",
+    "Sketchfab": "sketchfab",
+    "Jupyter": "jupyter",
+}
+
+
 def suggest(url: str) -> Optional[Suggestion]:
     """The embed settings for a well-known service's page, or None."""
     try:

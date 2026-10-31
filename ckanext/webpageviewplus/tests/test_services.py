@@ -269,6 +269,29 @@ def test_names_cover_every_service():
     assert seen == set(services.NAMES)
 
 
+def test_stored_embed_urls_are_recognised():
+    # The resource list names a view's service from its stored embed URL.
+    # Colab pages are embedded through nbviewer, so they show as Jupyter.
+    for url in RECOGNISED:
+        found = services.suggest(url)
+        again = services.suggest(found.embed_url)
+        expected = "Jupyter" if found.service == "Google Colab" else found.service
+        assert again is not None and again.service == expected, url
+
+
+def test_logos_ship_for_named_services():
+    import os
+
+    logos = os.path.join(
+        os.path.dirname(services.__file__), "public", "webpageviewplus", "logos")
+    assert set(services.LOGOS) <= set(services.NAMES)
+    for slug in services.LOGOS.values():
+        with open(os.path.join(logos, slug + ".svg")) as f:
+            svg = f.read()
+        assert svg.startswith("<svg fill=\"#") and "<script" not in svg.lower()
+    assert sorted(f[:-4] for f in os.listdir(logos)) == sorted(set(services.LOGOS.values()))
+
+
 def test_embed_urls_carry_no_input_text():
     # Only validated ids reach the embed URL.
     found = services.suggest("https://vimeo.com/76979871/x\"><script>")

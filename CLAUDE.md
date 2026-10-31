@@ -86,6 +86,13 @@ order now being built:
      `ckan webpageviewplus connections`, `purge-stats` also purges them, and
      `show_connections` (default off: anyone can post a report) adds "This page connects to".
 
+9. In progress: thumbnails in the resource list (spec section "Proposed: thumbnails in the
+   resource list"; its Build order gives the stages). Stage 1 done: the second plugin
+   `webpage_view_plus_thumbnails`, the table (fourth migration), the route, the template
+   override, editor-picked uploaded images (`thumbnail_resource`) and service logos and names.
+   Next: the fetch behind `thumbnail_fetch` (`og:image`, linked images, `auto_thumbnail`), then
+   services' fixed thumbnail addresses, then `service_format`.
+
 ## The security model (read before touching frame, validator, content or download code)
 
 - **Invariant:** while uploaded HTML could still run on CKAN's origin, no frame may let scripts
@@ -215,6 +222,24 @@ order now being built:
   action) still collapses every failure to "unknown"; `probe()` keeps status and failure kind
   for `ckan webpageviewplus check-views` (`cli.assess`), which also covers core `webpage_view`
   views, fetches each URL once, stores answers for plus views, and exits 1 on any problem.
+- `thumbnails.py` + `WebpageviewplusThumbnailsPlugin` (`plugin.py`): thumbnails in the
+  dataset page's resource list. A plugin of its own (needs Pillow, the `[thumbnails]` extra;
+  `configure` refuses to start without it or without `webpage_view_plus`), so sites that don't
+  enable it never load `thumbnail_templates/package/snippets/resource_item.html`. That override
+  keeps each CKAN version's own `resource_item_title` markup (`super()`) and swaps only the
+  `format-label` span (`replace_format_label`). Keep the folder's name from starting with
+  `templates`: `ckan_extends` matches search paths by string prefix. The plugin chains
+  `resource_view_create`/`_update` (`actions.thumbnails_view_*`) to make a copy at save
+  (`after_save`, never failing the save): Pillow decodes PNG/JPEG/GIF/WebP only, by the bytes,
+  first frame, pixel cap, and re-encodes a JPEG within 320 x 180, stored per view with its
+  `source` (`resource:<id>`); a copy counts only while the view's config still asks for that
+  source. `thumbnail_resource` is in the main schema, and `view_after_validator` refuses an
+  image outside the view's dataset, because `/webpageviewplus/thumbnail/<view_id>` authorises
+  against the view's dataset. Uploads are read through `content.local_path` (filesystem
+  storages only). Rendering does one query per dataset (`_views`, cached on `g`), which reads
+  every view type, since logos and names need the resource's only view to be a known
+  service's. Logos are Simple Icons SVGs in `public/webpageviewplus/logos/`, named in
+  `services.LOGOS` by the name `suggest()` gives a stored embed URL.
 - `tests/fixtures/qsv_protocol.html` speaks the qsv messages. It's uploaded to the `wvp-demo`
   dataset with three views (`data-schematic` auto, `interactive` auto, `interactive` fixed),
   for browser checks with Playwright (`uv run --with playwright`, system Chrome via
@@ -265,8 +290,8 @@ CKAN 2.11.5, http://localhost:5001.
   points at an empty directory and ckan-dev crash-loops with `Plugin 'webpage_view_plus' not found`.
   Fix: switch ckan-docker back to `local/dev-mounts` (or remove the plugin from `.env`), then run
   `docker compose -f docker-compose.dev.yml up -d ckan-dev`.
-- `webpage_view_plus` is in `CKAN__PLUGINS` in ckan-docker's `.env` (before `envvars`, which must
-  stay last).
+- `webpage_view_plus webpage_view_plus_thumbnails` are in `CKAN__PLUGINS` in ckan-docker's `.env`
+  (before `envvars`, which must stay last).
 - The dev site runs with a content origin: `CKANEXT__WEBPAGEVIEWPLUS__CONTENT_ORIGIN=http://127.0.0.1:5001`
   and a `..._SIGNING_SECRET` in ckan-docker's `.env` (read by the `envvars` plugin). Browsers
   treat `localhost` and `127.0.0.1` as different sites, so this exercises real isolation with no

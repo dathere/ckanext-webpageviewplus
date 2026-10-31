@@ -16,6 +16,7 @@ from ckanext.webpageviewplus import (
     services,
     settings,
     stats,
+    thumbnails,
 )
 
 
@@ -114,6 +115,26 @@ def resource_view_update(
 ) -> dict[str, Any]:
     view = original(context, data_dict)
     health.after_save(view)
+    return view
+
+
+# The webpage_view_plus_thumbnails plugin's own chain, so its copies are made
+# only when it's enabled.
+@toolkit.chained_action
+def thumbnails_view_create(
+    original: Any, context: Context, data_dict: dict[str, Any]
+) -> dict[str, Any]:
+    view = original(context, data_dict)
+    thumbnails.after_save(view)
+    return view
+
+
+@toolkit.chained_action
+def thumbnails_view_update(
+    original: Any, context: Context, data_dict: dict[str, Any]
+) -> dict[str, Any]:
+    view = original(context, data_dict)
+    thumbnails.after_save(view)
     return view
 
 

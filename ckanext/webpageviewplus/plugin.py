@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
 from ckan.common import CKANConfig
+from ckan.exceptions import CkanConfigurationException
 from ckan.lib.plugins import DefaultTranslation
 from ckan.types import Context
 from flask import Blueprint, Response, g, has_request_context, request
@@ -22,6 +23,7 @@ from ckanext.webpageviewplus import (
     frame,
     services,
     settings,
+    thumbnails,
     validators as v,
 )
 from ckanext.webpageviewplus.frame import is_http_url  # noqa: F401 (re-export)
@@ -150,6 +152,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
                 "hide_controls": [ignore_missing, boolean_validator],
                 "consent_gate": [ignore_missing, boolean_validator],
                 "count_views": [ignore_missing, boolean_validator],
+                # Used by webpage_view_plus_thumbnails; checked in __after.
+                "thumbnail_resource": [ignore_empty, unicode_safe],
                 "__after": [v.view_after_validator],
             },
             "iframed": False,
@@ -193,6 +197,11 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             "allowed_hosts": settings.allowed_hosts(),
             "service_names": services.NAMES,
             "view_counting": settings.view_counting(),
+            # The images this view may use, when thumbnails are on.
+            "thumbnail_choices": (
+                thumbnails.choices(data_dict.get("package"))
+                if thumbnails.enabled() else None
+            ),
             # Only the view's edit form shows them.
             "view_counts": (
                 stats.totals_or_none(resource_view["id"], 30)
@@ -358,3 +367,55 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
 
     def form_template(self, context: Context, data_dict: dict[str, Any]) -> str:
         return "webpageviewplus/form.html"
+
+
+class WebpageviewplusThumbnailsPlugin(plugins.SingletonPlugin):
+    """Thumbnails in the dataset page's resource list for resources with a
+    Website (Plus) view (thumbnails.py). A plugin of its own, so a site that
+    doesn't enable it never loads the resource_item.html override."""
+
+    plugins.implements(plugins.IConfigurer)
+    plugins.implements(plugins.IConfigurable)
+    plugins.implements(plugins.IBlueprint)
+    plugins.implements(plugins.IActions)
+    plugins.implements(plugins.ITemplateHelpers)
+
+    # IConfigurer
+
+    def update_config(self, config_: CKANConfig):
+        toolkit.add_template_directory(config_, "thumbnail_templates")
+
+    # IConfigurable
+
+    def configure(self, config_: CKANConfig):
+        if not plugins.plugin_loaded("webpage_view_plus"):
+            raise CkanConfigurationException(
+                "webpage_view_plus_thumbnails needs the webpage_view_plus plugin: "
+                "add it to ckan.plugins before webpage_view_plus_thumbnails")
+        try:
+            import PIL  # noqa: F401
+        except ImportError:
+            raise CkanConfigurationException(
+                "webpage_view_plus_thumbnails needs Pillow: "
+                "pip install ckanext-webpageviewplus[thumbnails]")
+
+    # IBlueprint
+
+    def get_blueprint(self):
+        return [thumbnails.thumbnail]
+
+    # IActions
+
+    def get_actions(self):
+        return {
+            "resource_view_create": actions.thumbnails_view_create,
+            "resource_view_update": actions.thumbnails_view_update,
+        }
+
+    # ITemplateHelpers
+
+    def get_helpers(self):
+        return {
+            "webpageviewplus_thumbnail": thumbnails.for_resource,
+            "webpageviewplus_replace_format_label": thumbnails.replace_format_label,
+        }

@@ -8,7 +8,7 @@ import ckan.plugins.toolkit as toolkit
 from ckan.lib.navl.dictization_functions import missing
 from ckan.types import Context, FlattenDataDict, FlattenErrorDict, FlattenKey
 
-from ckanext.webpageviewplus import content, frame, settings
+from ckanext.webpageviewplus import content, frame, settings, thumbnails
 
 ADVANCED_FIELDS = ("sandbox", "allow", "referrer_policy")
 
@@ -116,6 +116,23 @@ def view_after_validator(
                 data[(name,)] = stored_config[name]
             else:
                 data.pop((name,), None)
+
+    # The thumbnail route answers to whoever may see the view's dataset, so
+    # the picked image must be in that dataset too.
+    picked = _get(data, "thumbnail_resource")
+    if picked:
+        resource = _resource(data)
+        image = model.Resource.get(picked)
+        if (
+            resource is None or image is None or image.state != "active"
+            or image.package_id != resource.package_id
+            or not thumbnails.is_image_upload(content.resource_dict(image))
+        ):
+            _add_error(
+                errors,
+                "thumbnail_resource",
+                toolkit._("Choose an image uploaded to this dataset"),
+            )
 
     if any(errors.get((name,)) for name in ("page_url", "preset", "sandbox")):
         return

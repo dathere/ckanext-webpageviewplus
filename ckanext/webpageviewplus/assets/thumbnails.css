@@ -1,0 +1,44 @@
+/* The resource list's thumbnails (webpage_view_plus_thumbnails). CKAN puts
+   its format icon in a 60px gutter; a thumbnail needs a wider one, and the
+   whole list takes it so the names stay in line. */
+.resource-list:has(.webpageviewplus-thumbnail) .resource-item {
+  padding-left: 106px;
+}
+.resource-list:has(.webpageviewplus-thumbnail) .resource-item .format-label {
+  left: 34px;
+}
+[dir="rtl"] .resource-list:has(.webpageviewplus-thumbnail) .resource-item {
+  padding-left: 10px;
+  padding-right: 106px;
+}
+.resource-item .webpageviewplus-thumbnail {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 80px;
+  height: 45px;
+}
+[dir="rtl"] .resource-list:has(.webpageviewplus-thumbnail) .resource-item .format-label {
+  left: auto;
+  right: 34px;
+}
+[dir="rtl"] .resource-item .webpageviewplus-thumbnail {
+  left: auto;
+  right: 10px;
+}
+.resource-item .webpageviewplus-thumbnail img {
+  display: block;
+  width: 80px;
+  height: 45px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+/* Read by screen readers, like CKAN's own format label. */
+.resource-item .webpageviewplus-format {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

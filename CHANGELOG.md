@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Thumbnails in the resource list, a second plugin (`webpage_view_plus_thumbnails`) needing
+  Pillow (`pip install ckanext-webpageviewplus[thumbnails]`). A resource with a Website (Plus)
+  view shows an image an editor picked from the dataset's uploaded images (stored small, in a
+  new table: run `ckan db upgrade -p webpage_view_plus`), or, when its only view is a
+  well-known service's, that service's logo (from Simple Icons, for 20 of the 29 services) and name.
+
 ## 0.5.0 (2026-10-30)
 
 ### Added

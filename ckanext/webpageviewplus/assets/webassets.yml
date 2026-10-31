@@ -8,3 +8,8 @@ webpageviewplus-js:
   output: ckanext-webpageviewplus/%(version)s-webpageviewplus.js
   contents:
     - webpageviewplus.js
+
+thumbnails-css:
+  output: ckanext-webpageviewplus/%(version)s-thumbnails.css
+  contents:
+    - thumbnails.css
