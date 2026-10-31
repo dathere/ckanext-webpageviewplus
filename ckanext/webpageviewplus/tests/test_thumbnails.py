@@ -331,6 +331,7 @@ class TestConfigure:
 # --- stage 2: fetching (thumbnail_fetch) ------------------------------------
 
 LINKED = "https://img.example.com/chart.png"
+YOUTUBE_IMAGE = "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg"
 OG = "https://cdn.example.com/og.png"
 LOOKER = ("https://lookerstudio.google.com/embed/reporting/"
           "e1efb265-1581-4bfe-961c-e7c3b1795208/page/kIV1C")
@@ -363,7 +364,8 @@ def dns(monkeypatch):
     from ckanext.webpageviewplus import frameability as fa
 
     table = {"pages.example.com": ["93.184.216.34"], "cdn.example.com": ["93.184.216.35"],
-             "img.example.com": ["93.184.216.36"], "internal.example.com": ["10.0.0.5"]}
+             "img.example.com": ["93.184.216.36"], "internal.example.com": ["10.0.0.5"],
+             "i.ytimg.com": ["93.184.216.37"]}
     monkeypatch.setattr(fa, "_resolve", lambda host, port: table.get(host, []))
     return table
 
@@ -380,6 +382,8 @@ def web(dns):
                  content_type="text/html; charset=utf-8")
         mock.get(OG, body=_png(), content_type="image/png")
         mock.get(LINKED, body=_png(color=(0, 0, 200, 255)), content_type="image/png")
+        mock.get(YOUTUBE_IMAGE, body=_png(size=(320, 180), color=(0, 200, 0, 255)),
+                 content_type="image/jpeg")
         yield mock
 
 
@@ -432,6 +436,22 @@ class TestFetch:
         src = url_for("webpageviewplus_thumbnails.serve", view_id=view["id"],
                       v=row["digest"][:16])
         assert 'src="{}"'.format(src.replace("&", "&amp;")) in _page(app, dataset)
+        assert app.get(src).data == row["image"]
+
+    def test_service_fixed_address(self, app, web):
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        view = _view(page["id"], page_url=YOUTUBE, preset="external")
+        row = thumbnails.stored(view["id"])
+        assert row["source"] == "service:" + YOUTUBE
+        with Image.open(io.BytesIO(row["image"])) as im:
+            assert im.getpixel((10, 10))[1] > 150  # the green test image
+        assert [c.request.url for c in web.calls] == [YOUTUBE_IMAGE]  # no page fetched
+        src = url_for("webpageviewplus_thumbnails.serve", view_id=view["id"],
+                      v=row["digest"][:16])
+        body = _page(app, dataset)
+        assert 'src="{}"'.format(src.replace("&", "&amp;")) in body
+        assert "logos/youtube.svg" not in body  # beats the logo
         assert app.get(src).data == row["image"]
 
     def test_opting_out_drops_the_copy(self, app, web):

@@ -397,3 +397,28 @@ def test_form_has_suggestion_region(app):
     assert "data-webpageviewplus-service" in body
     assert "webpageviewplus_service_suggest" in body
     assert 'data-preset-names="{&#34;' in body
+
+
+@pytest.mark.parametrize("url,expected", [
+    ("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90",
+     "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg"),
+    ("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+     "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg"),
+    ("https://datawrapper.dwcdn.net/XSj9X/3/", "https://datawrapper.dwcdn.net/XSj9X/plain.png"),
+    ("https://flo.uri.sh/visualisation/11597006/embed",
+     "https://public.flourish.studio/visualisation/11597006/thumbnail"),
+    ("https://public.tableau.com/app/profile/someone/viz/RegionalSampleWorkbook/Storms",
+     "https://public.tableau.com/static/images/Re/RegionalSampleWorkbook/Storms/1.png"),
+    ("https://archive.org/details/adventuresoftoms00twaiiala",
+     "https://archive.org/services/img/adventuresoftoms00twaiiala"),
+    ("https://vimeo.com/76979871", None),
+    ("https://pages.example.com/a.html", None),
+    # Only ids suggest() checked reach the address.
+    ("https://www.youtube.com/watch?v=../../evil", None),
+])
+def test_thumbnail_address(url, expected):
+    assert services.thumbnail_address(url) == expected
+
+
+def test_thumbnail_services_are_named():
+    assert set(services._THUMBNAILS) <= set(services.NAMES)

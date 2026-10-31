@@ -648,6 +648,34 @@ LOGOS: dict[str, str] = {
 GENERIC_PREVIEWS: frozenset[str] = frozenset({"Power BI", "Looker Studio", "Typeform"})
 
 
+def _parts(embed_url: str) -> list[str]:
+    return urlsplit(embed_url).path.strip("/").split("/")
+
+
+# A service's fixed thumbnail address, built from the embed URL suggest()
+# gives (so from ids it already checked). Each was checked 2026-10-31 on a
+# real embed. Vimeo has none of its own (only its oEmbed API).
+_THUMBNAILS: dict[str, Callable[[list[str]], str]] = {
+    # 320 x 180, 16:9 with no letterbox bars.
+    "YouTube": lambda p: "https://i.ytimg.com/vi/{}/mqdefault.jpg".format(p[1]),
+    # The chart alone, without its title and notes.
+    "Datawrapper": lambda p: "https://datawrapper.dwcdn.net/{}/plain.png".format(p[0]),
+    "Flourish": lambda p: "https://public.flourish.studio/visualisation/{}/thumbnail".format(p[1]),
+    "Tableau Public": lambda p: "https://public.tableau.com/static/images/{}/{}/{}/1.png".format(
+        p[1][:2], p[1], p[2]),
+    "Internet Archive": lambda p: "https://archive.org/services/img/" + p[1],
+}
+
+
+def thumbnail_address(url: str) -> Optional[str]:
+    """The fixed thumbnail address of a well-known service's page or embed
+    URL, for the services that have one, else None."""
+    found = suggest(url)
+    if found is None or found.service not in _THUMBNAILS:
+        return None
+    return _THUMBNAILS[found.service](_parts(found.embed_url))
+
+
 def suggest(url: str) -> Optional[Suggestion]:
     """The embed settings for a well-known service's page, or None."""
     try:

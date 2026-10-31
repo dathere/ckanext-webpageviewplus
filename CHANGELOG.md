@@ -14,6 +14,8 @@
   images an editor picks, fetched once when the view is saved, with the frameability check's
   guards. Editors can opt a view out ("Don't use the page's own preview image").
   `ckan webpageviewplus check-views` remakes thumbnails too, keeping a copy when remaking it fails.
+- With `thumbnail_fetch` on, YouTube, Datawrapper, Flourish, Tableau Public and Internet Archive
+  views take the thumbnail each service publishes at a fixed address.
 
 ### Changed
 

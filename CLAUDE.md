@@ -91,8 +91,9 @@ order now being built:
    `webpage_view_plus_thumbnails`, the table (fourth migration), the route, the template
    override, editor-picked uploaded images (`thumbnail_resource`) and service logos and names.
    Stage 2 done: the fetch behind `thumbnail_fetch` (`og:image`/`twitter:image`, linked images,
-   the per-view opt-out `no_auto_thumbnail`, `check-views` remaking copies). Next: services'
-   fixed thumbnail addresses (YouTube's `i.ytimg.com`...), then `service_format`.
+   the per-view opt-out `no_auto_thumbnail`, `check-views` remaking copies). Stage 3 done:
+   services' fixed thumbnail addresses (`services.thumbnail_address`: YouTube, Datawrapper,
+   Flourish, Tableau Public, Internet Archive; source `service:<url>`). Next: `service_format`.
 
 ## The security model (read before touching frame, validator, content or download code)
 
@@ -246,7 +247,9 @@ order now being built:
   only), source `page:<url>` for the URL `health.third_party_url` gives, so uploads and CKAN's
   own pages are never fetched, and a changed URL hides the copy. `source_for` decides what a
   copy must have been made from, and `after_save`, `for_resource` and `serve` must all go
-  through it. Services whose preview image is only their logo are in
+  through it. A service with a fixed thumbnail address (`services._THUMBNAILS`, built from the
+  embed URL `suggest()` checked) gets source `service:<url>` instead, and its page isn't
+  fetched; check a new one's address on a real embed. Services whose preview image is only their logo are in
   `services.GENERIC_PREVIEWS` (found by fetching each one's stored embed URL). Fetches use
   `frameability.fetch_body`: the probe's guards plus a byte cap counted while reading. Every
   failure is "no copy"; `check-views` passes `keep=True` so a copy whose source is unchanged

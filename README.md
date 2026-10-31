@@ -614,8 +614,11 @@ image comes from, first match wins:
    no thumbnail. A good source for qsv Data Schematics is their static image export
    (`viz_static`), uploaded as a second resource.
 2. **The page's own preview image**, with `ckanext.webpageviewplus.thumbnail_fetch = true`
-   (off by default): the image another site's page names for link previews (`og:image`, then
-   `twitter:image`), fetched once when the view is saved and stored the same way. Uploads and
+   (off by default), fetched once when the view is saved and stored the same way. For YouTube,
+   Datawrapper, Flourish, Tableau Public and Internet Archive it's the image each service
+   publishes at a fixed address (YouTube's `i.ytimg.com/vi/<id>/mqdefault.jpg`, Datawrapper's
+   `plain.png`...), so the page itself isn't fetched. Otherwise it's the image the page names
+   for link previews (`og:image`, then `twitter:image`). Uploads and
    CKAN's own pages aren't fetched. Power BI, Looker Studio and Typeform name only their own
    logo or a stock image, so they're skipped. An editor can tick "Don't use the page's own
    preview image" on a view. A copy counts only for the address it was taken from: when a

@@ -10,10 +10,11 @@ Where the image comes from, first match wins:
 1. An image the editor picked: an image resource in the same dataset. An
    upload is read from CKAN's storage; a linked image is fetched (only
    with thumbnail_fetch on).
-2. With thumbnail_fetch on and the view's no_auto_thumbnail unticked: the
-   page's own preview image (og:image, then twitter:image), for another
-   site's page, unless its service's is only a logo
-   (services.GENERIC_PREVIEWS).
+2. With thumbnail_fetch on and the view's no_auto_thumbnail unticked, for
+   another site's page: a well-known service's fixed thumbnail address
+   (services.thumbnail_address: YouTube, Datawrapper...), else the page's
+   own preview image (og:image, then twitter:image), unless its service's
+   is only a logo (services.GENERIC_PREVIEWS).
 3. The service's logo, when the resource has only this view and its URL is
    a well-known service's (services.LOGOS, shipped with the package).
 
@@ -144,8 +145,9 @@ def auto(config: dict[str, Any]) -> bool:
 
 def source_for(config: dict[str, Any], resource_url: str, url_type: str) -> Optional[str]:
     """What a view's stored copy must have been made from to count:
-    ``resource:<id>`` (a picked image) or ``page:<url>`` (the preview image
-    of the page the view frames, while fetching is allowed)."""
+    ``resource:<id>`` (a picked image), or, while fetching is allowed, for
+    the page the view frames: ``service:<url>`` (its service's fixed
+    thumbnail address) or ``page:<url>`` (its preview image)."""
     picked = config.get("thumbnail_resource")
     if picked:
         return "resource:" + picked
@@ -154,6 +156,8 @@ def source_for(config: dict[str, Any], resource_url: str, url_type: str) -> Opti
     url = health.third_party_url(config.get("page_url") or "", resource_url or "", url_type or "")
     if not url:
         return None
+    if services.thumbnail_address(url):
+        return "service:" + url
     found = services.suggest(url)
     if found and found.service in services.GENERIC_PREVIEWS:
         return None
@@ -307,6 +311,11 @@ def _make(
         key, fetch = ("image", picked_dict["url"]), fetch_image
     elif kind == "page":
         key, fetch = ("page", ref), page_image
+    elif kind == "service":
+        address = services.thumbnail_address(ref)
+        if not address:
+            return None
+        key, fetch = ("image", address), fetch_image
     else:
         return None
     if memo is not None and key in memo:
@@ -433,7 +442,7 @@ def _source_active(source: str, pkg: Optional[dict[str, Any]] = None) -> bool:
     query. Page sources need nothing more than source_for."""
     kind, _, picked = source.partition(":")
     if kind != "resource":
-        return kind == "page"
+        return kind in ("page", "service")
     resources = (pkg or {}).get("resources")
     if resources is not None:
         image = next((r for r in resources if r.get("id") == picked), None)
