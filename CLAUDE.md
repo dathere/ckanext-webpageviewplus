@@ -90,8 +90,9 @@ order now being built:
    resource list"; its Build order gives the stages). Stage 1 done: the second plugin
    `webpage_view_plus_thumbnails`, the table (fourth migration), the route, the template
    override, editor-picked uploaded images (`thumbnail_resource`) and service logos and names.
-   Next: the fetch behind `thumbnail_fetch` (`og:image`, linked images, `auto_thumbnail`), then
-   services' fixed thumbnail addresses, then `service_format`.
+   Stage 2 done: the fetch behind `thumbnail_fetch` (`og:image`/`twitter:image`, linked images,
+   the per-view opt-out `no_auto_thumbnail`, `check-views` remaking copies). Next: services'
+   fixed thumbnail addresses (YouTube's `i.ytimg.com`...), then `service_format`.
 
 ## The security model (read before touching frame, validator, content or download code)
 
@@ -180,7 +181,9 @@ order now being built:
 - `frameability.py` + `actions.py`: `webpageviewplus_frameability`, a `side_effect_free` action
   the form calls by GET as the editor types (never in the view validator, which runs before
   CKAN's auth check). Its auth requires `resource_view_create` on the resource. It's off unless
-  `frameability_check` is set. The SSRF guards are documented at the top of `frameability.py`;
+  `frameability_check` is set. The SSRF guards are documented at the top of `frameability.py`
+  (every direct connection's peer address is checked once it's open, `_PublicAdapter`, against
+  DNS rebinding; through an egress proxy the proxy does the lookup);
   every failure must stay the same "unknown" verdict. The header rules follow browsers:
   `frame-ancestors` overrides `X-Frame-Options`, `ALLOW-FROM` is ignored, and `SAMEORIGIN` and
   `'self'` count as blocked.
@@ -236,9 +239,19 @@ order now being built:
   source and the picked image is still in the dataset (`_picked_active`, on render and in the
   route). `resource_update`/`resource_delete` are chained too (`refresh_from`), so a replaced
   image remakes its copies and a deleted one drops them. Not `package_update`/`package_revise`:
-  an image re-uploaded through them keeps its old copy until the view is saved (stage 2's
-  `check-views` refresh should cover it; chaining `package_update` would re-encode on every
-  dataset edit). `thumbnail_resource` is in the main schema, and `view_after_validator` refuses an
+  an image re-uploaded through them keeps its old copy until the view is saved or
+  `check-views` runs (chaining `package_update` would re-encode on every dataset edit).
+  With `thumbnail_fetch` on (stage 2), a linked picked image is fetched, and a view with no
+  pick takes its page's preview image (`og:image`, then `twitter:image`, from the `<head>`
+  only), source `page:<url>` for the URL `health.third_party_url` gives, so uploads and CKAN's
+  own pages are never fetched, and a changed URL hides the copy. `source_for` decides what a
+  copy must have been made from, and `after_save`, `for_resource` and `serve` must all go
+  through it. Services whose preview image is only their logo are in
+  `services.GENERIC_PREVIEWS` (found by fetching each one's stored embed URL). Fetches use
+  `frameability.fetch_body`: the probe's guards plus a byte cap counted while reading. Every
+  failure is "no copy"; `check-views` passes `keep=True` so a copy whose source is unchanged
+  survives a failed refresh. The per-view opt-out is `no_auto_thumbnail`, not the spec's
+  `auto_thumbnail`, because an unticked checkbox sends nothing (as with `hide_controls`). `thumbnail_resource` is in the main schema, and `view_after_validator` refuses an
   image outside the view's dataset, because `/webpageviewplus/thumbnail/<view_id>` authorises
   against the view's dataset. Uploads are read through `content.local_path` (filesystem
   storages only). Rendering does one query per dataset (`_views`, cached on `g`), which reads
@@ -296,7 +309,7 @@ CKAN 2.11.5, http://localhost:5001.
   Fix: switch ckan-docker back to `local/dev-mounts` (or remove the plugin from `.env`), then run
   `docker compose -f docker-compose.dev.yml up -d ckan-dev`.
 - `webpage_view_plus webpage_view_plus_thumbnails` are in `CKAN__PLUGINS` in ckan-docker's `.env`
-  (before `envvars`, which must stay last).
+  (before `envvars`, which must stay last), and `CKANEXT__WEBPAGEVIEWPLUS__THUMBNAIL_FETCH=true`.
 - The dev site runs with a content origin: `CKANEXT__WEBPAGEVIEWPLUS__CONTENT_ORIGIN=http://127.0.0.1:5001`
   and a `..._SIGNING_SECRET` in ckan-docker's `.env` (read by the `envvars` plugin). Browsers
   treat `localhost` and `127.0.0.1` as different sites, so this exercises real isolation with no

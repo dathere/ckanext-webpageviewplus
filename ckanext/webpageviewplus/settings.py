@@ -36,6 +36,10 @@ def frameability_check() -> bool:
     return toolkit.asbool(_get("frameability_check"))
 
 
+def thumbnail_fetch() -> bool:
+    return toolkit.asbool(_get("thumbnail_fetch"))
+
+
 def editor_can_loosen() -> bool:
     return toolkit.asbool(_get("editor_can_loosen"))
 

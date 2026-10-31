@@ -8,7 +8,7 @@ import click
 
 import ckan.model as model
 
-from ckanext.webpageviewplus import content, frame, frameability, health, settings
+from ckanext.webpageviewplus import content, frame, frameability, health, settings, thumbnails
 
 SCHEMATIC_MARKER = b"qsv-schematic-source"
 # Stop scanning large uploads after this many bytes.
@@ -319,6 +319,9 @@ def check_views(
     view has a problem, so it can run from cron. Results for
     webpage_view_plus views are saved: with frameability_check on, a view
     whose page refuses to be framed shows a card instead of a blank frame.
+    With the webpage_view_plus_thumbnails plugin, their thumbnails are
+    remade too (a copy stays if remaking it fails); that never changes the
+    exit status.
     """
     query = (
         model.Session.query(model.ResourceView, model.Resource, model.Package)
@@ -332,9 +335,16 @@ def check_views(
         query = query.filter(
             (model.Package.name == dataset) | (model.Package.id == dataset))
     probes: dict[str, frameability.Probe] = {}
+    remake = thumbnails.enabled() and not no_store
+    images: dict[tuple[str, str], Optional[bytes]] = {}
     rows = []
     for view, resource, package in query:
         row = assess(view, resource, probes, timeout, store=not no_store)
+        if remake and view.view_type == thumbnails.VIEW_TYPE:
+            thumbnails.after_save(
+                dict(view.config or {}, id=view.id, view_type=view.view_type,
+                     resource_id=view.resource_id),
+                deadline=time.monotonic() + timeout, keep=True, memo=images)
         row.update(
             dataset=package.name, resource_id=resource.id, view_id=view.id,
             view_type=view.view_type)

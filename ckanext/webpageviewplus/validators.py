@@ -126,12 +126,12 @@ def view_after_validator(
         if (
             resource is None or image is None or image.state != "active"
             or image.package_id != resource.package_id
-            or not thumbnails.is_image_upload(content.resource_dict(image))
+            or not thumbnails.is_pickable(content.resource_dict(image))
         ):
             _add_error(
                 errors,
                 "thumbnail_resource",
-                toolkit._("Choose an image uploaded to this dataset"),
+                toolkit._("Choose an image from this dataset"),
             )
 
     if any(errors.get((name,)) for name in ("page_url", "preset", "sandbox")):

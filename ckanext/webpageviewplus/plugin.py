@@ -154,6 +154,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
                 "count_views": [ignore_missing, boolean_validator],
                 # Used by webpage_view_plus_thumbnails; checked in __after.
                 "thumbnail_resource": [ignore_empty, unicode_safe],
+                "no_auto_thumbnail": [ignore_missing, boolean_validator],
                 "__after": [v.view_after_validator],
             },
             "iframed": False,
@@ -202,6 +203,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
                 thumbnails.choices(data_dict.get("package"))
                 if thumbnails.enabled() else None
             ),
+            # The page's own preview image may be fetched (thumbnails.auto).
+            "thumbnail_fetch": thumbnails.enabled() and settings.thumbnail_fetch(),
             # Only the view's edit form shows them.
             "view_counts": (
                 stats.totals_or_none(resource_view["id"], 30)

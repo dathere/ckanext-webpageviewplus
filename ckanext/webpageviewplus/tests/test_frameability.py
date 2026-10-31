@@ -178,7 +178,7 @@ def test_probe_timeout_bounded_by_deadline(dns, monkeypatch):
         seen["timeout"] = kwargs["timeout"]
         raise requests.Timeout()
 
-    monkeypatch.setattr(fa.requests, "get", get)
+    monkeypatch.setattr(fa, "_http_get", get)
     fa.probe("https://pages.example.com/a", CKAN, deadline=time.monotonic() + 2)
     assert 0 < seen["timeout"] <= 2
 
@@ -285,3 +285,35 @@ def test_probe_records_redirect_chain(dns):
     responses.get("http://pages.example.com/b")
     result = fa.probe("https://pages.example.com/a", CKAN)
     assert result.urls == ("https://pages.example.com/a", "http://pages.example.com/b")
+
+
+def test_rebinding_refused_at_connect(monkeypatch):
+    """A host that passed the check but resolves to a private address when
+    CKAN connects (DNS rebinding) gets nothing sent to it."""
+    import http.server
+    import threading
+
+    hits = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            hits.append(self.path)
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"internal")
+
+        def log_message(self, *args):
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        monkeypatch.setattr(fa, "_address_kind", lambda url, deadline=None: "public")
+        for name in ("http_proxy", "HTTP_PROXY", "all_proxy", "ALL_PROXY"):
+            monkeypatch.delenv(name, raising=False)
+        url = "http://127.0.0.1:{}/x".format(server.server_port)
+        assert fa.fetch_body(url, time.monotonic() + 5, 1000, "test") is None
+        assert fa.probe(url, CKAN).problem == "unreachable"
+        assert hits == []
+    finally:
+        server.shutdown()

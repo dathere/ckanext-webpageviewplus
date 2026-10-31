@@ -63,6 +63,19 @@ groups:
           on makes the CKAN server request URLs editors type, only those
           resolving to public addresses.
 
+      - key: ckanext.webpageviewplus.thumbnail_fetch
+        default: false
+        type: bool
+        description: |
+          With the webpage_view_plus_thumbnails plugin: let CKAN fetch
+          thumbnails when a view is saved, from the page's own preview image
+          (og:image, then twitter:image) and from linked image resources an
+          editor picks. Each image is fetched once, re-encoded small and
+          served by CKAN, so visitors never contact the other site. Off by
+          default: turning it on makes the CKAN server request page and image
+          URLs, only those resolving to public addresses (at most 512 KB of a
+          page, 2 MB of an image). Editors can turn it off per view.
+
       - key: ckanext.webpageviewplus.editor_can_loosen
         default: false
         type: bool

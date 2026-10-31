@@ -9,6 +9,18 @@
   view shows an image an editor picked from the dataset's uploaded images (stored small, in a
   new table: run `ckan db upgrade -p webpage_view_plus`), or, when its only view is a
   well-known service's, that service's logo (from Simple Icons, for 20 of the 29 services) and name.
+- With `ckanext.webpageviewplus.thumbnail_fetch = true` (off by default), thumbnails can also
+  come from the page's own preview image (`og:image`, then `twitter:image`) and from linked
+  images an editor picks, fetched once when the view is saved, with the frameability check's
+  guards. Editors can opt a view out ("Don't use the page's own preview image").
+  `ckan webpageviewplus check-views` remakes thumbnails too, keeping a copy when remaking it fails.
+
+### Changed
+
+- The frameability check (and the new thumbnail fetch) checks each connection's address once
+  it's open, before sending anything, so a host whose DNS answer changes to an internal
+  address after the check (DNS rebinding) is refused. Through an egress proxy, the proxy does
+  the lookup.
 
 ## 0.5.0 (2026-10-30)
 

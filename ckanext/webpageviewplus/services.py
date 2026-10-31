@@ -639,6 +639,13 @@ LOGOS: dict[str, str] = {
     "Jupyter": "jupyter",
 }
 
+# Services whose embed page's preview image (og:image) is the service's own
+# logo or a stock image, never the content: the resource list skips it and
+# shows the logo above, if any. Checked 2026-10-31 by fetching each
+# service's stored embed URL. The other services' embed pages show their
+# content (Google Sheets, Felt...) or have no preview image at all.
+GENERIC_PREVIEWS: frozenset[str] = frozenset({"Power BI", "Looker Studio", "Typeform"})
+
 
 def suggest(url: str) -> Optional[Suggestion]:
     """The embed settings for a well-known service's page, or None."""

@@ -243,7 +243,8 @@ view says it counts visits. See [Opt-in view counting](#opt-in-view-counting).
 **Show thumbnails in the resource list.** Install with Pillow
 (`pip install ckanext-webpageviewplus[thumbnails]`) and add `webpage_view_plus_thumbnails` to
 `ckan.plugins` after `webpage_view_plus`. A dataset's resource list then shows a small image,
-instead of the format icon, beside each resource with a Website (Plus) view. See
+instead of the format icon, beside each resource with a Website (Plus) view. With
+`thumbnail_fetch = true`, CKAN also takes the page's own preview image when a view is saved. See
 [Thumbnails in the resource list](#thumbnails-in-the-resource-list).
 
 **See what uploaded pages contact.** With `connection_reports = true` and a content origin,
@@ -563,9 +564,11 @@ enable it, the server:
 - reads headers only, times out after 5 seconds, and caches each answer for 5 minutes;
 - gives the same "couldn't check" answer for every failure, so it can't be used to probe hosts.
 
-Requests go out through any proxy your environment configures for Python `requests`. One known
-limit: a host whose DNS answer changes between the check and the connection (DNS rebinding)
-isn't caught, so keep internal services behind authentication as well.
+Requests go out through any proxy your environment configures for Python `requests`. Each
+direct connection is checked again once it's open, before anything is sent, so a host whose DNS
+answer changes to an internal address between the check and the connection (DNS rebinding)
+gets nothing. Through a proxy, the proxy looks up the address, so filtering internal addresses
+is up to it.
 
 ### Finding broken views
 
@@ -602,25 +605,48 @@ doesn't enable it never loads its override of `package/snippets/resource_item.ht
 image comes from, first match wins:
 
 1. **An image the editor picks** in the view form ("Thumbnail in the resource list"): a PNG,
-   JPEG, WebP or GIF uploaded to the same dataset. When the view is saved, CKAN reads it from
-   its storage, shrinks it to fit 320 x 180, drops its metadata and stores it as a small JPEG
-   in the database (table `webpage_view_plus_thumbnails`). It's served from
-   `/webpageviewplus/thumbnail/<view_id>` to whoever may see the dataset. Uploads on a
-   2.12 cloud storage can't be read yet, so they get no thumbnail. A good source for qsv Data
-   Schematics is their static image export (`viz_static`), uploaded as a second resource.
-2. **The service's logo**, when the resource has only this one view and its address is a
+   JPEG, WebP or GIF uploaded to the same dataset, or with `thumbnail_fetch` on, linked from it.
+   When the view is saved, CKAN reads it from its storage (or fetches it), shrinks it to fit
+   320 x 180, drops its metadata and stores it as a small JPEG in the database (table
+   `webpage_view_plus_thumbnails`). It's served from `/webpageviewplus/thumbnail/<view_id>` to
+   whoever may see the dataset. Uploads on a 2.12 cloud storage can't be read yet, so they get
+   no thumbnail. A good source for qsv Data Schematics is their static image export
+   (`viz_static`), uploaded as a second resource.
+2. **The page's own preview image**, with `ckanext.webpageviewplus.thumbnail_fetch = true`
+   (off by default): the image another site's page names for link previews (`og:image`, then
+   `twitter:image`), fetched once when the view is saved and stored the same way. Uploads and
+   CKAN's own pages aren't fetched. Power BI, Looker Studio and Typeform name only their own
+   logo or a stock image, so they're skipped. An editor can tick "Don't use the page's own
+   preview image" on a view. A copy counts only for the address it was taken from: when a
+   view's page changes, its thumbnail goes until the view is saved again or `check-views`
+   runs.
+3. **The service's logo**, when the resource has only this one view and its address is a
    [well-known service](#well-known-services-recognised-links)'s. The logos ship with the
    extension (from [Simple Icons](https://simpleicons.org/) 16.36.0, CC0; each brand's
    trademark rules still apply). Datawrapper, Flourish, Tableau Public, Power BI, Our World
    in Data, shinyapps.io, Infogram, Felt and uMap have none there, so they keep the format
    icon. Looker Studio shows Looker's logo.
-3. Otherwise CKAN's format icon stays.
+4. Otherwise CKAN's format icon stays.
 
 A resource with several Website (Plus) views uses the first one in view order. When a resource
 has exactly one view and it's a well-known service's, screen readers hear the service's name
 ("YouTube") instead of the format; the resource's `format` itself isn't changed. Visitors only
 ever load images from CKAN, never from the service, and a dataset page looks up all its
 resources' thumbnails in one query.
+
+**Fetching.** With `thumbnail_fetch` on, CKAN's server requests the page and its image once
+per save, with the same guards as the [frameability check](#frameability-check): only http(s)
+addresses that resolve to public addresses, every redirect checked again (at most 3), 5
+seconds for the whole of it, at most 512 KB of the page and 2 MB of the image (counted while
+reading), and every failure the same "no thumbnail". Each connection is checked once it's
+open, before anything is sent, so a host whose DNS answer changes to an internal address in
+between (DNS rebinding) gets nothing. Through an egress proxy (`HTTPS_PROXY`), the proxy looks
+up the address, so filtering internal addresses is up to it. Only PNG, JPEG, WebP and GIF are
+decoded, never SVG, and CKAN never serves the fetched bytes as they came.
+
+`ckan webpageviewplus check-views` remakes every Website (Plus) view's thumbnail too, so run
+from cron it picks up changed pages and images replaced through `package_update`. When
+remaking one fails, it keeps the copy it has.
 
 ### Privacy and telemetry
 
@@ -696,6 +722,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.formats` | `html htm` | Resource formats the view is offered for |
 | `ckanext.webpageviewplus.controls` | `open fullscreen reload share` | Buttons in the control bar; empty hides it |
 | `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing, check pages when views are saved, and show a card for those that refuse. Makes CKAN request editor-typed URLs, see [Frameability check](#frameability-check) |
+| `ckanext.webpageviewplus.thumbnail_fetch` | `false` | With the `webpage_view_plus_thumbnails` plugin, fetch thumbnails when views are saved: the page's own preview image, and linked images editors pick. Makes CKAN request page and image URLs, see [Thumbnails in the resource list](#thumbnails-in-the-resource-list) |
 | `ckanext.webpageviewplus.color_scheme` | `auto` | `light` or `dark`: the colour scheme framed pages see (Firefox only so far) |
 | `ckanext.webpageviewplus.narrow_width` | `576` | View width, in px, below which aspect and viewport heights become 80% of the screen; `0` turns it off |
 | `ckanext.webpageviewplus.privacy_profile` | `default` | `eu` puts the consent card on every third-party page, whatever its preset |

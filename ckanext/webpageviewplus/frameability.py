@@ -7,10 +7,12 @@ fetched, redirects are re-checked hop by hop (at most 3), no body is read, and
 every network or policy failure gives the same "unknown" verdict, so the
 check can't be used to probe which hosts or ports exist.
 
-Known limit: the host is resolved here and again by requests when it
-connects, so a DNS answer that changes in between (rebinding) isn't caught.
-The connection isn't pinned to the checked address, so that egress proxies a
-deployment requires keep working.
+The host is resolved here and again by requests when it connects, so a DNS
+answer that changes in between (rebinding) could point the request at an
+internal address. Every connection is therefore checked again once it's
+open, before anything is sent: its peer must be a public address too
+(_PublicAdapter). Through an egress proxy the peer is the proxy, which does
+the lookup itself, so that check doesn't apply there.
 """
 from __future__ import annotations
 
@@ -25,6 +27,9 @@ from typing import Any, Mapping, Optional
 from urllib.parse import urljoin, urlsplit
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.connection import HTTPConnection, HTTPSConnection
+from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
 
 from ckanext.webpageviewplus import frame
 
@@ -194,6 +199,136 @@ def _public(url: str) -> bool:
     return _address_kind(url) == "public"
 
 
+def _is_public_address(address: str) -> bool:
+    try:
+        return ipaddress.ip_address(address.split("%")[0]).is_global
+    except ValueError:
+        return False
+
+
+def _check_peer(sock: socket.socket) -> None:
+    """Refuse a connection whose other end isn't a public address (a DNS
+    answer that changed since the URL was checked)."""
+    try:
+        peer = sock.getpeername()[0]
+    except OSError:
+        peer = ""
+    if not _is_public_address(peer):
+        sock.close()
+        raise OSError("connected to a non-public address")
+
+
+class _PublicHTTPConnection(HTTPConnection):
+    def _new_conn(self):
+        sock = super()._new_conn()
+        _check_peer(sock)
+        return sock
+
+
+class _PublicHTTPSConnection(HTTPSConnection):
+    def _new_conn(self):
+        sock = super()._new_conn()
+        _check_peer(sock)
+        return sock
+
+
+class _PublicHTTPPool(HTTPConnectionPool):
+    ConnectionCls = _PublicHTTPConnection
+
+
+class _PublicHTTPSPool(HTTPSConnectionPool):
+    ConnectionCls = _PublicHTTPSConnection
+
+
+class _PublicAdapter(HTTPAdapter):
+    """Direct connections only to public addresses. Requests through a
+    proxy use the adapter's proxy managers, which keep urllib3's own pools."""
+
+    def init_poolmanager(self, *args: Any, **kwargs: Any) -> None:
+        super().init_poolmanager(*args, **kwargs)
+        self.poolmanager.pool_classes_by_scheme = {
+            "http": _PublicHTTPPool, "https": _PublicHTTPSPool}
+
+
+_local = threading.local()
+
+
+def _http_get(url: str, **kwargs: Any) -> requests.Response:
+    session = getattr(_local, "session", None)
+    if session is None:
+        session = _local.session = requests.Session()
+        session.mount("http://", _PublicAdapter())
+        session.mount("https://", _PublicAdapter())
+    return session.get(url, **kwargs)
+
+
+@dataclass(frozen=True)
+class Body:
+    url: str  # after redirects
+    content_type: str
+    charset: Optional[str]  # from Content-Type only
+    data: bytes
+
+
+def fetch_body(
+    url: str,
+    deadline: float,
+    max_bytes: int,
+    user_agent: str,
+    truncate: bool = False,
+) -> Optional[Body]:
+    """GET ``url`` with the same guards as the check (public addresses,
+    redirects re-checked, at most MAX_REDIRECTS, ``deadline`` over all of
+    it) and read at most ``max_bytes`` of a 200 answer: more is None, or
+    the first ``max_bytes`` with ``truncate``. None for every failure."""
+    try:
+        return _fetch_body(url, deadline, max_bytes, user_agent, truncate)
+    except Exception:
+        log.debug("webpageviewplus: fetch failed", exc_info=True)
+        return None
+
+
+def _fetch_body(
+    url: str, deadline: float, max_bytes: int, user_agent: str, truncate: bool
+) -> Optional[Body]:
+    for _ in range(MAX_REDIRECTS + 1):
+        if _address_kind(url, deadline) != "public":
+            return None
+        timeout = min(TIMEOUT, deadline - time.monotonic())
+        if timeout <= 0:
+            return None
+        response = _http_get(
+            url, stream=True, timeout=timeout, allow_redirects=False,
+            headers={"User-Agent": user_agent})
+        try:
+            location = response.headers.get("Location")
+            if response.is_redirect and location:
+                url = urljoin(url, location)
+                continue
+            if response.status_code != 200:
+                return None
+            data = bytearray()
+            for chunk in response.iter_content(64 * 1024):
+                data += chunk
+                if len(data) > max_bytes:
+                    if not truncate:
+                        return None
+                    del data[max_bytes:]
+                    break
+                if time.monotonic() > deadline:
+                    return None
+            content_type, _, params = (response.headers.get("Content-Type") or "").partition(";")
+            charset = None
+            for param in params.split(";"):
+                name, _, value = param.partition("=")
+                if name.strip().lower() == "charset" and value.strip():
+                    charset = value.strip().strip("\"'")
+            return Body(url, content_type.strip().lower(), charset, bytes(data))
+        finally:
+            response.close()
+    return None
+
+
 @dataclass(frozen=True)
 class Probe:
     """What fetching a page found. ``problem`` is "" when the page answered
@@ -238,7 +373,7 @@ def _probe(
             if timeout <= 0:
                 return Probe(UNKNOWN, problem="unreachable", urls=tuple(urls))
         try:
-            response = requests.get(
+            response = _http_get(
                 url,
                 stream=True,
                 timeout=timeout,

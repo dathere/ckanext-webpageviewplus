@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-31 12:25+0000\n"
+"POT-Creation-Date: 2026-10-31 14:29+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -20,7 +20,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.15.0\n"
 
-#: ckanext/webpageviewplus/actions.py:177
+#: ckanext/webpageviewplus/actions.py:196
 msgid "Must be a whole number"
 msgstr "Doit être un nombre entier"
 
@@ -28,11 +28,11 @@ msgstr "Doit être un nombre entier"
 msgid "Website (Plus)"
 msgstr "Site web (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:162
+#: ckanext/webpageviewplus/plugin.py:163
 msgid "Website"
 msgstr "Site web"
 
-#: ckanext/webpageviewplus/plugin.py:264
+#: ckanext/webpageviewplus/plugin.py:267
 msgid "Embedded web page"
 msgstr "Page web intégrée"
 
@@ -67,8 +67,8 @@ msgid "Unknown referrer policy"
 msgstr "Politique de référent inconnue"
 
 #: ckanext/webpageviewplus/validators.py:134
-msgid "Choose an image uploaded to this dataset"
-msgstr "Choisissez une image téléversée dans ce jeu de données"
+msgid "Choose an image from this dataset"
+msgstr "Choisissez une image de ce jeu de données"
 
 #: ckanext/webpageviewplus/validators.py:148
 msgid "Height value doesn't fit the height mode"
@@ -345,7 +345,19 @@ msgstr "Miniature dans la liste des ressources"
 msgid "None"
 msgstr "Aucune"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:116
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:117
+msgid ""
+"An image in this dataset (PNG, JPEG, WebP or GIF), uploaded or linked, "
+"shown small beside this resource in the dataset's list. With None, the "
+"page's own preview image, a well-known service's logo or the format icon "
+"shows."
+msgstr ""
+"Une image de ce jeu de données (PNG, JPEG, WebP ou GIF), téléversée ou "
+"liée, affichée en petit à côté de cette ressource dans la liste du jeu de"
+" données. Avec Aucune, l'image d'aperçu de la page elle-même, le logo "
+"d'un service connu ou l'icône du format s'affiche."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:119
 msgid ""
 "An image uploaded to this dataset (PNG, JPEG, WebP or GIF), shown small "
 "beside this resource in the dataset's list. With None, a well-known "
@@ -356,13 +368,27 @@ msgstr ""
 "données. Avec Aucune, le logo d'un service connu ou l'icône du format "
 "s'affiche."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:124
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:125
+msgid "Don't use the page's own preview image"
+msgstr "Ne pas utiliser l'image d'aperçu de la page elle-même"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:126
+msgid ""
+"Otherwise, when no image is chosen above, this site fetches the image the"
+" page names for link previews, once when the view is saved, and shows a "
+"small copy."
+msgstr ""
+"Sinon, lorsqu'aucune image n'est choisie ci-dessus, ce site récupère "
+"l'image que la page indique pour les aperçus de liens, une fois à "
+"l'enregistrement de la vue, et en affiche une petite copie."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:135
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
 msgstr ""
 "Masquer la barre de commandes (Ouvrir dans un nouvel onglet, Plein écran,"
 " Recharger)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:125
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:136
 msgid ""
 "On phones and at high zoom, Open in new tab still shows, so visitors can "
 "always reach the page."
@@ -370,11 +396,11 @@ msgstr ""
 "Sur téléphone et en fort zoom, Ouvrir dans un nouvel onglet reste "
 "affiché, pour que les visiteurs puissent toujours atteindre la page."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:129
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:140
 msgid "Ask before loading a page from another site"
 msgstr "Demander avant de charger une page d’un autre site"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:130
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:141
 msgid ""
 "Visitors see a card naming the site, and nothing loads from it until they"
 " choose Load. Uploads and pages on this site load as usual."
@@ -383,14 +409,14 @@ msgstr ""
 " avant qu’ils choisissent Charger. Les fichiers téléversés et les pages "
 "de ce site se chargent normalement."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:135
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:146
 msgid "Count visits (daily totals only, nothing about visitors; the view says so)"
 msgstr ""
 "Compter les visites (totaux quotidiens uniquement, rien sur les visiteurs"
 " ; la vue l’indique)"
 
 #. view counts as "label: number" pairs, so no plural forms are needed.
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:141
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:152
 #, python-brace-format
 msgid ""
 "Last 30 days. Shown: {impressions}. Seen: {seen}. Loaded: {loaded}. Used:"
@@ -400,11 +426,11 @@ msgstr ""
 "Chargée : {loaded}. Utilisée : {engaged}. En échec : {failed}."
 
 #. heading of the advanced (sysadmin-only) settings.
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:150
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:161
 msgid "Advanced"
 msgstr "Avancé"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:151
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:162
 msgid ""
 "Each field replaces the preset's value; leave it blank to keep the "
 "preset's. A sandbox with both allow-scripts and allow-same-origin is "
@@ -415,27 +441,27 @@ msgstr ""
 " est refusée partout où elle pourrait laisser une page agir comme ce "
 "site."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:152
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:163
 msgid "Sandbox tokens (replace the preset's)"
 msgstr "Jetons de sandbox (remplacent ceux du profil)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:152
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:163
 msgid "eg. allow-scripts allow-popups"
 msgstr "p. ex. allow-scripts allow-popups"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:153
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:164
 msgid "Allowed features (replace the preset's)"
 msgstr "Fonctionnalités autorisées (remplacent celles du profil)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:153
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:164
 msgid "eg. fullscreen; clipboard-write"
 msgstr "p. ex. fullscreen; clipboard-write"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:155
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:166
 msgid "Referrer policy"
 msgstr "Politique de référent"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:158
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:169
 msgid "Site default"
 msgstr "Celle du site"
 
