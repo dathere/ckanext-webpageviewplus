@@ -235,7 +235,10 @@ order now being built:
   `source` (`resource:<id>`); a copy counts only while the view's config still asks for that
   source and the picked image is still in the dataset (`_picked_active`, on render and in the
   route). `resource_update`/`resource_delete` are chained too (`refresh_from`), so a replaced
-  image remakes its copies and a deleted one drops them. `thumbnail_resource` is in the main schema, and `view_after_validator` refuses an
+  image remakes its copies and a deleted one drops them. Not `package_update`/`package_revise`:
+  an image re-uploaded through them keeps its old copy until the view is saved (stage 2's
+  `check-views` refresh should cover it; chaining `package_update` would re-encode on every
+  dataset edit). `thumbnail_resource` is in the main schema, and `view_after_validator` refuses an
   image outside the view's dataset, because `/webpageviewplus/thumbnail/<view_id>` authorises
   against the view's dataset. Uploads are read through `content.local_path` (filesystem
   storages only). Rendering does one query per dataset (`_views`, cached on `g`), which reads

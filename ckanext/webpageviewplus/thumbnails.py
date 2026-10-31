@@ -265,7 +265,8 @@ def refresh_from(resource_id: str) -> None:
         with model.meta.engine.connect() as connection:
             view_ids = [row.view_id for row in connection.execute(
                 sa.select(table.c.view_id).where(table.c.source == "resource:" + resource_id))]
-    except sa.exc.ProgrammingError:
+    except sa.exc.SQLAlchemyError:
+        log.warning("webpageviewplus: refreshing thumbnails failed", exc_info=True)
         return
     for view_id in view_ids:
         view = model.ResourceView.get(view_id)
