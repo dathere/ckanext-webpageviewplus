@@ -93,6 +93,11 @@ class TestEncode:
     def test_refused(self, data):
         assert thumbnails.encode(data) is None
 
+    def test_placeholder_pixel_refused(self):
+        assert thumbnails.encode(_png(size=(1, 1))) is None
+        assert thumbnails.encode(_png(size=(400, 10))) is None
+        assert thumbnails.encode(_png(size=(16, 16))) is not None
+
     def test_too_many_pixels(self, monkeypatch):
         monkeypatch.setattr(thumbnails, "MAX_PIXELS", 100)
         assert thumbnails.encode(_png((20, 20))) is None

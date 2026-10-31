@@ -68,6 +68,9 @@ PILLOW_FORMATS = ("PNG", "JPEG", "GIF", "WEBP")
 # this (by its header, before decoding) isn't decoded.
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 MAX_PIXELS = 40_000_000
+# Smaller than this on either side is a placeholder (Tableau answers a
+# missing workbook with a 1 x 1 PNG) or a tracking pixel, not a picture.
+MIN_SIDE = 16
 # Fetching (thumbnail_fetch): the whole of it when a view is saved, page and
 # image together, since the editor waits; how much of a page is read for its
 # preview image; and the largest image fetched.
@@ -173,7 +176,7 @@ def encode(data: bytes) -> Optional[bytes]:
     try:
         with Image.open(io.BytesIO(data), formats=PILLOW_FORMATS) as im:
             width, height = im.size
-            if width * height > MAX_PIXELS:
+            if width * height > MAX_PIXELS or min(width, height) < MIN_SIDE:
                 return None
             im.seek(0)
             if im.format == "JPEG":
