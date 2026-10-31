@@ -31,8 +31,11 @@ order now being built:
    ignored outside Chromium, so it must never count toward the invariant. `csp` (CSP Embedded
    Enforcement) is deferred: in Chromium it blocks any page whose server doesn't opt in. If a site
    asks, build a cross-browser setting adding directives to the CSP on served HTML uploads instead.
-5. Next: the Playwright suite (Chromium, Firefox, WebKit), starting with self-sizing and the qsv
-   protocol on the `wvp-demo` fixture views.
+5. Done: the Playwright suite (`browser_tests/`, Chromium, Firefox, WebKit, in CI). Self-sizing
+   (`test_self_sizing.py`) covers the qsv protocol, the generic `webpageviewplus:resize` message
+   (`resize_message.html`), clamping, malformed heights, the viewport re-sent on window resize,
+   and the fallback height when a page never reports. `post_from_frame` and `record_heights`
+   (`wvp_helpers.py`) post as the framed page and record every height the script sets.
 6. Done: accessibility. Skip link, live region, focus, contrast and forced colours, axe-core in
    the suite, and reflow: at 320px wide (400% zoom) every frame gets a 600px floor, and a view
    that hides its bar still shows Open in new tab unless the site's `controls` drops `open`.
@@ -263,7 +266,8 @@ order now being built:
   every view type, since logos and names need the resource's only view to be a known
   service's. Logos are Simple Icons SVGs in `public/webpageviewplus/logos/`, named in
   `services.LOGOS` by the name `suggest()` gives a stored embed URL.
-- `tests/fixtures/qsv_protocol.html` speaks the qsv messages. It's uploaded to the `wvp-demo`
+- `tests/fixtures/qsv_protocol.html` speaks the qsv messages; `resize_message.html` reports its
+  height with the generic message only (both seeded in `wvp-browser` by `browser_tests/seed.py`). It's uploaded to the `wvp-demo`
   dataset with three views (`data-schematic` auto, `interactive` auto, `interactive` fixed),
   for browser checks with Playwright (`uv run --with playwright`, system Chrome via
   `channel="chrome"`).

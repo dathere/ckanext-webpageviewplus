@@ -1,5 +1,6 @@
 """Seed the data the browser tests use: a public dataset `wvp-browser` with
-the qsv protocol fixture uploaded and one view per case. Idempotent: the
+two uploaded fixtures (the qsv protocol, and the generic resize message) and
+one view per case. View titles are unique across both. Idempotent: the
 dataset is purged and recreated. Run inside the CKAN container, with
 CKAN_INI pointing at the site's config:
 
@@ -19,9 +20,9 @@ import ckan.plugins.toolkit as tk
 
 DATASET = "wvp-browser"
 ORG = "wvp-browser-org"
-FIXTURE = os.path.join(
+FIXTURES = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "..", "ckanext", "webpageviewplus", "tests", "fixtures", "qsv_protocol.html",
+    "..", "ckanext", "webpageviewplus", "tests", "fixtures",
 )
 VIEWS = [
     ("Schematic auto", {"preset": "data-schematic", "height_mode": "auto"}),
@@ -47,11 +48,22 @@ VIEWS = [
     }),
     # No scripts run: the fixture stays as served, and nothing resizes it.
     ("Strict", {"preset": "strict"}),
+    # Auto, but the page can't report (no scripts): it keeps the fallback.
+    ("Strict auto", {"preset": "strict", "height_mode": "auto"}),
     # A third-party page behind the consent card. The tests check the card
     # and what's remembered, not the page, so example.com needn't load.
     ("Consent example.com", {
         "preset": "interactive", "page_url": "https://example.com/", "consent_gate": True,
     }),
+]
+# The page reports its height with {type: "webpageviewplus:resize"} only.
+GENERIC_VIEWS = [
+    ("Generic auto", {"preset": "interactive", "height_mode": "auto"}),
+    ("Generic schematic auto", {"preset": "data-schematic", "height_mode": "auto"}),
+]
+RESOURCES = [
+    ("qsv protocol fixture", "qsv_protocol.html", VIEWS),
+    ("Resize message fixture", "resize_message.html", GENERIC_VIEWS),
 ]
 
 
@@ -76,24 +88,24 @@ def main():
             "name": DATASET, "title": "webpageviewplus browser tests",
             "owner_org": org["id"], "private": False,
         })
-        with open(FIXTURE, "rb") as f:
-            body = f.read()
-        resource = act("resource_create")(ctx(), {
-            "package_id": pkg["id"], "name": "qsv protocol fixture",
-            "format": "HTML", "url": "qsv_protocol.html",
-            "upload": FileStorage(
-                io.BytesIO(body), filename="qsv_protocol.html",
-                content_type="text/html",
-            ),
-        })
-        for v in act("resource_view_list")(ctx(), {"id": resource["id"]}):
-            act("resource_view_delete")(ctx(), {"id": v["id"]})
-        for title, fields in VIEWS:
-            act("resource_view_create")(ctx(), dict(
-                resource_id=resource["id"], view_type="webpage_view_plus",
-                title=title, **fields,
-            ))
-        print(resource["id"])
+        for name, filename, views in RESOURCES:
+            with open(os.path.join(FIXTURES, filename), "rb") as f:
+                body = f.read()
+            resource = act("resource_create")(ctx(), {
+                "package_id": pkg["id"], "name": name,
+                "format": "HTML", "url": filename,
+                "upload": FileStorage(
+                    io.BytesIO(body), filename=filename, content_type="text/html",
+                ),
+            })
+            for v in act("resource_view_list")(ctx(), {"id": resource["id"]}):
+                act("resource_view_delete")(ctx(), {"id": v["id"]})
+            for title, fields in views:
+                act("resource_view_create")(ctx(), dict(
+                    resource_id=resource["id"], view_type="webpage_view_plus",
+                    title=title, **fields,
+                ))
+            print(resource["id"])
 
 
 if __name__ == "__main__":

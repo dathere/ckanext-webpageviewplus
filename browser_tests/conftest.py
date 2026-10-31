@@ -30,13 +30,14 @@ def _api(action, **params):
 
 @pytest.fixture(scope="session")
 def view_urls():
-    """{view title: URL of the resource page showing that view}."""
+    """{view title: URL of the resource page showing that view}, across the
+    dataset's resources (seed.py keeps titles unique)."""
     package = _api("package_show", id=DATASET)
-    resource = package["resources"][0]
     return {
         view["title"]: "{}/dataset/{}/resource/{}?view_id={}".format(
             BASE_URL, DATASET, resource["id"], view["id"]
         )
+        for resource in package["resources"]
         for view in _api("resource_view_list", id=resource["id"])
     }
 
