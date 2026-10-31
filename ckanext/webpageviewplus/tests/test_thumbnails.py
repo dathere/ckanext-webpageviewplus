@@ -173,6 +173,43 @@ class TestThumbnails:
         app.get(url_for("webpageviewplus_thumbnails.serve", view_id=view["id"]),
                 status=404)
 
+    def test_deleting_the_image_drops_the_copy(self, app):
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        image = _image(dataset)
+        view = _view(page["id"], thumbnail_resource=image["id"])
+        helpers.call_action("resource_delete", id=image["id"])
+        assert thumbnails.stored(view["id"]) is None
+        assert "webpageviewplus-thumbnail" not in _page(app, dataset)
+        app.get(url_for("webpageviewplus_thumbnails.serve", view_id=view["id"]),
+                status=404)
+
+    def test_image_dropped_by_package_update_stops_showing(self, app):
+        # package_update doesn't go through resource_delete: rendering and
+        # the route check the image is still there.
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        image = _image(dataset)
+        view = _view(page["id"], thumbnail_resource=image["id"])
+        pkg = helpers.call_action("package_show", id=dataset["id"])
+        pkg["resources"] = [r for r in pkg["resources"] if r["id"] != image["id"]]
+        helpers.call_action("package_update", **pkg)
+        assert "webpageviewplus-thumbnail" not in _page(app, dataset)
+        app.get(url_for("webpageviewplus_thumbnails.serve", view_id=view["id"]),
+                status=404)
+
+    def test_replacing_the_image_remakes_the_copy(self):
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        image = _image(dataset)
+        view = _view(page["id"], thumbnail_resource=image["id"])
+        before = thumbnails.stored(view["id"])["digest"]
+        helpers.call_action(
+            "resource_update", id=image["id"], package_id=dataset["id"], url="chart.png",
+            url_type="upload", format="PNG",
+            upload=FileStorage(io.BytesIO(_png(color=(0, 0, 255, 255))), filename="chart.png"))
+        assert thumbnails.stored(view["id"])["digest"] != before
+
     def test_private_dataset(self, app):
         org = factories.Organization()
         dataset = factories.Dataset(owner_org=org["id"], private=True)

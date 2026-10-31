@@ -243,6 +243,38 @@ def _package_views(package_id: str) -> dict[str, list[dict[str, Any]]]:
     return cache[package_id]
 
 
+def _picked_active(config: dict[str, Any], pkg: Optional[dict[str, Any]] = None) -> bool:
+    """Whether the image a view's copy was made from is still in its
+    dataset: a deleted image's copy must stop showing at once, however it
+    was deleted. The dataset page's own resource list answers it without a
+    query."""
+    picked = config.get("thumbnail_resource")
+    if not picked:
+        return False
+    resources = (pkg or {}).get("resources")
+    if resources is not None:
+        return any(r.get("id") == picked for r in resources)
+    image = model.Resource.get(picked)
+    return image is not None and image.state == "active"
+
+
+def refresh_from(resource_id: str) -> None:
+    """Remake (or drop) every copy made from this image, after it was
+    updated or deleted. Never fails the action."""
+    try:
+        with model.meta.engine.connect() as connection:
+            view_ids = [row.view_id for row in connection.execute(
+                sa.select(table.c.view_id).where(table.c.source == "resource:" + resource_id))]
+    except sa.exc.ProgrammingError:
+        return
+    for view_id in view_ids:
+        view = model.ResourceView.get(view_id)
+        if view is None:
+            continue
+        after_save(dict(view.config or {}, id=view.id, view_type=view.view_type,
+                        resource_id=view.resource_id))
+
+
 def for_resource(pkg: dict[str, Any], res: dict[str, Any]) -> Optional[dict[str, Any]]:
     """What the resource list shows for ``res`` instead of CKAN's icon and
     format: ``src`` (an image, or None for the icon) and ``service`` (a
@@ -260,7 +292,8 @@ def for_resource(pkg: dict[str, Any], res: dict[str, Any]) -> Optional[dict[str,
         found = services.suggest(config.get("page_url") or res.get("url") or "")
         service = found.service if found else None
     src = None
-    if plus["digest"] and plus["source"] == source_for(config):
+    if plus["digest"] and plus["source"] == source_for(config) \
+            and _picked_active(config, pkg):
         src = toolkit.url_for(
             "webpageviewplus_thumbnails.serve", view_id=plus["id"], v=plus["digest"][:16])
     elif service in services.LOGOS:
@@ -299,7 +332,8 @@ def serve(view_id: str):
     except (toolkit.NotAuthorized, toolkit.ObjectNotFound):
         abort(404)  # not 403: don't confirm that a private dataset exists
     row = stored(view_id)
-    if row is None or row["source"] != source_for(view.config or {}):
+    if row is None or row["source"] != source_for(view.config or {}) \
+            or not _picked_active(view.config or {}):
         abort(404)
     # CKAN's response hook sets Cache-Control from __no_cache__ after this
     # view: private for private datasets, public otherwise (the copy is the

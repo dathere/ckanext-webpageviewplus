@@ -410,6 +410,8 @@ class WebpageviewplusThumbnailsPlugin(plugins.SingletonPlugin):
         return {
             "resource_view_create": actions.thumbnails_view_create,
             "resource_view_update": actions.thumbnails_view_update,
+            "resource_update": actions.thumbnails_resource_update,
+            "resource_delete": actions.thumbnails_resource_delete,
         }
 
     # ITemplateHelpers

@@ -91,9 +91,7 @@ order now being built:
    `webpage_view_plus_thumbnails`, the table (fourth migration), the route, the template
    override, editor-picked uploaded images (`thumbnail_resource`) and service logos and names.
    Next: the fetch behind `thumbnail_fetch` (`og:image`, linked images, `auto_thumbnail`), then
-   services' fixed thumbnail addresses, then `service_format`. A picked upload that's replaced
-   or deleted keeps its old copy until the view is saved again: stage 2's `check-views`
-   refresh should cover picked uploads too, not only fetched images.
+   services' fixed thumbnail addresses, then `service_format`.
 
 ## The security model (read before touching frame, validator, content or download code)
 
@@ -235,7 +233,9 @@ order now being built:
   (`after_save`, never failing the save): Pillow decodes PNG/JPEG/GIF/WebP only, by the bytes,
   first frame, pixel cap, and re-encodes a JPEG within 320 x 180, stored per view with its
   `source` (`resource:<id>`); a copy counts only while the view's config still asks for that
-  source. `thumbnail_resource` is in the main schema, and `view_after_validator` refuses an
+  source and the picked image is still in the dataset (`_picked_active`, on render and in the
+  route). `resource_update`/`resource_delete` are chained too (`refresh_from`), so a replaced
+  image remakes its copies and a deleted one drops them. `thumbnail_resource` is in the main schema, and `view_after_validator` refuses an
   image outside the view's dataset, because `/webpageviewplus/thumbnail/<view_id>` authorises
   against the view's dataset. Uploads are read through `content.local_path` (filesystem
   storages only). Rendering does one query per dataset (`_views`, cached on `g`), which reads

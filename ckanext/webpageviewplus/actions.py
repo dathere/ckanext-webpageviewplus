@@ -138,6 +138,25 @@ def thumbnails_view_update(
     return view
 
 
+# A picked image that's replaced or deleted remakes or drops its copies.
+@toolkit.chained_action
+def thumbnails_resource_update(
+    original: Any, context: Context, data_dict: dict[str, Any]
+) -> dict[str, Any]:
+    resource = original(context, data_dict)
+    thumbnails.refresh_from(resource["id"])
+    return resource
+
+
+@toolkit.chained_action
+def thumbnails_resource_delete(
+    original: Any, context: Context, data_dict: dict[str, Any]
+) -> Any:
+    result = original(context, data_dict)
+    thumbnails.refresh_from(data_dict["id"])
+    return result
+
+
 def _counted_view(data_dict: dict[str, Any]):
     view_id = toolkit.get_or_bust(data_dict, "id")
     view = model.Session.query(model.ResourceView).get(view_id)
