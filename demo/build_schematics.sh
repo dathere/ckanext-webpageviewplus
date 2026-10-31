@@ -65,7 +65,7 @@ if "$QSV" --version 2>/dev/null | grep -q viz_static; then
         --title "NYC 311 requests by borough" -o "$OUT/nyc311-pie.png"
     png map "$OUT/csv/nyc311-100.csv" --lat Latitude --lon Longitude \
         --title "NYC 311 requests (100-row sample)" -o "$OUT/nyc311-map.png"
-    ls -la "$OUT"/*.png
+    ls -la "$OUT"/*.png 2>/dev/null || echo "no static previews were made" >&2
 else
     echo "no static previews: $QSV lacks the viz_static feature" >&2
 fi

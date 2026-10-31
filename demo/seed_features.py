@@ -280,10 +280,13 @@ def service_resources():
         yield (name, page, [("{} ({})".format(name, found.preset), fields, story)])
 
 
-def preview_png() -> bytes:
+def preview_png():
     """A bar chart like the uploaded page's, drawn with Pillow (which the
-    thumbnails plugin needs anyway)."""
-    from PIL import Image, ImageDraw
+    thumbnails plugin needs anyway), or None without Pillow."""
+    try:
+        from PIL import Image, ImageDraw
+    except ImportError:
+        return None
 
     im = Image.new("RGB", (640, 360), "white")
     draw = ImageDraw.Draw(im)
@@ -336,22 +339,31 @@ def main():
             for v in act("resource_view_list")(ctx(), {"id": res["id"]}):
                 act("resource_view_delete")(ctx(), {"id": v["id"]})
             created.append((name, res, views))
-        image = act("resource_create")(ctx(), {
-            "package_id": pkg["id"], "name": PREVIEW, "format": "PNG",
-            "url": "chart-preview.png",
-            "description": "A static picture of the uploaded page's chart, picked as its "
-                           "thumbnail in this list. qsv Data Schematics export one with "
-                           "`qsv viz ... -o chart.png`.",
-            "upload": FileStorage(io.BytesIO(preview_png()), filename="chart-preview.png",
-                                  content_type="image/png"),
-        })
-        for v in act("resource_view_list")(ctx(), {"id": image["id"]}):
-            act("resource_view_delete")(ctx(), {"id": v["id"]})
+        png = preview_png()
+        image = None
+        if png is None:
+            print("skipped (no Pillow): {}".format(PREVIEW))
+        else:
+            image = act("resource_create")(ctx(), {
+                "package_id": pkg["id"], "name": PREVIEW, "format": "PNG",
+                "url": "chart-preview.png",
+                "description": "A static picture of the uploaded page's chart, picked as "
+                               "its thumbnail in this list. qsv Data Schematics export "
+                               "one with `qsv viz ... -o chart.png`.",
+                "upload": FileStorage(io.BytesIO(png), filename="chart-preview.png",
+                                      content_type="image/png"),
+            })
+            for v in act("resource_view_list")(ctx(), {"id": image["id"]}):
+                act("resource_view_delete")(ctx(), {"id": v["id"]})
         for name, res, views in created:
             print(name)
             for title, fields, description in views:
                 if fields.get("thumbnail_resource") == PREVIEW:
-                    fields = dict(fields, thumbnail_resource=image["id"])
+                    fields = dict(fields)
+                    if image is None:
+                        del fields["thumbnail_resource"]
+                    else:
+                        fields["thumbnail_resource"] = image["id"]
                 view = act("resource_view_create")(ctx(), dict(
                     resource_id=res["id"], view_type="webpage_view_plus",
                     title=title, description=description, **fields))
