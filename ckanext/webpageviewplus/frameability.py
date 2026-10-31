@@ -262,37 +262,63 @@ class _PublicAdapter(HTTPAdapter):
 _local = threading.local()
 
 
+class _Fetch:
+    """One guarded fetch: its session and a duplicate of each direct
+    connection's socket (TLS wrapping detaches the original, but shutting
+    down a duplicate still ends the connection)."""
+
+    def __init__(self) -> None:
+        self.session = requests.Session()
+        self.session.cookies.set_policy(
+            http.cookiejar.DefaultCookiePolicy(allowed_domains=[]))
+        self.session.mount("http://", _PublicAdapter())
+        self.session.mount("https://", _PublicAdapter())
+        self.sockets: list[socket.socket] = []
+        self.expired = False
+        self.lock = threading.Lock()
+
+    def record(self, sock: socket.socket) -> None:
+        with self.lock:
+            if self.expired:
+                sock.close()
+                raise OSError("deadline passed")
+            self.sockets.append(sock.dup())
+
+    def cut(self) -> None:
+        # shutdown, not close: it wakes a read blocked in another thread.
+        with self.lock:
+            self.expired = True
+            for sock in self.sockets:
+                try:
+                    sock.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass
+
+    def close(self) -> None:
+        self.session.close()
+        with self.lock:
+            for sock in self.sockets:
+                sock.close()
+
+
 def _record(sock: socket.socket) -> None:
     fetch = getattr(_local, "fetch", None)
     if fetch is not None:
-        fetch[1].append(sock)
-
-
-def _cut(sockets: list[socket.socket]) -> None:
-    # shutdown, not close: it wakes a read blocked in another thread.
-    for sock in list(sockets):
-        try:
-            sock.shutdown(socket.SHUT_RDWR)
-        except OSError:
-            pass
+        fetch.record(sock)
 
 
 @contextmanager
 def _guarded(deadline: Optional[float]) -> Iterator[None]:
     """One fetch, redirects included: a fresh session (no cookies kept
     between fetches, no pooled connections), and at ``deadline`` every
-    direct connection it opened is cut, so a server that drips its answer
-    a byte at a time can't outlast the per-read timeout."""
-    session = requests.Session()
-    session.cookies.set_policy(http.cookiejar.DefaultCookiePolicy(allowed_domains=[]))
-    session.mount("http://", _PublicAdapter())
-    session.mount("https://", _PublicAdapter())
-    sockets: list[socket.socket] = []
+    direct connection it opened, or opens later, is cut, so a server that
+    drips its answer a byte at a time can't outlast the per-read timeout."""
+    fetch = _Fetch()
     previous = getattr(_local, "fetch", None)
-    _local.fetch = (session, sockets)
+    _local.fetch = fetch
     timer = None
     if deadline is not None:
-        timer = threading.Timer(max(0.0, deadline - time.monotonic()), _cut, (sockets,))
+        timer = threading.Timer(max(0.0, deadline - time.monotonic()), fetch.cut)
         timer.daemon = True
         timer.start()
     try:
@@ -301,14 +327,14 @@ def _guarded(deadline: Optional[float]) -> Iterator[None]:
         if timer is not None:
             timer.cancel()
         _local.fetch = previous
-        session.close()
+        fetch.close()
 
 
 def _http_get(url: str, **kwargs: Any) -> requests.Response:
     fetch = getattr(_local, "fetch", None)
     if fetch is None:
         raise RuntimeError("_http_get outside _guarded")
-    return fetch[0].get(url, **kwargs)
+    return fetch.session.get(url, **kwargs)
 
 
 @dataclass(frozen=True)

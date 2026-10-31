@@ -346,6 +346,77 @@ def test_dripped_headers_cut_at_the_deadline(local_server):
     assert time.monotonic() - start < 2.5
 
 
+def test_dripped_https_body_cut_at_the_deadline(monkeypatch, tmp_path):
+    """TLS wraps (and detaches) the socket the connection opened, so the
+    cut must still reach the live connection."""
+    import http.server
+    import ssl
+    import subprocess
+    import threading
+
+    cert, key = tmp_path / "cert.pem", tmp_path / "key.pem"
+    subprocess.run(
+        ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1",
+         "-subj", "/CN=127.0.0.1", "-addext", "subjectAltName=IP:127.0.0.1",
+         "-keyout", str(key), "-out", str(cert)],
+        check=True, capture_output=True)
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-Length", "100")
+            self.end_headers()
+            try:
+                for _ in range(100):
+                    self.wfile.write(b"x")
+                    self.wfile.flush()
+                    time.sleep(0.2)
+            except OSError:
+                pass
+
+        def log_message(self, *args):
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server.daemon_threads = True
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(str(cert), str(key))
+    server.socket = context.wrap_socket(server.socket, server_side=True)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        monkeypatch.setattr(fa, "_address_kind", lambda url, deadline=None: "public")
+        monkeypatch.setattr(fa, "_is_public_address", lambda address: True)
+        monkeypatch.setenv("REQUESTS_CA_BUNDLE", str(cert))
+        for name in ("https_proxy", "HTTPS_PROXY", "all_proxy", "ALL_PROXY"):
+            monkeypatch.delenv(name, raising=False)
+        url = "https://127.0.0.1:{}/x".format(server.server_port)
+        start = time.monotonic()
+        assert fa.fetch_body(url, start + 1, 1000, "test") is None
+        assert time.monotonic() - start < 2.5
+        # Not a TLS failure: with time enough, the same fetch succeeds.
+        monkeypatch.setattr(Handler, "do_GET", lambda self: (
+            self.send_response(200), self.send_header("Content-Length", "2"),
+            self.end_headers(), self.wfile.write(b"ok")))
+        assert fa.fetch_body(url, time.monotonic() + 5, 1000, "test").data == b"ok"
+    finally:
+        server.shutdown()
+
+
+def test_connection_opened_after_the_deadline_refused():
+    import socket
+
+    fetch = fa._Fetch()
+    fetch.cut()
+    a, b = socket.socketpair()
+    try:
+        with pytest.raises(OSError):
+            fetch.record(a)
+        assert a.fileno() == -1  # closed
+    finally:
+        b.close()
+        fetch.close()
+
+
 def test_no_cookies_kept_between_fetches(local_server):
     seen = []
 
