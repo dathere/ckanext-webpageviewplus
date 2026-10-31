@@ -599,6 +599,8 @@ which views show the "doesn't allow" card.
 
 ### Thumbnails in the resource list
 
+<img src="https://raw.githubusercontent.com/dathere/ckanext-webpageviewplus/main/docs/thumbnails.png" width="715" alt="A dataset's resource list with thumbnails: an uploaded chart picked by the editor, a Datawrapper chart, a YouTube video's and a Tableau Public workbook's own thumbnails, pages' preview images, the Vimeo and Observable logos, and the HTML format icon where there's no image or the view opts out">
+
 The `webpage_view_plus_thumbnails` plugin replaces the format icon in a dataset's resource
 list for resources with a Website (Plus) view. It's a plugin of its own, so a site that
 doesn't enable it never loads its override of `package/snippets/resource_item.html` (the
