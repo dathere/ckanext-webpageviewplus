@@ -643,7 +643,8 @@ LOGOS: dict[str, str] = {
 # logo or a stock image, never the content: the resource list skips it and
 # shows the logo above, if any. Checked 2026-10-31 by fetching each
 # service's stored embed URL. The other services' embed pages show their
-# content (Google Sheets, Felt...) or have no preview image at all.
+# content (Google Sheets, Felt...) or have no preview image at all, except
+# Observable, which answered 429 (rate limited) and is unchecked.
 GENERIC_PREVIEWS: frozenset[str] = frozenset({"Power BI", "Looker Studio", "Typeform"})
 
 
