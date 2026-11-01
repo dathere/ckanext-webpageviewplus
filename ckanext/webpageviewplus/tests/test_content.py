@@ -325,7 +325,22 @@ class TestStreamedStorage:
         response = _get(app, _content_url(resource))
         assert response.body == HTML.decode()
         assert response.headers["Content-Length"] == str(len(HTML))
-        assert "ETag" not in response.headers
+        # The storage's hash of the file.
+        assert response.headers["ETag"] == '"{}"'.format(stored.etag)
+
+    def test_unchanged_page_revalidates_without_reading(self, app, monkeypatch):
+        resource = _upload(factories.Dataset())
+        etag = _get(app, _content_url(resource)).headers["ETag"]
+        storage = content.get_resource_uploader(resource).storage
+
+        def no_read(*args, **kwargs):
+            raise AssertionError("read the file for a 304")
+        monkeypatch.setattr(type(storage), "stream", no_read)
+        response = _get(app, _content_url(resource), headers={"If-None-Match": etag}, status=304)
+        assert response.headers["ETag"] == etag
+        assert response.body == ""
+        assert response.headers["Cache-Control"] == "public, no-cache"
+        assert response.headers["Content-Security-Policy"].startswith("frame-ancestors ")
 
     def test_missing_file_is_a_404(self, app):
         resource = _upload(factories.Dataset())

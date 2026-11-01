@@ -540,8 +540,9 @@ How content is served:
   file-keeper's adapters, `file_keeper:s3`, `file_keeper:gcs` or `file_keeper:azure_blob`
   (each registers once its client library is installed: `boto3`, `google-cloud-storage` or
   `azure-storage-blob`). CKAN reads a cloud
-  file and streams it to the visitor, so its bytes pass through CKAN, without ETags or range
-  requests; uploads on disk are sent as files, as before. This keeps every rule above in force
+  file and streams it to the visitor, so its bytes pass through CKAN (without range requests).
+  The storage's hash of the file is its ETag, so a browser revalidating an unchanged page gets
+  a 304 and the file isn't read again. Uploads on disk are sent as files, as before. This keeps every rule above in force
   (signed URLs, `frame-ancestors`, no cookies) whatever the storage, where sending visitors to
   the storage's own link would not.
 - **CKAN 2.10 and 2.11 with cloud storage:** uploads kept by an extension such as

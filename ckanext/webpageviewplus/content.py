@@ -103,10 +103,12 @@ def _readable_uploader(resource: dict[str, Any]) -> Any:
 @dataclass(frozen=True)
 class StoredFile:
     """An upload's bytes, wherever its storage keeps them. ``path`` is set
-    when they're a file on CKAN's own disk."""
+    when they're a file on CKAN's own disk; ``etag``, for a streamed file,
+    is the storage's hash of it, when it keeps one."""
     size: int
     path: Optional[str]
     _chunks: Callable[[], Iterable[bytes]]
+    etag: Optional[str] = None
 
     def chunks(self) -> Iterable[bytes]:
         return self._chunks()
@@ -144,11 +146,14 @@ def stored_file(resource: dict[str, Any]) -> Optional[StoredFile]:
         return StoredFile(os.path.getsize(path), path, _file_chunks(path))
     storage = upload.storage
     try:
-        size = storage.size(location)
+        if storage.supports(fk.Capability.ANALYZE):
+            # One request (a HEAD on S3) for both the size and the hash.
+            data = storage.analyze(location)
+        else:
+            data = fk.FileData(location, size=storage.size(location))
     except (fk.exc.MissingFileError, fk.exc.LocationError):
         return None
-    data = fk.FileData(location, size=size)
-    return StoredFile(size, None, lambda: storage.stream(data))
+    return StoredFile(data.size, None, lambda: storage.stream(data), etag=data.hash or None)
 
 
 def _window(now: Optional[float] = None) -> int:
@@ -252,12 +257,19 @@ def serve(resource_id: str, filename: str):
     request.environ[CACHE_ENVIRON_KEY] = "private" if private else "public"
     if stored.path:
         response = send_file(stored.path, mimetype="text/html", conditional=True)
+    elif stored.etag and stored.etag in request.if_none_match:
+        # A browser revalidating an unchanged page (public ones are sent
+        # no-cache): answered without reading the file from the storage.
+        response = Response(status=304)
+        response.set_etag(stored.etag)
     else:
-        # A cloud storage: the bytes pass through CKAN (no ETag or ranges).
+        # A cloud storage: the bytes pass through CKAN (no range requests).
         response = Response(
             stored.chunks(), mimetype="text/html",
             headers={"Content-Length": str(stored.size)},
         )
+        if stored.etag:
+            response.set_etag(stored.etag)
     if settings.connection_reports():
         # Never blocks: only tells CKAN which hosts the page contacts.
         response.headers["Content-Security-Policy-Report-Only"] = connections.policy(resource_id)

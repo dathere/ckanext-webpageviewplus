@@ -8,8 +8,9 @@
   `ckan.files` storage that can stream its files (S3, Google Cloud Storage, Azure and others,
   through file-keeper). CKAN streams the file, so the content origin's rules hold whatever the
   storage. Views of these uploads, including qsv Data Schematics, now run with their own origin
-  (maps, saved data) instead of sandboxed on CKAN's address. Picked thumbnails and `migrate`'s
-  schematic check read them too.
+  (maps, saved data) instead of sandboxed on CKAN's address. The storage's hash is the ETag, so
+  an unchanged page revalidates with a 304 without being read again. Picked thumbnails and
+  `migrate`'s schematic check read them too.
 
 ### Changed
 
