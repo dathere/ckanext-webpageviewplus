@@ -538,14 +538,15 @@ def after_save(
                                 view["view_type"], resource.last_modified)
         if source and source.startswith("pdf-page:"):
             # Made in the editor's browser (store_first_page, as a draft),
-            # never here: keep a copy that still matches, else take a
-            # matching draft, else drop the copy.
-            row = stored(view["id"])
-            if not (row and row["source"] == source):
-                draft = _draft(view["id"])
-                if draft and draft["source"] == source:
-                    store(view["id"], source, draft["image"])
-                else:
+            # never here: take a matching draft (a linked PDF's is newer
+            # than its copy under the same source), else keep a copy that
+            # still matches, else drop the copy.
+            draft = _draft(view["id"])
+            if draft and draft["source"] == source:
+                store(view["id"], source, draft["image"])
+            else:
+                row = stored(view["id"])
+                if not (row and row["source"] == source):
                     delete(view["id"])
             _drop_draft(view["id"])
             return
@@ -718,6 +719,11 @@ def store_first_page(view: model.ResourceView, png: bytes) -> Optional[str]:
         return None
     source = first_page_source(view.config or {}, resource.url or "", resource.url_type or "",
                                resource.last_modified)
+    if (view.config or {}).get("thumbnail_resource") == FIRST_PAGE:
+        # Already the view's choice: there's no other thumbnail to keep, and
+        # a save may have landed before this drawing did.
+        store(view.id, source, image)
+        return source
     return source if _store_draft(view.id, source, image) else None
 
 

@@ -314,7 +314,8 @@ order now being built:
   `webpageviewplus:pdf-thumbnail`, and posts the PNG to `webpageviewplus_pdf_thumbnail`
   (auth `resource_view_update`, which needs `resource_id`), which re-encodes it and keeps it
   as a draft in Redis (`_draft`, `DRAFT_SECONDS`; the table's `view_id` has a foreign key, and
-  a cancelled edit mustn't replace the saved copy), source
+  a cancelled edit mustn't replace the saved copy; a view already saved with the first page is
+  stored at once, as a save may land before the drawing), source
   `pdf-page:<pdf_url | link | upload:<file name>>#<last_modified>` (`first_page_source`).
   `after_save` never makes these: it keeps a matching copy, else promotes a matching draft,
   else drops the copy.

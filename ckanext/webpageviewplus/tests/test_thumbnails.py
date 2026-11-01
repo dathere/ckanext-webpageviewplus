@@ -913,6 +913,22 @@ class TestPdfFirstPage:
         assert thumbnails.stored(view["id"])["source"].startswith("pdf-page:")
         assert thumbnails._draft(view["id"]) is None
 
+    def test_redrawn_once_chosen(self):
+        # A view already using its first page takes a new drawing at once: a
+        # linked PDF changed under the same URL, or a save that landed
+        # before the drawing did.
+        view = _pdf_view(self._report(factories.Dataset())["id"],
+                         thumbnail_resource=thumbnails.FIRST_PAGE)
+        assert thumbnails.stored(view["id"]) is None
+        for color in ((255, 0, 0, 255), (0, 255, 0, 255)):
+            helpers.call_action("webpageviewplus_pdf_thumbnail",
+                                context={"user": factories.Sysadmin()["name"]},
+                                id=view["id"], image=_png_b64(color=color))
+            digest = thumbnails.stored(view["id"])["digest"]
+            _update(view, title="Report")  # the save keeps the newest drawing
+            assert thumbnails.stored(view["id"])["digest"] == digest
+        assert thumbnails._draft(view["id"]) is None
+
     def test_changed_file_stops_counting(self, app):
         dataset = factories.Dataset()
         report = self._report(dataset)
