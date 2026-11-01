@@ -107,7 +107,9 @@ order now being built:
    with `ignore_auth`, only for an empty or HTML format and a resource's only view).
 10. Done (unreleased, for 0.8.0): `pdf_view_plus` (spec section "PDF viewer on the content
    origin"): PDF.js from the content origin for uploaded and linked PDFs; see `pdf.py` below.
-   Not built yet: `migrate` from ckanext-pdfview's `pdf_view`, and a PDF view in `demo/`.
+   `ckan webpageviewplus migrate-pdf` converts ckanext-pdfview's `pdf_view` views (same
+   `pdf_url` field); its tests patch `cli._plugin_loaded`, never `ckan.plugins.plugin_loaded`
+   (that fools `with_plugins`' teardown on CKAN 2.10).
 
 ## The security model (read before touching frame, validator, content or download code)
 
@@ -374,7 +376,10 @@ CKAN 2.11.5, http://localhost:5001.
   with PR #4949 as `QSV`, and with its `viz_static` feature, Chrome and chromedriver also
   writes a PNG preview per file, which the seed picks as each view's thumbnail).
   `wvp-features` seeds thumbnail examples too: a picked "Chart preview image", a view with
-  `no_auto_thumbnail`, and a view with `count_views`. Run the seeds in the container:
+  `no_auto_thumbnail`, and a view with `count_views`.
+  With `pdf_view_plus` enabled it also seeds an "Uploaded PDF" (drawn with Pillow) and a
+  "PDF on another site" (PDF.js's sample paper on jsDelivr, pinned to `PDFJS_VERSION`), which
+  `record_demo.py` shows after the view form. Run the seeds in the container:
   `docker exec ckan-docker-ckan-dev-1 python /srv/app/src_extensions/ckanext-webpageviewplus/demo/seed_features.py`.
   `demo/record_demo.py` (host, Playwright) records the README's `docs/demo.gif` from those datasets;
   its docstring has the ffmpeg step.

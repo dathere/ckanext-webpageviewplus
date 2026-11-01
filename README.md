@@ -381,7 +381,7 @@ migrating.
 Brazilian Portuguese, following the visitor's CKAN language. See [Translations](#translations).
 
 **Can it replace ckanext-pdfview?** Yes, on a site with a separate domain for uploads: enable
-`pdf_view_plus` and add a PDF (Plus) view to your PDF resources. It shows PDFs with PDF.js
+`pdf_view_plus` and run `ckan webpageviewplus migrate-pdf`, which converts its views in place. It shows PDFs with PDF.js
 from that domain, so phones see them too, and a PDF's scripts never run. Linked PDFs are
 fetched by CKAN and cached, at most `pdf_max_size` MB each. See [PDF views](#pdf-views).
 
@@ -917,8 +917,17 @@ view isn't offered on sites without one. Your proxy must forward `/webpageviewpl
     ckan.plugins = ... webpage_view_plus pdf_view_plus
 
 Then add a **PDF (Plus)** view to a PDF resource. To create it by default for new PDF
-resources, add `pdf_view_plus` to `ckan.views.default_views`. With ckanext-pdfview installed
-too, remove its `pdf_view` from the plugins once your views are replaced.
+resources, add `pdf_view_plus` to `ckan.views.default_views`.
+
+**Moving from ckanext-pdfview.** Convert its views in place, keeping each one's id, title,
+description, order and PDF url:
+
+    ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate-pdf --dry-run
+    ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate-pdf
+
+It needs `pdf_view_plus` enabled and a content origin, and skips (and names) any view whose PDF
+url isn't an http(s) address or whose host isn't in `allowed_hosts`. Then remove `pdf_view` from
+`ckan.plugins` and `ckan.views.default_views`.
 
 **What it shows.**
 
@@ -1043,6 +1052,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | Command | Does |
 | --- | --- |
 | `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME]` | Convert `webpage_view` views, see [Migrating from webpage_view](#migrating-from-webpage_view) |
+| `ckan webpageviewplus migrate-pdf [--dry-run]` | Convert ckanext-pdfview's `pdf_view` views to PDF (Plus), see [PDF views](#pdf-views) |
 | `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails, except with `--no-store` (cron) |
 | `ckan webpageviewplus purge-stats` | Delete view counts and reported hosts older than the retention period (cron) |
 | `ckan webpageviewplus stats-summary [--limit N]` | Site-wide view counts, busiest first |

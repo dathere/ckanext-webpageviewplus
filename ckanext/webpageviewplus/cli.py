@@ -8,7 +8,7 @@ import click
 
 import ckan.model as model
 
-from ckanext.webpageviewplus import content, frame, frameability, health, settings, thumbnails
+from ckanext.webpageviewplus import content, frame, frameability, health, pdf, settings, thumbnails
 
 SCHEMATIC_MARKER = b"qsv-schematic-source"
 # Stop scanning large uploads after this many bytes.
@@ -169,6 +169,61 @@ def migrate(dry_run: bool, uploads_only: bool, preset: Optional[str]):
             config["preset"] = chosen
             view.config = config
             view.view_type = "webpage_view_plus"
+
+    if dry_run:
+        click.echo("{} view(s) would be migrated (dry run).".format(migrated))
+    else:
+        model.repo.commit()
+        click.echo("{} view(s) migrated.".format(migrated))
+
+
+def _plugin_loaded(name: str) -> bool:
+    import ckan.plugins as plugins
+    return plugins.plugin_loaded(name)
+
+
+@webpageviewplus.command("migrate-pdf")
+@click.option("--dry-run", is_flag=True, help="Show what would change, change nothing.")
+def migrate_pdf(dry_run: bool):
+    """Convert ckanext-pdfview's pdf_view views to pdf_view_plus.
+
+    Keeps each view's id, title, description, order and pdf_url (both view
+    types name the field alike). Needs the pdf_view_plus plugin and a
+    content origin, without which the converted views couldn't show.
+    """
+    if not _plugin_loaded(pdf.VIEW_TYPE):
+        raise click.UsageError("add pdf_view_plus to ckan.plugins first")
+    if not settings.isolating_content_origin():
+        raise click.UsageError(
+            "pdf_view_plus needs ckanext.webpageviewplus.content_origin "
+            "(with harden_downloads on)")
+    views = (
+        model.Session.query(model.ResourceView)
+        .filter(model.ResourceView.view_type == "pdf_view")
+        .order_by(model.ResourceView.resource_id, model.ResourceView.order)
+        .all()
+    )
+    migrated = 0
+    for view in views:
+        config = dict(view.config or {})
+        pdf_url = (config.get("pdf_url") or "").strip()
+        problem = None
+        if pdf_url and not frame.is_http_url(pdf_url):
+            problem = "its pdf_url isn't an http(s) URL"
+        elif pdf_url and not pdf.host_allowed(pdf_url):
+            problem = "its pdf_url's host isn't in allowed_hosts"
+        if problem:
+            click.echo("{} {} skipped: {}; left on pdf_view".format(
+                view.id, view.resource_id, problem), err=True)
+            continue
+        migrated += 1
+        click.echo("{} {} -> {}{}".format(
+            view.id, view.resource_id, pdf.VIEW_TYPE,
+            " ({})".format(pdf_url) if pdf_url else ""))
+        if not dry_run:
+            # Only the fields pdf_view_plus knows: pdfview has no others.
+            view.config = {"pdf_url": pdf_url} if pdf_url else {}
+            view.view_type = pdf.VIEW_TYPE
 
     if dry_run:
         click.echo("{} view(s) would be migrated (dry run).".format(migrated))

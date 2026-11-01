@@ -165,3 +165,83 @@ def test_contains_respects_limit():
     # Cut mid-chunk too: the limit isn't rounded up to a whole chunk.
     body = b"x" * (CHUNK // 2) + wvp_cli.SCHEMATIC_MARKER
     assert not wvp_cli.contains(_chunks(body), wvp_cli.SCHEMATIC_MARKER, limit=CHUNK // 2)
+
+
+def _pdfview_view(resource, title="PDF", **config):
+    """A ckanext-pdfview view, as a site upgrading from it has them (that
+    plugin isn't installed here, so the row is written directly)."""
+    view = model.ResourceView(
+        resource_id=resource["id"], view_type="pdf_view", title=title,
+        description="From pdfview", order=0, config=config)
+    model.Session.add(view)
+    model.Session.commit()
+    return view.id
+
+
+def _view_row(view_id):
+    model.Session.expire_all()
+    return model.ResourceView.get(view_id)
+
+
+@pytest.fixture
+def pdf_site(monkeypatch, content_origin):
+    """The CLI reloads CKAN from test.ini, so markers don't reach it: say
+    pdf_view_plus is loaded (cli's own helper only: patching
+    ckan.plugins.plugin_loaded would fool with_plugins' teardown)."""
+    monkeypatch.setattr(wvp_cli, "_plugin_loaded", lambda name: True)
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus pdf_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins", "pdf_site")
+class TestMigratePdf:
+    def test_dry_run_changes_nothing(self, cli):
+        view_id = _pdfview_view(factories.Resource(url="https://files.example.org/a.pdf", format="PDF"))
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate-pdf", "--dry-run"])
+        assert result.exit_code == 0, result.output
+        assert view_id in result.output
+        assert _view_row(view_id).view_type == "pdf_view"
+
+    def test_migrates_keeping_fields(self, cli):
+        resource = factories.Resource(url="https://files.example.org/a.pdf", format="PDF")
+        plain = _pdfview_view(resource, title="Report")
+        linked = _pdfview_view(resource, title="Other", pdf_url="https://b.example.org/b.pdf")
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate-pdf"])
+        assert result.exit_code == 0, result.output
+        shown = helpers.call_action("resource_view_show", id=plain)
+        assert shown["view_type"] == "pdf_view_plus"
+        assert (shown["title"], shown["description"]) == ("Report", "From pdfview")
+        assert "pdf_url" not in shown
+        assert helpers.call_action("resource_view_show", id=linked)["pdf_url"] == "https://b.example.org/b.pdf"
+
+    def test_bad_pdf_url_skipped(self, cli):
+        resource = factories.Resource(url="https://files.example.org/a.pdf", format="PDF")
+        view_id = _pdfview_view(resource, pdf_url="javascript:alert(1)")
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate-pdf"])
+        assert result.exit_code == 0, result.output
+        assert "skipped" in result.output
+        assert _view_row(view_id).view_type == "pdf_view"
+
+    def test_host_not_allowed_skipped(self, cli, monkeypatch):
+        from ckanext.webpageviewplus import settings
+        monkeypatch.setattr(settings, "allowed_hosts", lambda: ["files.example.org"])
+        resource = factories.Resource(url="https://files.example.org/a.pdf", format="PDF")
+        kept = _pdfview_view(resource, pdf_url="https://elsewhere.example.org/b.pdf")
+        moved = _pdfview_view(resource, pdf_url="https://files.example.org/c.pdf")
+        cli.invoke(ckan, ["webpageviewplus", "migrate-pdf"])
+        assert _view_row(kept).view_type == "pdf_view"
+        assert _view_row(moved).view_type == "pdf_view_plus"
+
+    def test_needs_content_origin(self, cli, monkeypatch):
+        from ckanext.webpageviewplus import settings
+        monkeypatch.setattr(settings, "isolating_content_origin", lambda: None)
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate-pdf"])
+        assert result.exit_code != 0
+        assert "content_origin" in result.output
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+def test_migrate_pdf_needs_the_plugin(cli):
+    result = cli.invoke(ckan, ["webpageviewplus", "migrate-pdf"])
+    assert result.exit_code != 0
+    assert "pdf_view_plus" in result.output

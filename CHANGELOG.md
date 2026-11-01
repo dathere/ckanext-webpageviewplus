@@ -20,6 +20,10 @@
   Portuguese, Thai, German, Italian, French, Japanese, Indonesian, Ukrainian, Turkish). Proxies
   must forward `/webpageviewplus/pdfjs/` and `/webpageviewplus/pdf/` on the content domain.
   `scripts/vendor_pdfjs.py` updates the vendored copy.
+- `ckan webpageviewplus migrate-pdf [--dry-run]` converts ckanext-pdfview's `pdf_view` views to
+  PDF (Plus) in place, keeping id, title, description, order and PDF url. It needs
+  `pdf_view_plus` and a content origin, and skips views whose PDF url isn't http(s) or whose
+  host isn't in `allowed_hosts`.
 - OpenDocument files (`.odt`, `.ods`, `.odp`) join the Microsoft Office service: the form
   suggests Microsoft's viewer for them, with `external`, and presentations get a 16/9 height.
   0.7.0 refused them because the sample files it was tested with fail to open. Others render
