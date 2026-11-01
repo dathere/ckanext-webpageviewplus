@@ -231,6 +231,17 @@ class TestMigratePdf:
         assert _view_row(kept).view_type == "pdf_view"
         assert _view_row(moved).view_type == "pdf_view_plus"
 
+    def test_resource_url_host_not_allowed_skipped(self, cli, monkeypatch):
+        # No pdf_url: the view shows the resource's own URL, checked the same way.
+        from ckanext.webpageviewplus import settings
+        monkeypatch.setattr(settings, "allowed_hosts", lambda: ["files.example.org"])
+        resource = factories.Resource(url="https://elsewhere.example.org/a.pdf", format="PDF")
+        view_id = _pdfview_view(resource)
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate-pdf"])
+        assert result.exit_code == 0, result.output
+        assert "skipped" in result.output
+        assert _view_row(view_id).view_type == "pdf_view"
+
     def test_unreadable_upload_skipped(self, cli, monkeypatch):
         # A cloud storage extension on CKAN 2.10/2.11: the converted view
         # couldn't read the file, while pdfview's (the browser) can.

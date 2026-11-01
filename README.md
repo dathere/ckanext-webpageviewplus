@@ -939,7 +939,8 @@ image comes from, first match wins:
    or **the PDF's first page**: choose it in the same list and PDF.js draws page 1 in your
    browser, from the saved view, and sends the picture to CKAN (the
    `webpageviewplus_pdf_thumbnail` action, for those who may edit the view), which re-encodes
-   it like any image. Save the view to use it. CKAN itself never renders a PDF. For an upload
+   it like any image and keeps it in Redis for a day. Save the view to use it: until then
+   the view keeps the thumbnail it had. CKAN itself never renders a PDF. For an upload
    the copy is tied to the resource's last change: when the file is replaced, it stops showing
    until someone opens the view form, which draws it again. A PDF linked from another site has
    no such record, so the form draws its first page again every time it's opened.

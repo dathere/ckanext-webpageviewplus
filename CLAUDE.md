@@ -312,9 +312,12 @@ order now being built:
   through `pdf-view/<id>` in a tiny
   on-screen frame (browsers pause rendering in off-screen cross-origin frames), asks it with
   `webpageviewplus:pdf-thumbnail`, and posts the PNG to `webpageviewplus_pdf_thumbnail`
-  (auth `resource_view_update`, which needs `resource_id`), which re-encodes and stores it as
+  (auth `resource_view_update`, which needs `resource_id`), which re-encodes it and keeps it
+  as a draft in Redis (`_draft`, `DRAFT_SECONDS`; the table's `view_id` has a foreign key, and
+  a cancelled edit mustn't replace the saved copy), source
   `pdf-page:<pdf_url | link | upload:<file name>>#<last_modified>` (`first_page_source`).
-  `after_save` never makes these: it keeps a matching copy and drops any other.
+  `after_save` never makes these: it keeps a matching copy, else promotes a matching draft,
+  else drops the copy.
   `first_page_ready` (form only) is never true for linked PDFs, which have no change stamp. The viewer
   script answers only `window.parent`, and sets `externalLinkTarget` to a new tab.
   survives a failed refresh. The per-view opt-out is `no_auto_thumbnail`, not the spec's

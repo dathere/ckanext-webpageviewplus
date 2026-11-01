@@ -387,8 +387,8 @@ def check_views(
     webpage_view_plus views are saved: with frameability_check on, a view
     whose page refuses to be framed shows a card instead of a blank frame.
     With the webpage_view_plus_thumbnails plugin, their thumbnails are
-    remade too (a copy stays if remaking it fails); that never changes the
-    exit status.
+    remade too, and those of pdf_view_plus views (a copy stays if remaking
+    it fails); that never changes the exit status.
     """
     query = (
         model.Session.query(model.ResourceView, model.Resource, model.Package)
@@ -416,6 +416,23 @@ def check_views(
             dataset=package.name, resource_id=resource.id, view_id=view.id,
             view_type=view.view_type)
         rows.append(row)
+    if remake:
+        # PDF (Plus) views have no page to check, only a thumbnail to remake.
+        pdf_views = (
+            model.Session.query(model.ResourceView)
+            .join(model.Resource, model.Resource.id == model.ResourceView.resource_id)
+            .join(model.Package, model.Package.id == model.Resource.package_id)
+            .filter(model.ResourceView.view_type == thumbnails.PDF_VIEW_TYPE)
+            .filter(model.Resource.state == "active", model.Package.state == "active")
+        )
+        if dataset:
+            pdf_views = pdf_views.filter(
+                (model.Package.name == dataset) | (model.Package.id == dataset))
+        for view in pdf_views:
+            thumbnails.after_save(
+                dict(view.config or {}, id=view.id, view_type=view.view_type,
+                     resource_id=view.resource_id),
+                deadline=time.monotonic() + timeout, keep=True, memo=images)
     broken = [r for r in rows if r["problem"]]
     shown = rows if show_all else broken
     if as_json:

@@ -781,6 +781,67 @@ class TestOfficeAndPdfViews:
                        v=row["digest"][:16]).replace("&", "&amp;") in _page(app, dataset)
         assert app.get(url_for("webpageviewplus_thumbnails.serve", view_id=view["id"])).status_code == 200
 
+    def test_one_run_never_shares_an_upload_across_datasets(self, ckan_config):
+        # check-views fetches each file once per run, but an upload is read
+        # only for a view in its own dataset: a private dataset's preview
+        # mustn't reach a public view pointing at the same file.
+        private = factories.Dataset(private=True, owner_org=factories.Organization()["id"])
+        doc = _office_upload(private, _office_file(), "minutes.odt")
+        download = "{}/dataset/{}/resource/{}/download/minutes.odt".format(
+            ckan_config["ckan.site_url"].rstrip("/"), private["id"], doc["id"])
+        own = _view(doc["id"], page_url=_embed(download), preset="interactive")
+        public = factories.Dataset()
+        page = factories.Resource(package_id=public["id"], url=PAGE, format="HTML")
+        other = _view(page["id"], page_url=_embed(download), preset="interactive")
+        assert thumbnails.stored(other["id"]) is None
+        memo = {}
+        for view in (own, other):
+            thumbnails.after_save(view, memo=memo)
+        assert thumbnails.stored(own["id"])
+        assert thumbnails.stored(other["id"]) is None
+
+    def test_deleted_office_upload_drops_its_preview(self, app, ckan_config):
+        dataset = factories.Dataset()
+        doc = _office_upload(dataset, _office_file(), "minutes.odt")
+        download = "{}/dataset/{}/resource/{}/download/minutes.odt".format(
+            ckan_config["ckan.site_url"].rstrip("/"), dataset["id"], doc["id"])
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        view = _view(page["id"], page_url=_embed(download), preset="interactive")
+        assert thumbnails.stored(view["id"])
+        serve = url_for("webpageviewplus_thumbnails.serve", view_id=view["id"])
+        # Deleted without the resource actions: the copy stops showing at once.
+        from ckan import model
+        model.Resource.get(doc["id"]).state = "deleted"
+        model.Session.commit()
+        assert app.get(serve).status_code == 404
+        assert "webpageviewplus/thumbnail/" not in _page(app, dataset)
+        # Deleted through them: the copy goes.
+        model.Resource.get(doc["id"]).state = "active"
+        model.Session.commit()
+        helpers.call_action("resource_delete", id=doc["id"])
+        assert thumbnails.stored(view["id"]) is None
+
+    def test_check_views_remakes_pdf_thumbnails(self):
+        from click.testing import CliRunner
+
+        from ckanext.webpageviewplus import cli as wvp_cli
+
+        dataset = factories.Dataset()
+        report = factories.Resource(package_id=dataset["id"], url="https://files.example.com/r.pdf",
+                                    format="PDF")
+        image = _image(dataset)
+        view = helpers.call_action(
+            "resource_view_create",
+            context={"user": factories.Sysadmin()["name"], "ignore_auth": True},
+            resource_id=report["id"], view_type="pdf_view_plus", title="Report",
+            thumbnail_resource=image["id"])
+        good = thumbnails.stored(view["id"])["digest"]
+        # The image is replaced without the resource actions (package_update).
+        thumbnails.store(view["id"], "resource:" + image["id"], b"stale")
+        result = CliRunner().invoke(wvp_cli.check_views, ["--dataset", dataset["name"]])
+        assert result.exception is None or isinstance(result.exception, SystemExit)
+        assert thumbnails.stored(view["id"])["digest"] == good
+
     def test_pdf_view_image_from_another_dataset_refused(self):
         dataset = factories.Dataset()
         report = factories.Resource(package_id=dataset["id"], url="https://files.example.com/r.pdf",
@@ -833,6 +894,24 @@ class TestPdfFirstPage:
         assert row["source"] == result["source"]  # the save kept it
         assert url_for("webpageviewplus_thumbnails.serve", view_id=view["id"],
                        v=row["digest"][:16]).replace("&", "&amp;") in _page(app, dataset)
+
+    def test_cancelled_edit_keeps_the_picked_image(self, app):
+        # Choosing the first page draws it at once; until the view is saved,
+        # the image it uses stays its thumbnail.
+        dataset = factories.Dataset()
+        image = _image(dataset)
+        view = _pdf_view(self._report(dataset)["id"], thumbnail_resource=image["id"])
+        before = thumbnails.stored(view["id"])
+        helpers.call_action("webpageviewplus_pdf_thumbnail",
+                            context={"user": factories.Sysadmin()["name"]},
+                            id=view["id"], image=_png_b64(color=(0, 0, 255, 255)))
+        assert thumbnails.stored(view["id"]) == before
+        assert app.get(url_for("webpageviewplus_thumbnails.serve",
+                               view_id=view["id"])).status_code == 200
+        # Saved with the first page: the drawing takes over, the draft goes.
+        _update(view, thumbnail_resource=thumbnails.FIRST_PAGE)
+        assert thumbnails.stored(view["id"])["source"].startswith("pdf-page:")
+        assert thumbnails._draft(view["id"]) is None
 
     def test_changed_file_stops_counting(self, app):
         dataset = factories.Dataset()

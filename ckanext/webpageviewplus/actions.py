@@ -146,7 +146,8 @@ def thumbnails_view_update(
     return view
 
 
-# A picked image that's replaced or deleted remakes or drops its copies.
+# A picked image or uploaded Office file that's replaced or deleted remakes or
+# drops its copies.
 @toolkit.chained_action
 def thumbnails_resource_update(
     original: Any, context: Context, data_dict: dict[str, Any]
@@ -252,9 +253,9 @@ def pdf_thumbnail_auth(context: Context, data_dict: dict[str, Any]) -> dict[str,
 
 def webpageviewplus_pdf_thumbnail(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:
     """Store a picture of a PDF (Plus) view's first page, drawn by PDF.js in
-    the editor's browser (the view form sends it). It counts as the view's
-    thumbnail once the view's "Thumbnail in the resource list" is set to
-    the PDF's first page, while the file is unchanged.
+    the editor's browser (the view form sends it). It becomes the view's
+    thumbnail when the view is saved with "Thumbnail in the resource list"
+    set to the PDF's first page, while the file is unchanged.
 
     :param id: the PDF (Plus) view's id
     :param image: the picture, base64 (PNG, JPEG, WebP or GIF; it's

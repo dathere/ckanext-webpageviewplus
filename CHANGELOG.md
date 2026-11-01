@@ -24,7 +24,9 @@
 - Thumbnails (`webpage_view_plus_thumbnails`): PDF (Plus) views take an image the editor picks,
   or the PDF's first page, drawn by PDF.js in the editor's browser when it's chosen in the view
   form and sent to the new `webpageviewplus_pdf_thumbnail` action (for those who may edit the
-  view), which re-encodes it; CKAN never renders PDFs. For an upload it's tied to the file's
+  view), which re-encodes it and keeps it in Redis until the view is saved (a cancelled edit
+  keeps the old thumbnail); CKAN never renders PDFs. `check-views` remakes PDF (Plus) views'
+  thumbnails too. For an upload it's tied to the file's
   last change, and the form redraws it once the file has changed; a linked PDF's is redrawn
   whenever the form is opened. A Website (Plus) view of an Office file shows the preview picture inside the file
   (always in OpenDocument; in `.docx`, `.xlsx`, `.pptx` and `.ppsx` when saved with one). An

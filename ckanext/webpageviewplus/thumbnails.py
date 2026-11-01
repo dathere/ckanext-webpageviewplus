@@ -86,6 +86,8 @@ FETCH_SECONDS = 5
 MAX_PAGE_BYTES = 512 * 1024
 MAX_IMAGE_BYTES = 2 * 1024 * 1024
 USER_AGENT = "ckanext-webpageviewplus thumbnail"
+# How long a first page drawn in the view form waits for the view's save.
+DRAFT_SECONDS = 24 * 60 * 60
 # Office files that carry their own preview picture: OpenDocument always
 # (Thumbnails/thumbnail.png), Word, Excel and PowerPoint files when saved
 # with one (docProps/thumbnail.*; WMF and EMF ones can't be decoded). The
@@ -461,7 +463,10 @@ def _make(
         def fetch(url: str, deadline: float) -> Optional[bytes]:
             data = office_bytes(url, package_id, deadline)
             return office_preview(data) if data else None
-        key = ("office", ref)
+        # office_bytes reads an upload only for a view in its own dataset:
+        # a run's memo mustn't hand one dataset's copy to another.
+        local = frame.is_ckan_host(ref, settings.ckan_hosts())
+        key = ("office " + (package_id if local else ""), ref)
     else:
         return None
     if memo is not None and key in memo:
@@ -532,11 +537,17 @@ def after_save(
             source = source_for(view, resource.url or "", resource.url_type or "",
                                 view["view_type"], resource.last_modified)
         if source and source.startswith("pdf-page:"):
-            # Made in the editor's browser (store_first_page), never here:
-            # keep a copy that still matches, drop any other.
+            # Made in the editor's browser (store_first_page, as a draft),
+            # never here: keep a copy that still matches, else take a
+            # matching draft, else drop the copy.
             row = stored(view["id"])
             if not (row and row["source"] == source):
-                delete(view["id"])
+                draft = _draft(view["id"])
+                if draft and draft["source"] == source:
+                    store(view["id"], source, draft["image"])
+                else:
+                    delete(view["id"])
+            _drop_draft(view["id"])
             return
         if source:
             if deadline is None:
@@ -592,27 +603,40 @@ def _source_active(source: str, pkg: Optional[dict[str, Any]] = None) -> bool:
     """Whether a picked image a copy was made from is still in its dataset,
     and still one a view may use (a linked one only while fetching is
     allowed): a deleted image's copy must stop showing at once, however it
-    was deleted. The dataset page's own resource list answers it without a
-    query. Page sources need nothing more than source_for."""
+    was deleted. The same goes for an uploaded Office file's preview. The
+    dataset page's own resource list answers it without a query. Page
+    sources need nothing more than source_for."""
     kind, _, picked = source.partition(":")
-    if kind != "resource":
-        return kind in ("page", "service", "office", "pdf-page")
+    if kind == "office":
+        match = _DOWNLOAD_RE.search(urlsplit(picked).path) \
+            if frame.is_ckan_host(picked, settings.ckan_hosts()) else None
+        if match is None:
+            return True
+        picked, usable = match.group(1), (lambda r: r.get("url_type") == "upload")
+    elif kind != "resource":
+        return kind in ("page", "service", "pdf-page")
+    else:
+        usable = is_pickable
     resources = (pkg or {}).get("resources")
     if resources is not None:
-        image = next((r for r in resources if r.get("id") == picked), None)
-        return image is not None and is_pickable(image)
-    found = model.Resource.get(picked)
-    return found is not None and found.state == "active" \
-        and is_pickable(content.resource_dict(found))
+        found = next((r for r in resources if r.get("id") == picked), None)
+        return found is not None and usable(found)
+    row = model.Resource.get(picked)
+    return row is not None and row.state == "active" and usable(content.resource_dict(row))
 
 
 def refresh_from(resource_id: str) -> None:
-    """Remake (or drop) every copy made from this image, after it was
-    updated or deleted. Never fails the action."""
+    """Remake (or drop) every copy made from this image, or from this
+    uploaded Office file, after it was updated or deleted. Never fails the
+    action."""
+    office = sa.and_(
+        table.c.source.startswith("office:", autoescape=True),
+        table.c.source.contains("/resource/{}/download/".format(resource_id), autoescape=True))
     try:
         with model.meta.engine.connect() as connection:
             view_ids = [row.view_id for row in connection.execute(
-                sa.select(table.c.view_id).where(table.c.source == "resource:" + resource_id))]
+                sa.select(table.c.view_id).where(
+                    (table.c.source == "resource:" + resource_id) | office))]
     except sa.exc.SQLAlchemyError:
         log.warning("webpageviewplus: refreshing thumbnails failed", exc_info=True)
         return
@@ -632,18 +656,60 @@ def first_page_ready(view: dict[str, Any], resource: dict[str, Any]) -> bool:
         return False
     if view.get("pdf_url") or resource.get("url_type") != "upload":
         return False
-    row = stored(view["id"])
-    return bool(row) and row["source"] == first_page_source(
-        view, resource.get("url") or "", resource.get("url_type") or "",
-        resource.get("last_modified"))
+    source = first_page_source(view, resource.get("url") or "", resource.get("url_type") or "",
+                               resource.get("last_modified"))
+    return any(row and row["source"] == source
+               for row in (stored(view["id"]), _draft(view["id"])))
+
+
+def _draft_key(view_id: str) -> str:
+    return "{}:webpageviewplus:first-page:{}".format(
+        toolkit.config.get("ckan.site_id"), view_id)
+
+
+def _draft(view_id: str) -> Optional[dict[str, Any]]:
+    """A first page drawn for a view, waiting for the view's save. Drafts
+    live in Redis (the thumbnails table's rows belong to saved views) and
+    expire, so an abandoned edit leaves nothing behind."""
+    from ckan.lib.redis import connect_to_redis
+    try:
+        found = connect_to_redis().hgetall(_draft_key(view_id))
+    except Exception:
+        log.warning("webpageviewplus: can't read a first-page draft", exc_info=True)
+        return None
+    if not found or b"source" not in found or b"image" not in found:
+        return None
+    return {"source": found[b"source"].decode(), "image": found[b"image"]}
+
+
+def _store_draft(view_id: str, source: str, image: bytes) -> bool:
+    from ckan.lib.redis import connect_to_redis
+    key = _draft_key(view_id)
+    try:
+        redis = connect_to_redis()
+        redis.hset(key, mapping={"source": source, "image": image})
+        redis.expire(key, DRAFT_SECONDS)
+    except Exception:
+        log.warning("webpageviewplus: can't keep a first-page draft", exc_info=True)
+        return False
+    return True
+
+
+def _drop_draft(view_id: str) -> None:
+    from ckan.lib.redis import connect_to_redis
+    try:
+        connect_to_redis().delete(_draft_key(view_id))
+    except Exception:
+        log.warning("webpageviewplus: can't drop a first-page draft", exc_info=True)
 
 
 def store_first_page(view: model.ResourceView, png: bytes) -> Optional[str]:
     """Store a picture of a PDF (Plus) view's first page, drawn by PDF.js
     in the editor's browser. It's re-encoded like any image, so only a
-    valid picture is kept. It counts once the view's thumbnail is set to
-    FIRST_PAGE, while the file is unchanged. Returns its source, or None
-    for anything that isn't a usable image."""
+    valid picture is kept. It's a draft until the view is saved with its
+    thumbnail set to FIRST_PAGE (after_save), so an edit that's cancelled
+    leaves the view's copy alone. Returns its source, or None for anything
+    that isn't a usable image."""
     resource = model.Resource.get(view.resource_id)
     if resource is None or len(png) > MAX_IMAGE_BYTES:
         return None
@@ -652,8 +718,7 @@ def store_first_page(view: model.ResourceView, png: bytes) -> Optional[str]:
         return None
     source = first_page_source(view.config or {}, resource.url or "", resource.url_type or "",
                                resource.last_modified)
-    store(view.id, source, image)
-    return source
+    return source if _store_draft(view.id, source, image) else None
 
 
 def service_format(context: dict[str, Any], view: dict[str, Any]) -> None:
