@@ -13,9 +13,10 @@ Show web pages and uploaded HTML inside CKAN, safely. This extension replaces CK
 [Data Schematic](https://dathere.com/2026/08/data-schematic-a-neuro-symbolic-visual-story-telling-data-explorer-dictionary/))
 on a resource's page, with a security setting per view, a height that fits the page, and
 buttons to open it in a new tab or full screen. It runs beside `webpage_view`, so you can move
-your views over when you're ready.
+your views over when you're ready. A second view, "PDF (Plus)", shows PDFs with the bundled
+PDF.js viewer, the same in every browser and on phones.
 
-![The four presets: a qsv Data Schematic of Allegheny County dog licences sizing itself to fit, Wikipedia in Strict, a Datawrapper chart in Interactive, YouTube in External behind a consent card, the view form suggesting a Vimeo embed, thumbnails in two datasets' resource lists, then a short clip of each of the 30 well-known services with the preset it needs](https://raw.githubusercontent.com/dathere/ckanext-webpageviewplus/main/docs/demo.gif)
+![The four presets: a qsv Data Schematic of Allegheny County dog licences sizing itself to fit, Wikipedia in Strict, a Datawrapper chart in Interactive, YouTube in External behind a consent card, the view form suggesting a Vimeo embed, a linked PDF in the PDF (Plus) view with its toolbar in English and then German, thumbnails in two datasets' resource lists, then a short clip of each of the 30 well-known services with the preset it needs](https://raw.githubusercontent.com/dathere/ckanext-webpageviewplus/main/docs/demo.gif)
 
 ## Why use it
 
@@ -33,12 +34,18 @@ help for editors pasting links from well-known services, and a card explaining w
 can't be shown instead of a blank box. It works on phones and tablets, and with keyboards and
 screen readers.
 
+**It shows PDFs everywhere.** With a separate domain for uploads, the PDF (Plus) view shows
+uploaded and linked PDFs with PDF.js, which ships with the extension, so phones show them too,
+and a PDF's own scripts never run in the view. One command converts ckanext-pdfview's views.
+
 **It respects visitors' privacy.** Nothing is tracked by default. Sites can ask visitors before
 loading third-party pages, and opt in to anonymous view counts.
 
-**Compared with `webpage_view`:**
+### Compared with what it replaces
 
-| | `webpage_view` (CKAN core) | `webpage_view_plus` |
+**Web pages: `webpage_view` (CKAN core) and Website (Plus)**
+
+| | `webpage_view` (CKAN core) | Website (Plus) (`webpage_view_plus`) |
 | --- | --- | --- |
 | Security | none: embedded pages run unrestricted, uploads run as CKAN | a security preset per view, checked when it's saved and when it's shown |
 | Uploaded HTML | runs as CKAN, in the view and from its download link | sandboxed, or served from a separate domain |
@@ -53,8 +60,13 @@ loading third-party pages, and opt in to anonymous view counts.
 | Finding broken views | none | one command lists views (core's too) whose page is gone or refuses to be embedded |
 | Telemetry | none | none by default; opt-in view counting |
 | Languages | CKAN's | English, German, Spanish, French, Italian, Japanese and Brazilian Portuguese |
-| Moving over | n/a | one command converts existing views in place |
+| Moving over | n/a | `ckan webpageviewplus migrate` converts existing views in place |
 
+**Office files and PDFs.** The Microsoft Office service is compared with
+[ckanext-officedocs](https://github.com/jqnatividad/ckanext-officedocs) under
+[Office files compared with ckanext-officedocs](#office-files-compared-with-ckanext-officedocs),
+and the PDF (Plus) view with [ckanext-pdfview](https://github.com/ckan/ckanext-pdfview) under
+[PDF (Plus) compared with ckanext-pdfview](#pdf-plus-compared-with-ckanext-pdfview).
 
 ## Requirements
 
@@ -67,11 +79,13 @@ loading third-party pages, and opt in to anonymous view counts.
 
 **Browsers: Chrome and Edge 88+, Firefox 89+ and Safari 15+ (macOS, iOS and iPadOS)**, all from
 2021. The security protection works in every browser still in use; older browsers just show
-less around the view. Internet Explorer isn't supported. Details are under
+less around the view. The PDF (Plus) view needs recent browsers (Chrome and Edge 125+,
+Firefox ESR 153 or a newer Firefox, Safari 18+). Internet Explorer isn't supported. Details are under
 [Browser support](#browser-support).
 
 A separate domain for uploads is optional, and needs a second, separately registered domain
-name. See [A separate domain for uploads](#a-separate-domain-for-uploads).
+name. See [A separate domain for uploads](#a-separate-domain-for-uploads). The PDF (Plus) view
+needs one, and `ckan.storage_path` set to show PDFs linked from other sites.
 
 
 ## Installation
@@ -84,13 +98,35 @@ name. See [A separate domain for uploads](#a-separate-domain-for-uploads).
 
        pip install ckanext-webpageviewplus
 
+   For thumbnails in the resource list, install it with Pillow instead:
+
+       pip install "ckanext-webpageviewplus[thumbnails]"
+
    (or, for unreleased changes, `pip install git+https://github.com/dathere/ckanext-webpageviewplus.git`)
 
-3. Add `webpage_view_plus` to `ckan.plugins` in your CKAN config file (by default
-   `/etc/ckan/default/ckan.ini`). Keep `webpage_view` enabled until you've migrated.
+3. Add the plugins you want to `ckan.plugins` in your CKAN config file (by default
+   `/etc/ckan/default/ckan.ini`), `webpage_view_plus` first:
 
-4. Create the plugin's tables (used only by opt-in view counting, connection reports, the
-   frameability check and thumbnails, but run it anyway so turning those on later just works). Run it again after every upgrade:
+   | Plugin | Adds | Needs |
+   | --- | --- | --- |
+   | `webpage_view_plus` | the Website (Plus) view: web pages, uploaded HTML, well-known services, Office files | nothing |
+   | `webpage_view_plus_thumbnails` | [thumbnails in the resource list](#thumbnails-in-the-resource-list) | `webpage_view_plus`, and Pillow (the `[thumbnails]` extra) |
+   | `pdf_view_plus` | the [PDF (Plus) view](#pdf-views) | `webpage_view_plus`, a [separate domain for uploads](#a-separate-domain-for-uploads), and `ckan.storage_path` for PDFs linked from other sites |
+
+   For example:
+
+       ckan.plugins = ... webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus
+
+   CKAN won't start if `webpage_view_plus` is missing or, for thumbnails, Pillow is, and says
+   which. Without a separate domain, `pdf_view_plus` loads but offers no view. Keep
+   `webpage_view` (and ckanext-pdfview's `pdf_view` or ckanext-officedocs' `officedocs_view`,
+   if you use them) enabled until you've moved your views over: `migrate` and `migrate-pdf`
+   convert the first two; Office views are added afresh.
+
+4. Create the extension's tables (used only by opt-in view counting, connection reports, the
+   frameability check and thumbnails, but run it anyway so turning those on later just works).
+   They're all under `webpage_view_plus`, whichever plugins you enable. Run it again after every
+   upgrade:
 
        ckan -c /etc/ckan/default/ckan.ini db upgrade -p webpage_view_plus
 
@@ -215,6 +251,8 @@ a cloud storage extension (ckanext-s3filestore, ckanext-cloudstorage) can't be s
 they stay sandboxed on CKAN's own address, without maps or saved data. Upgrading to 2.12 and
 its file storage removes that limit.
 
+It's also what the [PDF (Plus) view](#pdf-views) needs: its viewer runs only from this domain.
+
 
 ## Optional features
 
@@ -292,6 +330,10 @@ very welcome, as pull requests to
 `ckanext/webpageviewplus/i18n/<locale>/LC_MESSAGES/ckanext-webpageviewplus.po` (see
 [Adding or updating a language](#adding-or-updating-a-language)).
 
+The PDF (Plus) view's toolbar comes from PDF.js's own translations: English and the ten
+languages CKAN portals use most, so Thai, Indonesian, Ukrainian and Turkish too (see
+[PDF views](#pdf-views)). Other languages show English.
+
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 
@@ -299,186 +341,210 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ### For site administrators
 
-**What exactly does the sandbox stop, and what doesn't it?** It stops an embedded page from
-acting as CKAN: it can't read CKAN's pages, cookies or storage, or use a visitor's login to
-change anything, whether it's a third-party page or HTML someone uploaded. Without a separate
-domain for uploads, no frame is ever allowed to run scripts with a real origin, as that's the
-one combination that could reach an upload and run it as CKAN. It doesn't vouch for what a
-page says or loads: a page can still be misleading, and loading a third-party page still sends
-that site the visitor's own cookies for it, which is what the consent card is for. See
-[How the protection works](#how-the-protection-works) and
-[Keeping your site safe](#keeping-your-site-safe).
+- **Q: What exactly does the sandbox stop, and what doesn't it?**<br>
+  A: It stops an embedded page from acting as CKAN: it can't read CKAN's pages, cookies or
+  storage, or use a visitor's login to change anything, whether it's a third-party page or HTML
+  someone uploaded. Without a separate domain for uploads, no frame is ever allowed to run
+  scripts with a real origin, as that's the one combination that could reach an upload and run
+  it as CKAN. It doesn't vouch for what a page says or loads: a page can still be misleading,
+  and loading a third-party page still sends that site the visitor's own cookies for it, which
+  is what the consent card is for. See [How the protection works](#how-the-protection-works) and
+  [Keeping your site safe](#keeping-your-site-safe).
 
-**Do I need a separate domain for uploads?** Not to install it: without one, every view and
-upload is sandboxed so it can't act as CKAN, and that's already safer than `webpage_view`.
-What you lose is full strength: `external` and `data-schematic` run as `interactive`, so
-third-party apps lose their logins and saved settings, and qsv Data Schematics lose their maps.
-See [A separate domain for uploads](#a-separate-domain-for-uploads).
+- **Q: Do I need a separate domain for uploads?**<br>
+  A: Not to install it: without one, every view and upload is sandboxed so it can't act as CKAN,
+  and that's already safer than `webpage_view`. What you lose is full strength: `external` and
+  `data-schematic` run as `interactive`, so third-party apps lose their logins and saved
+  settings, and qsv Data Schematics lose their maps. See [A separate domain for
+  uploads](#a-separate-domain-for-uploads).
 
-**Is it safe to switch on a live site?** Yes. It runs beside `webpage_view`, and nothing
-changes until editors add "Website (Plus)" views or you run `migrate` (start with
-`--dry-run`). One thing changes at once: uploaded HTML, SVG and XML opened from their download
-links run sandboxed. See [Migrating from webpage_view](#migrating-from-webpage_view) and
-[Uploaded HTML downloads are sandboxed](#uploaded-html-downloads-are-sandboxed).
+- **Q: Is it safe to switch on a live site?**<br>
+  A: Yes. It runs beside `webpage_view`, and nothing changes until editors add "Website (Plus)"
+  views or you run `migrate` (start with `--dry-run`). One thing changes at once: uploaded HTML,
+  SVG and XML opened from their download links run sandboxed. See [Migrating from
+  webpage_view](#migrating-from-webpage_view) and [Uploaded HTML downloads are
+  sandboxed](#uploaded-html-downloads-are-sandboxed).
 
-**Does it make my server fetch things from other sites?** Not by default, and never while
-showing a page to a visitor. Two settings make CKAN fetch when a view is saved: the
-[frameability check](#frameability-check) and `thumbnail_fetch`, both off by default and both
-limited to public addresses.
+- **Q: Does it make my server fetch things from other sites?**<br>
+  A: Not by default. Two settings make CKAN fetch when a view is saved: the
+  [frameability check](#frameability-check) and `thumbnail_fetch`, both off by default. And the
+  [PDF (Plus) view](#pdf-views), if you enable it, fetches a PDF linked from another site the
+  first time it's viewed, then serves its copy for `pdf_cache_seconds`. All three reach public
+  addresses only.
 
-**We keep uploads in S3 or other cloud storage. Does it work?** On CKAN 2.12, yes: uploads in
-any `ckan.files` storage that can stream, S3 included, are served from your separate domain. On
-CKAN 2.10 and 2.11, uploads kept by ckanext-s3filestore or ckanext-cloudstorage stay sandboxed
-on CKAN's own address, so schematics lose their maps there. Upgrading to 2.12 lifts that. See
-[Deploying a content origin](#deploying-a-content-origin).
+- **Q: We keep uploads in S3 or other cloud storage. Does it work?**<br>
+  A: On CKAN 2.12, yes: uploads in any `ckan.files` storage that can stream, S3 included, are
+  served from your separate domain. On CKAN 2.10 and 2.11, uploads kept by ckanext-s3filestore
+  or ckanext-cloudstorage stay sandboxed on CKAN's own address, so schematics lose their maps
+  there. Upgrading to 2.12 lifts that. See [Deploying a content
+  origin](#deploying-a-content-origin).
 
-**Can I control what editors embed?** Yes: limit the presets, keep `editor_can_loosen` off so
-only sysadmins can change a view's sandbox, and list the sites editors may embed with
-`allowed_hosts`. See [Keeping your site safe](#keeping-your-site-safe).
+- **Q: Can I control what editors embed?**<br>
+  A: Yes: limit the presets, keep `editor_can_loosen` off so only sysadmins can change a view's
+  sandbox, and list the sites editors may embed with `allowed_hosts`. See [Keeping your site
+  safe](#keeping-your-site-safe).
 
-**Does it track visitors?** No. It sends no telemetry, and frames deny ad and tracking
-features. You can ask visitors before loading third-party pages (`consent_gate`, or
-`privacy_profile = eu`), and opt in to anonymous daily view counts. See
-[Privacy and telemetry](#privacy-and-telemetry).
+- **Q: Does it track visitors?**<br>
+  A: No. It sends no telemetry, and frames deny ad and tracking features. You can ask visitors
+  before loading third-party pages (`consent_gate`, or `privacy_profile = eu`), and opt in to
+  anonymous daily view counts. See [Privacy and telemetry](#privacy-and-telemetry).
 
-**How do I find embeds that have stopped working?** Run `ckan webpageviewplus check-views` from
-cron: it lists views, core `webpage_view` ones too, whose page is gone, unreachable or refuses
-to be embedded. See [Finding broken views](#finding-broken-views).
+- **Q: How do I find embeds that have stopped working?**<br>
+  A: Run `ckan webpageviewplus check-views` from cron: it lists views, core `webpage_view` ones
+  too, whose page is gone, unreachable or refuses to be embedded. See [Finding broken
+  views](#finding-broken-views).
 
-**What do I run after upgrading?** `ckan db upgrade -p webpage_view_plus`, every time, then
-restart CKAN. Settings are checked at startup, and an unsafe combination stops CKAN with a
-message naming the setting.
+- **Q: What do I run after upgrading?**<br>
+  A: `ckan db upgrade -p webpage_view_plus`, every time, then restart CKAN. Settings are checked
+  at startup, and an unsafe combination stops CKAN with a message naming the setting.
 
-**Will it slow down dataset pages?** No. Frames load only when scrolled into view, and showing
-a page never fetches anything from another site: the frameability check and thumbnails are
-made when a view is saved and only read afterwards. Thumbnails add one database query per
-dataset page. With view counting on, each page view that shows a counted view adds a count.
+- **Q: Will it slow down dataset pages?**<br>
+  A: No. Frames load only when scrolled into view, and showing a page never fetches anything
+  from another site: the frameability check and thumbnails are made when a view is saved and
+  only read afterwards. (A PDF (Plus) view of a linked PDF makes CKAN fetch it when the viewer
+  first asks for the file, then serve its copy; that's the frame loading, not the page.) Thumbnails add one database query per dataset page. With view counting
+  on, each page view that shows a counted view adds a count.
 
-**Does it work with private datasets?** Yes. A view of a private resource shows only to people
-who may see it, as in CKAN. An upload served from your separate domain gets a short-lived
-signed address there, since that domain has no logins; it stops working within one to two
-`url_ttl` windows (5 to 10 minutes by default). See [Deploying a content origin](#deploying-a-content-origin).
+- **Q: Does it work with private datasets?**<br>
+  A: Yes. A view of a private resource shows only to people who may see it, as in CKAN. An
+  upload served from your separate domain gets a short-lived signed address there, since that
+  domain has no logins; it stops working within one to two `url_ttl` windows (5 to 10 minutes by
+  default). See [Deploying a content origin](#deploying-a-content-origin).
 
-**We run several CKAN servers behind a load balancer. Anything to know?** Give every server
-the same `signing_secret`, so an address signed on one is accepted by another, and point your
-separate domain at the same servers as CKAN. Stored checks, thumbnails and view counts are in
-the database, so they need no shared disk. Uploads need shared storage as they always do in
-CKAN.
+- **Q: We run several CKAN servers behind a load balancer. Anything to know?**<br>
+  A: Give every server the same `signing_secret`, so an address signed on one is accepted by
+  another, and point your separate domain at the same servers as CKAN. Stored checks, thumbnails
+  and view counts are in the database, so they need no shared disk. Uploads need shared storage
+  as they always do in CKAN.
 
-**Which browsers does it support?** Chrome and Edge 88+, Firefox 89+ and Safari 15+, on
-desktops, phones and tablets. The protection works in every browser still in use; older ones
-just show less around the view. See [Browser support](#browser-support).
+- **Q: Which browsers does it support?**<br>
+  A: Chrome and Edge 88+, Firefox 89+ and Safari 15+, on desktops, phones and tablets. The
+  protection works in every browser still in use; older ones just show less around the view.
+  The PDF (Plus) view needs recent browsers: Chrome and Edge 125+, Firefox ESR 153 or a
+  newer Firefox, Safari 18+. See [Browser support](#browser-support).
 
-**How do I turn it off or roll back?** Unsetting `content_origin` and restarting falls back to
-the sandboxed behaviour at once, with no data changes. Removing `webpage_view_plus` from
-`ckan.plugins` (with `webpage_view_plus_thumbnails`, if enabled: it won't start without it)
-hides its views, as CKAN hides any view whose plugin isn't enabled, but keeps
-them in the database: enabling it again brings them back. There's no command to convert views
-back to `webpage_view`, so run `migrate --dry-run` first and back up the database before
-migrating.
+- **Q: How do I turn it off or roll back?**<br>
+  A: Unsetting `content_origin` and restarting falls back to the sandboxed behaviour at once,
+  with no data changes (PDF (Plus) views then say they can't be shown). Removing
+  `webpage_view_plus` from `ckan.plugins` (with `webpage_view_plus_thumbnails` and
+  `pdf_view_plus`, if enabled: they won't start without it) hides its views, as CKAN hides any
+  view whose plugin isn't enabled, but keeps them in the database: enabling it again brings them
+  back. There's no command to convert views back to `webpage_view`, so run `migrate --dry-run`
+  first and back up the database before migrating.
 
-**Which languages does it come in?** English, German, Spanish, French, Italian, Japanese and
-Brazilian Portuguese, following the visitor's CKAN language. See [Translations](#translations).
+- **Q: Which languages does it come in?**<br>
+  A: English, German, Spanish, French, Italian, Japanese and Brazilian Portuguese, following the
+  visitor's CKAN language. The PDF viewer's toolbar adds Thai, Indonesian, Ukrainian and
+  Turkish. See [Translations](#translations).
 
-**Can it replace ckanext-pdfview?** Yes, on a site with a separate domain for uploads: enable
-`pdf_view_plus` and run `ckan webpageviewplus migrate-pdf`, which converts its views in place. It shows PDFs with PDF.js
-from that domain, so phones see them too, and a PDF's scripts never run. Linked PDFs are
-fetched by CKAN and cached, at most `pdf_max_size` MB each. See [PDF views](#pdf-views).
+- **Q: Can it replace ckanext-pdfview?**<br>
+  A: Yes, on a site with a separate domain for uploads: enable `pdf_view_plus` and run `ckan
+  webpageviewplus migrate-pdf`, which converts its views in place. It shows PDFs with PDF.js
+  from that domain, so phones see them too, and a PDF's scripts never run in the view. Linked PDFs are
+  fetched by CKAN and cached, at most `pdf_max_size` MB each. See [PDF views](#pdf-views).
 
 ### For editors
 
-**What does "sandboxed" mean for my page?** The browser runs the page in a locked room: it
-still shows, and depending on the preset its scripts run, but it can't reach CKAN, the visitor's
-login or other tabs. A preset is a ready-made sandbox. Under `strict` nothing runs; under
-`interactive` scripts, forms, popups and downloads work, but the page can't keep logins or
-saved settings; `data-schematic` adds saved data and maps for qsv Data Schematics; `external`
-lifts the sandbox for third-party sites you trust. The last two need your site to have a
-separate domain for uploads, and run as `interactive` without one. If something in your page doesn't work,
-check what its preset allows. See [How the protection works](#how-the-protection-works).
+- **Q: What does "sandboxed" mean for my page?**<br>
+  A: The browser runs the page in a locked room: it still shows, and depending on the preset its
+  scripts run, but it can't reach CKAN, the visitor's login or other tabs. A preset is a
+  ready-made sandbox. Under `strict` nothing runs; under `interactive` scripts, forms, popups
+  and downloads work, but the page can't keep logins or saved settings; `data-schematic` adds
+  saved data and maps for qsv Data Schematics; `external` lifts the sandbox for third-party
+  sites you trust. The last two need your site to have a separate domain for uploads, and run as
+  `interactive` without one. If something in your page doesn't work, check what its preset
+  allows. See [How the protection works](#how-the-protection-works).
 
-**Which preset should I pick?** `interactive`, the default, suits most charts and scripted
-pages. Use `strict` for plain HTML with no scripts, `data-schematic` for qsv Data Schematics,
-and `external` only for third-party sites you trust that need their own logins or saved
-settings. Pasting a link from a well-known service picks the preset for you. See
-[Adding a view](#adding-a-view).
+- **Q: Which preset should I pick?**<br>
+  A: `interactive`, the default, suits most charts and scripted pages. Use `strict` for plain
+  HTML with no scripts, `data-schematic` for qsv Data Schematics, and `external` only for
+  third-party sites you trust that need their own logins or saved settings. Pasting a link from
+  a well-known service picks the preset for you. See [Adding a view](#adding-a-view).
 
-**Why does my view show "doesn't allow its pages to be shown inside other sites"?** That site
-refuses to be embedded, so a browser would show an empty box; the card offers Open in new tab
-instead. A link to the page, instead of a view, is the way to share it. An `http://` page on an
-`https://` site gets a card too: browsers block it. Use its `https://` address if it has one.
+- **Q: Why does my view show "doesn't allow its pages to be shown inside other sites"?**<br>
+  A: That site refuses to be embedded, so a browser would show an empty box; the card offers
+  Open in new tab instead. A link to the page, instead of a view, is the way to share it. An
+  `http://` page on an `https://` site gets a card too: browsers block it. Use its `https://`
+  address if it has one.
 
-**The form says the service needs a separate domain for uploads. What now?** That service only
-works under `external`, which needs your site to have a
-[separate domain for uploads](#a-separate-domain-for-uploads). Ask your site administrator, or
-link to the page instead of embedding it.
+- **Q: The form says the service needs a separate domain for uploads. What now?**<br>
+  A: That service only works under `external`, which needs your site to have a [separate domain
+  for uploads](#a-separate-domain-for-uploads). Ask your site administrator, or link to the page
+  instead of embedding it.
 
-**Why did my YouTube link change to youtube-nocookie.com?** It's YouTube's privacy-enhanced
-mode, in which YouTube says it stores nothing about visitors until they play the video. The
-video is the same. See
-[Well-known services: recognised links](#well-known-services-recognised-links).
+- **Q: Why did my YouTube link change to youtube-nocookie.com?**<br>
+  A: It's YouTube's privacy-enhanced mode, in which YouTube says it stores nothing about
+  visitors until they play the video. The video is the same. See [Well-known services:
+  recognised links](#well-known-services-recognised-links).
 
-**Why are my qsv Data Schematic's maps blank?** Maps and saved data need the
-`data-schematic` preset and a separate domain for uploads. Without one, the schematic runs as
-`interactive`: its charts work, its maps don't. On CKAN 2.10 and 2.11 with cloud storage it
-runs that way too.
+- **Q: Why are my qsv Data Schematic's maps blank?**<br>
+  A: Maps and saved data need the `data-schematic` preset and a separate domain for uploads.
+  Without one, the schematic runs as `interactive`: its charts work, its maps don't. On CKAN
+  2.10 and 2.11 with cloud storage it runs that way too.
 
-**Can I upload a page that uses separate CSS, JavaScript or image files?** Not as separate
-files: a view shows one uploaded file, and a link from it to `style.css` or `chart.js` beside
-it gets the page itself back, not that file. Upload a single HTML file with its styles,
-scripts and images inside it (as data URLs), the way qsv Data Schematics are built. Files on
-other public sites, such as a library from a CDN, load as usual.
+- **Q: Can I upload a page that uses separate CSS, JavaScript or image files?**<br>
+  A: Not as separate files: a view shows one uploaded file, and a link from it to `style.css` or
+  `chart.js` beside it gets the page itself back, not that file. Upload a single HTML file with
+  its styles, scripts and images inside it (as data URLs), the way qsv Data Schematics are
+  built. Files on other public sites, such as a library from a CDN, load as usual.
 
-**Can I embed a private Google Sheet, Power BI report, or a dashboard that needs a login?**
-Generally not: only public embeds work, as visitors would need their own login to that service
-inside your page. Publish it to the web first (Google's "Publish to web", Power BI's "Publish
-to web"), or link to it instead. See
-[Well-known services: recognised links](#well-known-services-recognised-links).
+- **Q: Can I embed a private Google Sheet, Power BI report, or a dashboard that needs a login?**<br>
+  A: Generally not: only public embeds work, as visitors would need their own login to that
+  service inside your page. Publish it to the web first (Google's "Publish to web", Power BI's
+  "Publish to web"), or link to it instead. See [Well-known services: recognised
+  links](#well-known-services-recognised-links).
 
-**Can I show a Word, Excel or PowerPoint file?** Yes, if it's public and your site has a
-separate domain for uploads: paste the file's address as the page URL, or leave the page URL
-empty on the file's own resource, and the form suggests Microsoft's online viewer. OpenDocument
-files (`.odt`, `.ods`, `.odp`) work too. Files in private datasets can't be shown that way,
-since Microsoft fetches the file itself. Your site administrator decides
-whether Office resources offer the view. See
-[Well-known services: recognised links](#well-known-services-recognised-links).
+- **Q: Can I show a Word, Excel or PowerPoint file?**<br>
+  A: Yes, if it's public and your site has a separate domain for uploads: paste the file's
+  address as the page URL, or leave the page URL empty on the file's own resource, and the form
+  suggests Microsoft's online viewer. OpenDocument files (`.odt`, `.ods`, `.odp`) work too.
+  Files in private datasets can't be shown that way, since Microsoft fetches the file itself.
+  Your site administrator decides whether Office resources offer the view. See [Well-known
+  services: recognised links](#well-known-services-recognised-links).
 
-**How tall will my view be?** You choose: a fixed height, a share of the browser window, an
-aspect ratio such as 16:9 for video, or Auto, where the page reports its own height (qsv Data
-Schematics do). See [Adding a view](#adding-a-view).
+- **Q: Can I show a PDF?**<br>
+  A: Yes, if your site has the PDF (Plus) view: add it to the PDF resource. It shows the
+  resource's own file, uploaded or linked, or another PDF whose address you paste as the PDF
+  url. Readers can page, zoom and search it, on phones too. See [PDF views](#pdf-views).
 
-**Can my own web page set its view's height?** Yes: with Auto height, have the page post
-`{type: "webpageviewplus:resize", height: <px>}` to its parent window when it loads and
-whenever its height changes. See [Auto height for your own pages](#auto-height-for-your-own-pages).
+- **Q: How tall will my view be?**<br>
+  A: You choose: a fixed height, a share of the browser window, an aspect ratio such as 16:9 for
+  video, or Auto, where the page reports its own height (qsv Data Schematics do). See [Adding a
+  view](#adding-a-view).
 
-**Why does my view look different on a phone?** It adapts to small screens. A tall view shows
-"Tap to interact" first, so visitors can still scroll past it; views sized to the window or to
-an aspect ratio get taller on narrow screens; Fullscreen becomes Expand on iPhones; and a
-phone saving data gets a Load button instead of loading the page at once. See
-[Accessibility, phones and tablets](#accessibility-phones-and-tablets).
+- **Q: Can my own web page set its view's height?**<br>
+  A: Yes: with Auto height, have the page post `{type: "webpageviewplus:resize", height: <px>}`
+  to its parent window when it loads and whenever its height changes. See [Auto height for your
+  own pages](#auto-height-for-your-own-pages).
 
-**How do I get a picture in the resource list?** Where your site has thumbnails on, pick an
-image uploaded to the same dataset under "Thumbnail in the resource list" in the view form.
-Without one, a well-known service shows its own thumbnail or logo, and where the site allows it
-the page's own preview image is used; tick "Don't use the page's own preview image" to leave
-that out. See [Thumbnails in the resource list](#thumbnails-in-the-resource-list).
+- **Q: Why does my view look different on a phone?**<br>
+  A: It adapts to small screens. A tall view shows "Tap to interact" first, so visitors can
+  still scroll past it; views sized to the window or to an aspect ratio get taller on narrow
+  screens; Fullscreen becomes Expand on iPhones; and a phone saving data gets a Load button
+  instead of loading the page at once. See [Accessibility, phones and
+  tablets](#accessibility-phones-and-tablets).
 
-**Why do visitors see "This view loads content from …" first?** That's the consent card: the
-site, or you for this view, asked visitors to agree before a third-party page loads, since
-loading it tells that site who is looking. Visitors can choose to always load pages from that
-site. See [Privacy and telemetry](#privacy-and-telemetry).
+- **Q: How do I get a picture in the resource list?**<br>
+  A: Where your site has thumbnails on, pick an image uploaded to the same dataset under
+  "Thumbnail in the resource list" in the view form. Without one, a well-known service shows its
+  own thumbnail or logo, and where the site allows it the page's own preview image is used; tick
+  "Don't use the page's own preview image" to leave that out. See [Thumbnails in the resource
+  list](#thumbnails-in-the-resource-list).
 
-**Can I loosen a view's sandbox myself?** Not unless your site allows it: the advanced sandbox
-and browser-feature fields are for sysadmins, so the preset is the editor's choice.
+- **Q: Why do visitors see "This view loads content from …" first?**<br>
+  A: That's the consent card: the site, or you for this view, asked visitors to agree before a
+  third-party page loads, since loading it tells that site who is looking. Visitors can choose
+  to always load pages from that site. See [Privacy and telemetry](#privacy-and-telemetry).
 
-**Can I see how often my view is viewed?** Where your site has view counting on, tick "Count
-visits" on the view; its daily totals then show in the view form. Visitors see that the view
-counts visits, and nothing about them is kept. See [Opt-in view counting](#opt-in-view-counting).
+- **Q: Can I loosen a view's sandbox myself?**<br>
+  A: Not unless your site allows it: the advanced sandbox and browser-feature fields are for
+  sysadmins, so the preset is the editor's choice.
 
+- **Q: Can I see how often my view is viewed?**<br>
+  A: Where your site has view counting on, tick "Count visits" on the view; its daily totals
+  then show in the view form. Visitors see that the view counts visits, and nothing about them
+  is kept. See [Opt-in view counting](#opt-in-view-counting).
 
-**Can I show a PDF?** Yes, if your site has the PDF (Plus) view: add it to the PDF resource.
-It shows the resource's own file, uploaded or linked, or another PDF whose address you paste
-as the PDF url. Readers can page, zoom and search it, on phones too. See
-[PDF views](#pdf-views).
 
 ## Advanced
 
@@ -568,9 +634,14 @@ In older browsers, a view still shows its page, with less around it:
 | Tap to interact | Safari 12.1 (Mar 2019; iOS 12.2) | no overlay; swipes over the frame scroll the frame |
 | Windows High Contrast styles | Chrome 89 (Mar 2021), Firefox 89 (Jun 2021) | the default focus styles |
 
-For reference, the current versions as of October 2026 are Chrome 157, Edge 156, Firefox 159
+For reference, the current versions as of October 2026 are Chrome 156, Edge 156, Firefox 159
 and Safari 27 (macOS and iOS). Minimum versions and dates are from MDN's
 [browser-compat-data](https://github.com/mdn/browser-compat-data).
+
+**The PDF (Plus) view needs newer browsers:** the bundled PDF.js 6.5.438 targets Chrome and
+Edge 125+ (May 2024), Firefox's current Extended Support Release (153, Jul 2026) or newer, and
+Safari 18+ (Sep 2024). Older browsers may show a blank
+viewer; Open in new tab still reaches the file. It needs JavaScript.
 
 **Without JavaScript** (turned off, or the script blocked), frames still render with their
 sandbox and attributes, but:
@@ -619,13 +690,11 @@ checked in Chrome under each preset:
 | [Jupyter](https://jupyter.org/) | any public `.ipynb`: `github.com/.../blob/...`, `raw.githubusercontent.com/...`, `gist.github.com/<user>/<id>`, `nbviewer.org/...`, or any `https://` URL ending `.ipynb` (without a query), shown read-only through nbviewer | `interactive` | 800 px |
 | [Microsoft Office](https://www.microsoft.com/microsoft-365/free-office-online-for-the-web) | public Word, Excel and PowerPoint files (`.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`, `.ppsx`) and OpenDocument files (`.odt`, `.ods`, `.odp`) on any site, CKAN's own uploads included, or Microsoft's own `view.officeapps.live.com/op/view.aspx?src=...` address, shown through Microsoft's viewer | `external` | 800 px; slides 16/9 |
 
-YouTube, Vimeo, Observable, Tableau Public, ArcGIS StoryMaps and ArcGIS Online, Looker
-Studio, Infogram, uMap, the Internet Archive and Sketchfab fail inside a sandbox without
-`allow-same-origin`, and so does OpenStreetMap (its map tiles then carry no Referer, which
-its tile servers block), as do Google Forms and Typeform (without it a Google Form shows but its
-inputs stay disabled), Streamlit, shinyapps.io and some Plotly Cloud apps (it depends on
-the app), and Microsoft's Office viewer (its pages go blank or fail as soon as you scroll). They need `external`, and so a content origin; Hugging Face Spaces get it too, as
-apps that call their own server. On a site without one, the form says so instead of
+Services marked `external` in the table fail inside a sandbox without `allow-same-origin`, in
+ways a screenshot can miss: OpenStreetMap's map tiles lose their Referer and its tile servers
+block them, a Google Form shows but its inputs stay disabled, and Microsoft's Office viewer goes
+blank as soon as you scroll. Hugging Face Spaces get `external` too, as apps that call their own
+server. `external` needs a content origin; on a site without one, the form says so instead of
 offering settings that won't play.
 
 YouTube links become `www.youtube-nocookie.com` embeds, YouTube's privacy-enhanced mode, in
@@ -663,6 +732,26 @@ recognise, and whether they can be embedded is up to their own server:
 - **Dash** apps on your own server need `external`, as on Plotly Cloud: some work without an
   origin and some don't. The app's server must not send `X-Frame-Options` or a
   `frame-ancestors` that excludes the CKAN site.
+
+#### Office files compared with ckanext-officedocs
+
+Both show public Office files through Microsoft's online viewer, which fetches the file itself.
+ckanext-officedocs needs nothing else; Website (Plus) needs a
+[separate domain for uploads](#a-separate-domain-for-uploads), as the viewer only works
+unsandboxed, which this extension allows only once uploads can't run as CKAN.
+
+| | ckanext-officedocs (2.0.1) | Website (Plus) with the Microsoft Office service |
+| --- | --- | --- |
+| Needs | nothing | a separate domain for uploads |
+| Formats | DOC, DOCX, XLS, XLSX, XLSB, PPT, PPTX, PPS, PPSX, ODT, ODS, ODP (configurable) | DOC, DOCX, XLS, XLSX, PPT, PPTX, PPSX, ODT, ODS, ODP (XLSB didn't open in tests) |
+| How a view is made | offered for those formats automatically | the site adds the formats to `formats`; the form suggests the viewer for the file, or for a link to one pasted as the page URL |
+| Frame | Microsoft's viewer, no sandbox | the same viewer under the `external` preset, with the site's host list and Permissions Policy |
+| Height | one height for the site (400 px by default) | per view: 800 px, or 16:9 for slides |
+| Private datasets | no view, or with a setting a card suggesting a Chrome extension | the form says the file can't be shown, as Microsoft can't fetch it |
+| Before loading | loads at once | optionally a consent card, as Microsoft learns who is looking |
+| Controls | a Fullscreen button | the control bar: Open in new tab, Fullscreen, Reload, Share |
+| Site CSP | an inline script runs its Fullscreen button | no inline scripts |
+| Resource list | the format label | the file's own format (DOCX, PPT...), or with the thumbnails plugin an image the editor picks |
 
 ### Auto height for your own pages
 
@@ -760,6 +849,9 @@ How content is served:
   files, with no common way to read them. Their views stay framed from CKAN's origin under the
   sandbox, so a qsv Data Schematic loses its maps and saved data there. CKAN 2.12's file
   storage gives them one way to read any storage; upgrade to it to have these uploads served.
+- **With `pdf_view_plus`**, it also serves the PDF.js viewer (versioned files, cached for a
+  year) and the PDFs it shows, by the same rules: signed for private datasets, `frame-ancestors`,
+  no cookies. See [PDF views](#pdf-views).
 - **Rollback:** unset `content_origin` and restart. No data changes, and views fall back to the
   sandboxed behaviour.
 
@@ -849,8 +941,8 @@ image comes from, first match wins:
    publishes at a fixed address (YouTube's `i.ytimg.com/vi/<id>/mqdefault.jpg`, Datawrapper's
    `plain.png`...), so the page itself isn't fetched. Otherwise it's the image the page names
    for link previews (`og:image`, then `twitter:image`). Uploads and
-   CKAN's own pages aren't fetched. Power BI, Looker Studio and Typeform name only their own
-   logo or a stock image, so they're skipped. An editor can tick "Don't use the page's own
+   CKAN's own pages aren't fetched. Power BI, Looker Studio, Typeform and Microsoft's Office
+   viewer name only their own logo or a stock image, so they're skipped. An editor can tick "Don't use the page's own
    preview image" on a view. A copy counts only for the address it was taken from: when a
    view's page changes, its thumbnail goes until the view is saved again or `check-views`
    runs.
@@ -858,8 +950,8 @@ image comes from, first match wins:
    [well-known service](#well-known-services-recognised-links)'s. The logos ship with the
    extension (from [Simple Icons](https://simpleicons.org/) 16.36.0, CC0; each brand's
    trademark rules still apply). Datawrapper, Flourish, Tableau Public, Power BI, Our World
-   in Data, shinyapps.io, Infogram, Felt and uMap have none there, so they keep the format
-   icon. Looker Studio shows Looker's logo.
+   in Data, shinyapps.io, Infogram, Felt, uMap and Microsoft Office have none there, so they
+   keep the format icon (an Office file keeps its own, such as DOCX). Looker Studio shows Looker's logo.
 4. Otherwise CKAN's format icon stays.
 
 A resource with several Website (Plus) views uses the first one in view order. When a resource
@@ -926,7 +1018,14 @@ description, order and PDF url:
     ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate-pdf
 
 It needs `pdf_view_plus` enabled and a content origin, and skips (and names) any view whose PDF
-url isn't an http(s) address or whose host isn't in `allowed_hosts`. Then remove `pdf_view` from
+url isn't an http(s) address, whose host isn't in `allowed_hosts`, or whose uploaded file it
+can't read.
+
+**On CKAN 2.10 and 2.11 with cloud storage** (ckanext-s3filestore, ckanext-cloudstorage), uploaded
+PDFs can't be shown: the extension can't read files those extensions keep, so PDF (Plus) isn't
+offered for them and `migrate-pdf` leaves their views alone. Keep ckanext-pdfview for them until
+you move to CKAN 2.12, whose file storage the extension reads; PDFs linked from other sites work
+on any version. Then remove `pdf_view` from
 `ckan.plugins` and `ckan.views.default_views`.
 
 **What it shows.**
@@ -935,20 +1034,24 @@ url isn't an http(s) address or whose host isn't in `allowed_hosts`. Then remove
   datasets get signed addresses, as uploaded HTML does.
 - **PDFs on other sites.** Set the view's **PDF url**, or leave it empty for a resource that
   links to a PDF. CKAN fetches the file and serves it from the content domain, so visitors
-  never contact the other site. The fetch has the same guards as the frameability check:
+  reading it in the view never contact the other site (Open in new tab opens the original
+  file there). The fetch has the same guards as the frameability check:
   public addresses only, redirects checked, a 30-second deadline, at most `pdf_max_size` MB
   (default 25), and the file must really be a PDF. CKAN keeps one copy under
   `ckan.storage_path` for `pdf_cache_seconds` (default an hour) and serves every visitor from
   it, so a popular view doesn't make CKAN download the file again and again. `allowed_hosts`
-  applies to these links too, and they need `ckan.storage_path` set. A linked PDF in a private dataset is still a public file on its
-  own site: the signed address hides which view shows it, not the file.
+  applies to these links too, and they need `ckan.storage_path` set. A linked PDF in a private
+  dataset is still a public file on its own site: the signed address hides which view shows it,
+  not the file.
 
 **How it's locked down.** PDF.js runs in the `data-schematic` sandbox on the content domain,
-with the same origin as uploaded pages and never CKAN's. A PDF's own JavaScript never runs
-(PDF.js's scripting is off and not shipped), the viewer is read-only (no annotation or
+with the same origin as uploaded pages and never CKAN's. A PDF's own JavaScript never runs in
+the view (PDF.js's scripting is off and not shipped), the viewer is read-only (no annotation or
 signature tools), and its page may only load files from its own domain. Its Download, Print
-and Open buttons are hidden: the control bar's Open in new tab reaches the file. The PDF itself
-is served with a CSP `sandbox`, so opened on its own it can't run anything either.
+and Open buttons are hidden: the control bar's Open in new tab reaches the file, opening the
+original (CKAN's download address for an upload, the other site's for a link) in the browser's
+own viewer, which may run a PDF's scripts as it would for any PDF. The copy the view reads is
+served with a CSP `sandbox`, so opened on its own it can't run anything.
 
 **Languages.** The viewer follows the CKAN page's language. It ships English and the ten
 languages CKAN portals most often use, from the [datashades.info](https://datashades.info)
@@ -958,6 +1061,22 @@ Japanese, Indonesian, Ukrainian and Turkish. Other languages show English.
 **Updating PDF.js.** `scripts/vendor_pdfjs.py` downloads a release, checks its SHA-256 and
 writes the trimmed copy (no source maps, debugger or scripting sandbox; about 8 MB). See its
 docstring.
+
+#### PDF (Plus) compared with ckanext-pdfview
+
+| | ckanext-pdfview (`pdf_view`) | PDF (Plus) (`pdf_view_plus`) |
+| --- | --- | --- |
+| Needs | nothing | a separate domain for uploads, recent browsers (Chrome and Edge 125+, Firefox ESR 153+, Safari 18+), and for uploads in cloud storage, CKAN 2.12 |
+| Viewer | the browser's own, in an `<object>` tag | PDF.js 6.5.438, shipped with the extension |
+| Phones and tablets | iOS and Android don't show PDFs inline: a blank box or a download | the same viewer as on a desktop |
+| Sandbox | none: the view's PDF url can be any web address, and whatever it serves is shown unsandboxed in the CKAN page | PDF.js runs sandboxed on the separate domain; the PDF itself is sent with a CSP `sandbox` |
+| A PDF's own scripts | run where the browser's viewer runs them | never run in the view (Open in new tab opens the file in the browser's own viewer) |
+| PDFs on other sites | the visitor's browser fetches them, so that site sees each visitor | CKAN fetches each one (size-capped, checked to be a PDF, cached), so the site doesn't see visitors reading it in the view |
+| Private datasets | loads with the visitor's login | signed addresses, as for uploaded HTML |
+| Height | at least the window's height | per view: 800 px or a share of the window |
+| Controls | the browser viewer's | PDF.js's toolbar (page, zoom, search), and the control bar; download and print through Open in new tab |
+| Languages | the browser's | English and ten more, following the CKAN page |
+| Moving over | n/a | `ckan webpageviewplus migrate-pdf` converts existing views in place |
 
 ### Privacy and telemetry
 
@@ -979,9 +1098,13 @@ denies ad and tracking features (Topics, Attribution Reporting, FLEDGE), and its
 - **For a site's own analytics,** each view fires DOM events that bubble from its wrapper:
   `webpageviewplus:loaded`, `webpageviewplus:expanded` and `webpageviewplus:failed` (a load the
   view started, Load or Reload, that took over 15 s). The extension sends them nowhere.
+- **PDFs on other sites** shown in a PDF (Plus) view are fetched by CKAN, not the visitor's
+  browser, so that site doesn't learn who is reading in the view (Open in new tab does contact
+it). It sees CKAN's requests, at most one per
+  file per `pdf_cache_seconds`.
 - **Server logs** for admins, on the `ckanext.webpageviewplus.events` logger, with structured
   fields and nothing about the visitor: `view_rendered` (preset, notices),
-  `same_origin_refused`, `signature_refused` and `frameability_blocked`.
+  `same_origin_refused`, `signature_refused`, `frameability_blocked` and `pdf_fetch_failed`.
 
 #### Opt-in view counting
 
@@ -1053,8 +1176,8 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | --- | --- |
 | `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME]` | Convert `webpage_view` views, see [Migrating from webpage_view](#migrating-from-webpage_view) |
 | `ckan webpageviewplus migrate-pdf [--dry-run]` | Convert ckanext-pdfview's `pdf_view` views to PDF (Plus), see [PDF views](#pdf-views) |
-| `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails, except with `--no-store` (cron) |
-| `ckan webpageviewplus purge-stats` | Delete view counts and reported hosts older than the retention period (cron) |
+| `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails, except with `--no-store`. Run it weekly from cron |
+| `ckan webpageviewplus purge-stats` | Delete view counts and reported hosts older than the retention period. Run it daily from cron |
 | `ckan webpageviewplus stats-summary [--limit N]` | Site-wide view counts, busiest first |
 | `ckan webpageviewplus connections [--limit N]` | Hosts uploaded pages were seen contacting, site-wide |
 
@@ -1103,9 +1226,9 @@ to point at your CKAN checkout's `test-core.ini`. The tests create the plugin's 
 themselves (CKAN's fixtures drop them when they reset the test database).
 
 `browser_tests/` drives a running CKAN with Playwright in Chromium, Firefox and WebKit; see
-`.github/workflows/test.yml` for how CI starts and seeds one. The CKAN under test needs both
-plugins, `webpage_view_plus webpage_view_plus_thumbnails` (so the `[thumbnails]` extra), and a
-content origin, as in `browser_tests/ci.ini`.
+`.github/workflows/test.yml` for how CI starts and seeds one. The CKAN under test needs all three
+plugins, `webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus` (so the `[thumbnails]`
+extra), and a content origin, as in `browser_tests/ci.ini`.
 
 #### Releasing a new version of ckanext-webpageviewplus
 
