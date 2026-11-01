@@ -27,6 +27,14 @@
   that upgrading to 2.12 lifts it.
 - The demo GIF's montage has 30 services, ending with a PowerPoint file in Microsoft's viewer.
 
+### Docs
+
+- An FAQ in the README, for site administrators and for editors: plain-language answers, each
+  linking to the section with the detail.
+- A screenshot of thumbnails in the resource list, and a Codacy coverage badge.
+- Browser tests for self-sizing (the generic resize message, clamping, malformed heights,
+  window resizes) and for thumbnails in the resource list, in Chromium, Firefox and WebKit.
+
 ## 0.6.0 (2026-10-31)
 
 ### Added
