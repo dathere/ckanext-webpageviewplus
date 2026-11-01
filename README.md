@@ -366,7 +366,8 @@ just show less around the view. See [Browser support](#browser-support).
 
 **How do I turn it off or roll back?** Unsetting `content_origin` and restarting falls back to
 the sandboxed behaviour at once, with no data changes. Removing `webpage_view_plus` from
-`ckan.plugins` hides its views, as CKAN hides any view whose plugin isn't enabled, but keeps
+`ckan.plugins` (with `webpage_view_plus_thumbnails`, if enabled: it won't start without it)
+hides its views, as CKAN hides any view whose plugin isn't enabled, but keeps
 them in the database: enabling it again brings them back. There's no command to convert views
 back to `webpage_view`, so run `migrate --dry-run` first and back up the database before
 migrating.
