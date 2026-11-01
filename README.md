@@ -536,8 +536,10 @@ How content is served:
 - Responses send `frame-ancestors` (only CKAN's hosts may frame them) and `nosniff`, and never
   set a cookie.
 - **Which uploads are served:** those in CKAN's own upload folder, and on CKAN 2.12 those in any
-  `ckan.files` storage that can stream its files: `ckan:fs` on disk, or a cloud storage (S3,
-  Google Cloud Storage, Azure and others, through file-keeper's adapters). CKAN reads a cloud
+  `ckan.files` storage that can stream its files: `ckan:fs` on disk, or a cloud storage through
+  file-keeper's adapters, `file_keeper:s3`, `file_keeper:gcs` or `file_keeper:azure_blob`
+  (each registers once its client library is installed: `boto3`, `google-cloud-storage` or
+  `azure-storage-blob`). CKAN reads a cloud
   file and streams it to the visitor, so its bytes pass through CKAN, without ETags or range
   requests; uploads on disk are sent as files, as before. This keeps every rule above in force
   (signed URLs, `frame-ancestors`, no cookies) whatever the storage, where sending visitors to
