@@ -139,10 +139,12 @@ def cached_pdf(url: str) -> Optional[str]:
     body = frameability.fetch_body(
         url, time.monotonic() + FETCH_SECONDS, settings.pdf_max_size(), USER_AGENT)
     if body is None or not looks_like_pdf(body.data):
-        try:
-            os.remove(path)
-        except OSError:
-            pass
+        # Unless another worker has just stored a fresh copy meanwhile.
+        if not _fresh(path):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
         return None
     os.makedirs(folder, exist_ok=True)
     # A name of its own: two threads may fetch the same PDF at once.

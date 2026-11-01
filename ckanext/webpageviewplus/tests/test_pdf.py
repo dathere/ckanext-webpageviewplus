@@ -207,6 +207,20 @@ class TestLinks:
         _get(app, _file_url(view, resource))
         assert calls == [LINK, LINK]
 
+    def test_failed_refresh_keeps_a_fresh_copy(self, fetches, monkeypatch):
+        # Two workers refresh an expired copy: one stores it, the other's
+        # fetch fails afterwards. The fresh copy stays.
+        path = pdf.cached_pdf(LINK)
+        fresh = [False]
+        monkeypatch.setattr(pdf, "_fresh", lambda p: fresh[0])
+
+        def other_worker_stored(*args, **kw):
+            fresh[0] = True
+            return None
+        monkeypatch.setattr(frameability, "fetch_body", other_worker_stored)
+        assert pdf.cached_pdf(LINK) is None
+        assert os.path.exists(path)
+
     def test_not_a_pdf_refused(self, app, fetches, events_log):
         bodies, _ = fetches
         bodies[LINK] = b"<!doctype html><script>alert(1)</script>"
