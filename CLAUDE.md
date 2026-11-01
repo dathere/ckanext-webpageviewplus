@@ -300,6 +300,12 @@ order now being built:
   `services.GENERIC_PREVIEWS` (found by fetching each one's stored embed URL). Fetches use
   `frameability.fetch_body`: the probe's guards plus a byte cap counted while reading. Every
   failure is "no copy"; `check-views` passes `keep=True` so a copy whose source is unchanged
+  survives a failed refresh. PDF (Plus) views (`VIEW_TYPES`) take a picked image only
+  (`source_for(..., view_type)`). A Website (Plus) view of Microsoft's Office viewer gets
+  `office:<file url>`: the preview picture inside the file (`office_preview`:
+  `Thumbnails/thumbnail.png` in ODF, `docProps/thumbnail.*` in OOXML, entry capped), read from
+  storage for an upload to the same dataset on CKAN's host (no `thumbnail_fetch` needed), else
+  fetched only with `thumbnail_fetch`. The opt-out checkbox shows whenever thumbnails are on.
   survives a failed refresh. The per-view opt-out is `no_auto_thumbnail`, not the spec's
   `auto_thumbnail`, because an unticked checkbox sends nothing (as with `hide_controls`). `thumbnail_resource` is in the main schema, and `view_after_validator` refuses an
   image outside the view's dataset, because `/webpageviewplus/thumbnail/<view_id>` authorises

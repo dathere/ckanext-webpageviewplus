@@ -35,9 +35,10 @@ import logging
 import os
 import re
 import time
+import zipfile
 from html.parser import HTMLParser
 from typing import Any, Optional
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import parse_qs, urljoin, urlsplit
 
 import sqlalchemy as sa
 from flask import Blueprint, Response, abort, g, has_app_context, request
@@ -54,6 +55,9 @@ from ckanext.webpageviewplus import content, frame, frameability, health, servic
 log = logging.getLogger(__name__)
 
 VIEW_TYPE = "webpage_view_plus"
+# View types that may have a copy: PDF (Plus) views take a picked image only.
+PDF_VIEW_TYPE = "pdf_view_plus"
+VIEW_TYPES = (VIEW_TYPE, PDF_VIEW_TYPE)
 PLUGIN = "webpage_view_plus_thumbnails"
 
 # The stored copy fits in this box, keeping its aspect ratio; the list shows
@@ -78,6 +82,18 @@ FETCH_SECONDS = 5
 MAX_PAGE_BYTES = 512 * 1024
 MAX_IMAGE_BYTES = 2 * 1024 * 1024
 USER_AGENT = "ckanext-webpageviewplus thumbnail"
+# Office files that carry their own preview picture: OpenDocument always
+# (Thumbnails/thumbnail.png), Word, Excel and PowerPoint files when saved
+# with one (docProps/thumbnail.*; WMF and EMF ones can't be decoded). The
+# older binary formats keep theirs elsewhere and aren't read.
+OFFICE_PREVIEW_EXTENSIONS = ("odt", "ods", "odp", "docx", "xlsx", "pptx", "ppsx")
+OFFICE_PREVIEWS = (
+    "Thumbnails/thumbnail.png",
+    "docProps/thumbnail.jpeg",
+    "docProps/thumbnail.jpg",
+    "docProps/thumbnail.png",
+)
+_DOWNLOAD_RE = re.compile(r"/resource/([0-9a-f-]{36})/download/")
 
 PATH = "/webpageviewplus/thumbnail/<view_id>"
 
@@ -146,14 +162,24 @@ def auto(config: dict[str, Any]) -> bool:
     return settings.thumbnail_fetch() and not toolkit.asbool(config.get("no_auto_thumbnail"))
 
 
-def source_for(config: dict[str, Any], resource_url: str, url_type: str) -> Optional[str]:
+def source_for(
+    config: dict[str, Any], resource_url: str, url_type: str, view_type: str = VIEW_TYPE,
+) -> Optional[str]:
     """What a view's stored copy must have been made from to count:
-    ``resource:<id>`` (a picked image), or, while fetching is allowed, for
-    the page the view frames: ``service:<url>`` (its service's fixed
-    thumbnail address) or ``page:<url>`` (its preview image)."""
+    ``resource:<id>`` (a picked image); ``office:<url>`` (the preview
+    picture inside the Office file Microsoft's viewer shows: a CKAN upload,
+    or while fetching is allowed one elsewhere); or, while fetching is
+    allowed, for the page the view frames: ``service:<url>`` (its
+    service's fixed thumbnail address) or ``page:<url>`` (its preview
+    image). PDF (Plus) views take a picked image only."""
     picked = config.get("thumbnail_resource")
     if picked:
         return "resource:" + picked
+    if view_type != VIEW_TYPE or toolkit.asbool(config.get("no_auto_thumbnail")):
+        return None
+    office = office_file(config.get("page_url") or "")
+    if office and (frame.is_ckan_host(office, settings.ckan_hosts()) or settings.thumbnail_fetch()):
+        return "office:" + office
     if not auto(config):
         return None
     url = health.third_party_url(config.get("page_url") or "", resource_url or "", url_type or "")
@@ -165,6 +191,75 @@ def source_for(config: dict[str, Any], resource_url: str, url_type: str) -> Opti
     if found and found.service in services.GENERIC_PREVIEWS:
         return None
     return "page:" + url
+
+
+def office_file(page_url: str) -> Optional[str]:
+    """The Office file a view of Microsoft's viewer shows, if it's one of
+    the formats that carry a preview picture."""
+    found = services.suggest(page_url) if page_url else None
+    if found is None or found.service != services.OFFICE:
+        return None
+    src = (parse_qs(urlsplit(found.embed_url).query).get("src") or [""])[0]
+    try:
+        path = urlsplit(src).path
+    except ValueError:
+        return None
+    name = path.rsplit("/", 1)[-1]
+    extension = name.rpartition(".")[2].lower() if "." in name else ""
+    return src if extension in OFFICE_PREVIEW_EXTENSIONS else None
+
+
+def office_preview(data: bytes) -> Optional[bytes]:
+    """The preview picture inside an Office file, as a copy, or None. Only
+    that one entry is read, and only if it's small."""
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(data))
+    except (zipfile.BadZipFile, ValueError):
+        return None
+    with archive:
+        for name in OFFICE_PREVIEWS:
+            try:
+                info = archive.getinfo(name)
+            except KeyError:
+                continue
+            if info.file_size > MAX_IMAGE_BYTES:
+                return None
+            try:
+                with archive.open(info) as f:
+                    raw = f.read(MAX_IMAGE_BYTES + 1)
+            except (zipfile.BadZipFile, OSError, RuntimeError, NotImplementedError):
+                return None
+            return encode(raw) if len(raw) <= MAX_IMAGE_BYTES else None
+    return None
+
+
+def office_bytes(url: str, package_id: str, deadline: float) -> Optional[bytes]:
+    """The Office file at ``url``: read from storage when it's an upload to
+    this dataset on CKAN's own host (no fetch), else fetched while fetching
+    is allowed. At most MAX_UPLOAD_BYTES either way."""
+    if frame.is_ckan_host(url, settings.ckan_hosts()):
+        match = _DOWNLOAD_RE.search(urlsplit(url).path)
+        target = model.Resource.get(match.group(1)) if match else None
+        if target is None or target.state != "active" or target.package_id != package_id \
+                or target.url_type != "upload":
+            return None
+        try:
+            stored = content.stored_file(content.resource_dict(target))
+            if stored is None or stored.size > MAX_UPLOAD_BYTES:
+                return None
+            body = bytearray()
+            for chunk in stored.chunks():
+                body += chunk
+                if len(body) > MAX_UPLOAD_BYTES:
+                    return None
+            return bytes(body)
+        except Exception:
+            log.warning("webpageviewplus: can't read the Office file of resource %s", target.id)
+            return None
+    if not settings.thumbnail_fetch():
+        return None
+    body = frameability.fetch_body(url, deadline, MAX_UPLOAD_BYTES, USER_AGENT)
+    return body.data if body else None
 
 
 def encode(data: bytes) -> Optional[bytes]:
@@ -327,6 +422,13 @@ def _make(
         if not address:
             return None
         key, fetch = ("image", address), fetch_image
+    elif kind == "office":
+        package_id = resource.package_id
+
+        def fetch(url: str, deadline: float) -> Optional[bytes]:
+            data = office_bytes(url, package_id, deadline)
+            return office_preview(data) if data else None
+        key = ("office", ref)
     else:
         return None
     if memo is not None and key in memo:
@@ -388,13 +490,14 @@ def after_save(
     ``keep`` (check-views), a copy whose source is unchanged stays when
     making a new one fails, so a site that's down for a moment doesn't
     lose its thumbnails."""
-    if view.get("view_type") != VIEW_TYPE:
+    if view.get("view_type") not in VIEW_TYPES:
         return
     try:
         resource = model.Resource.get(view.get("resource_id"))
         source = image = None
         if resource is not None:
-            source = source_for(view, resource.url or "", resource.url_type or "")
+            source = source_for(view, resource.url or "", resource.url_type or "",
+                                view["view_type"])
         if source:
             if deadline is None:
                 deadline = time.monotonic() + FETCH_SECONDS
@@ -453,7 +556,7 @@ def _source_active(source: str, pkg: Optional[dict[str, Any]] = None) -> bool:
     query. Page sources need nothing more than source_for."""
     kind, _, picked = source.partition(":")
     if kind != "resource":
-        return kind in ("page", "service")
+        return kind in ("page", "service", "office")
     resources = (pkg or {}).get("resources")
     if resources is not None:
         image = next((r for r in resources if r.get("id") == picked), None)
@@ -519,17 +622,18 @@ def for_resource(pkg: dict[str, Any], res: dict[str, Any]) -> Optional[dict[str,
     if not package_id or not res.get("id"):
         return None
     views = _package_views(package_id).get(res["id"]) or []
-    plus = next((v for v in views if v["view_type"] == VIEW_TYPE), None)
+    plus = next((v for v in views if v["view_type"] in VIEW_TYPES), None)
     if plus is None:
         return None
     config = plus["config"] or {}
     service = None
-    if len(views) == 1:
+    if len(views) == 1 and plus["view_type"] == VIEW_TYPE:
         found = services.suggest(config.get("page_url") or res.get("url") or "")
         # An Office document keeps its own format label (DOCX...).
         service = found.service if found and found.service != services.OFFICE else None
     src = None
-    source = source_for(config, res.get("url") or "", res.get("url_type") or "")
+    source = source_for(config, res.get("url") or "", res.get("url_type") or "",
+                        plus["view_type"])
     if source and plus["digest"] and plus["source"] == source \
             and _source_active(source, pkg):
         src = toolkit.url_for(
@@ -556,7 +660,7 @@ def replace_format_label(markup: str, replacement: str) -> Markup:
 @thumbnail.route(PATH)
 def serve(view_id: str):
     view = model.ResourceView.get(view_id)
-    if view is None or view.view_type != VIEW_TYPE:
+    if view is None or view.view_type not in VIEW_TYPES:
         abort(404)
     resource = model.Resource.get(view.resource_id)
     if resource is None or resource.state != "active":
@@ -570,7 +674,8 @@ def serve(view_id: str):
     except (toolkit.NotAuthorized, toolkit.ObjectNotFound):
         abort(404)  # not 403: don't confirm that a private dataset exists
     row = stored(view_id)
-    source = source_for(view.config or {}, resource.url or "", resource.url_type or "")
+    source = source_for(view.config or {}, resource.url or "", resource.url_type or "",
+                        view.view_type)
     if row is None or not source or row["source"] != source or not _source_active(source):
         abort(404)
     # CKAN's response hook sets Cache-Control from __no_cache__ after this

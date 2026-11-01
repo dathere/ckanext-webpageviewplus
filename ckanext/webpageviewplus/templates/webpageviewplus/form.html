@@ -121,18 +121,16 @@
         <p class="form-text" id="help-thumbnail_resource">{{ _('An image uploaded to this dataset (PNG, JPEG, WebP or GIF), shown small beside this resource in the dataset\'s list. With None, a well-known service\'s logo or the format icon shows.') }}</p>
       {% endif %}
     </div>
-    {% if thumbnail_fetch %}
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="field-no_auto_thumbnail" name="no_auto_thumbnail" value="true" aria-describedby="help-no_auto_thumbnail" {% if data.no_auto_thumbnail in (true, 'true', 'True') %}checked{% endif %}>
-        <label class="form-check-label" for="field-no_auto_thumbnail">{{ _('Don\'t use the page\'s own preview image') }}</label>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="field-no_auto_thumbnail" name="no_auto_thumbnail" value="true" aria-describedby="help-no_auto_thumbnail" {% if data.no_auto_thumbnail in (true, 'true', 'True') %}checked{% endif %}>
+      <label class="form-check-label" for="field-no_auto_thumbnail">{{ _('Don\'t use the page\'s own preview image') }}</label>
+      {% if thumbnail_fetch %}
         <p class="form-text" id="help-no_auto_thumbnail">{{ _('Otherwise, when no image is chosen above, this site fetches the image the page names for link previews, once when the view is saved, and shows a small copy.') }}</p>
-      </div>
-    {% endif %}
+      {% else %}
+        <p class="form-text" id="help-no_auto_thumbnail">{{ _('Otherwise, when no image is chosen above, an Office file uploaded to this dataset shows the preview picture saved inside it.') }}</p>
+      {% endif %}
+    </div>
   </div>
-{% endif %}
-{# Kept while fetching is off, so turning it back on doesn't undo an opt-out. #}
-{% if not thumbnail_fetch and data.no_auto_thumbnail in (true, 'true', 'True') %}
-  <input type="hidden" name="no_auto_thumbnail" value="true">
 {% endif %}
 
 <div class="form-group control-medium">

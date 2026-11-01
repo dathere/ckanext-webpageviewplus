@@ -20,6 +20,11 @@
   Portuguese, Thai, German, Italian, French, Japanese, Indonesian, Ukrainian, Turkish). Proxies
   must forward `/webpageviewplus/pdfjs/` and `/webpageviewplus/pdf/` on the content domain.
   `scripts/vendor_pdfjs.py` updates the vendored copy.
+- Thumbnails (`webpage_view_plus_thumbnails`): PDF (Plus) views take an image the editor picks,
+  and a Website (Plus) view of an Office file shows the preview picture inside the file
+  (always in OpenDocument; in `.docx`, `.xlsx`, `.pptx` and `.ppsx` when saved with one). An
+  upload to the dataset is read from storage with no setting needed; a file elsewhere is
+  fetched only with `thumbnail_fetch`, at most 20 MB.
 - `ckan webpageviewplus migrate-pdf [--dry-run]` converts ckanext-pdfview's `pdf_view` views to
   PDF (Plus) in place, keeping id, title, description, order and PDF url. It needs
   `pdf_view_plus` and a content origin, and skips views whose PDF url isn't http(s), whose

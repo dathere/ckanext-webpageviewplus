@@ -117,22 +117,7 @@ def view_after_validator(
             else:
                 data.pop((name,), None)
 
-    # The thumbnail route answers to whoever may see the view's dataset, so
-    # the picked image must be in that dataset too.
-    picked = _get(data, "thumbnail_resource")
-    if picked:
-        resource = _resource(data)
-        image = model.Resource.get(picked)
-        if (
-            resource is None or image is None or image.state != "active"
-            or image.package_id != resource.package_id
-            or not thumbnails.is_pickable(content.resource_dict(image))
-        ):
-            _add_error(
-                errors,
-                "thumbnail_resource",
-                toolkit._("Choose an image from this dataset"),
-            )
+    _check_thumbnail(data, errors)
 
     if any(errors.get((name,)) for name in ("page_url", "preset", "sandbox")):
         return
@@ -207,6 +192,25 @@ def view_after_validator(
         )
 
 
+def _check_thumbnail(data: FlattenDataDict, errors: FlattenErrorDict) -> None:
+    # The thumbnail route answers to whoever may see the view's dataset, so
+    # the picked image must be in that dataset too.
+    picked = _get(data, "thumbnail_resource")
+    if picked:
+        resource = _resource(data)
+        image = model.Resource.get(picked)
+        if (
+            resource is None or image is None or image.state != "active"
+            or image.package_id != resource.package_id
+            or not thumbnails.is_pickable(content.resource_dict(image))
+        ):
+            _add_error(
+                errors,
+                "thumbnail_resource",
+                toolkit._("Choose an image from this dataset"),
+            )
+
+
 def pdf_height_mode_validator(value: Any, context: Context) -> Any:
     # A PDF viewer scrolls inside, so its height never follows the page.
     if value and value not in ("fixed", "viewport"):
@@ -221,6 +225,7 @@ def pdf_after_validator(
     context: Context,
 ) -> None:
     """pdf_view_plus's checks across fields."""
+    _check_thumbnail(data, errors)
     mode = _get(data, "height_mode")
     if mode and not errors.get(("height_mode",)):
         if not frame.height_value_valid(mode, _get(data, "height_value") or ""):

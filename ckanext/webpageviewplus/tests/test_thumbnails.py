@@ -432,7 +432,8 @@ class TestFetchOff:
                     resource_id=page["id"], view_id=view["id"]),
             headers={"Authorization": sysadmin["token"]},
         ).body
-        assert '<input type="hidden" name="no_auto_thumbnail" value="true">' in body
+        # The checkbox shows (and keeps it) whether fetching is on or off.
+        assert re.search(r'id="field-no_auto_thumbnail"[^>]*checked', body)
 
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus webpage_view_plus_thumbnails")
@@ -648,3 +649,146 @@ def test_service_format_off_by_default():
     page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
     _view(page["id"], page_url=YOUTUBE, preset="external")
     assert _format(page) == "HTML"
+
+
+# --- PDF (Plus) views and Office files' own previews ------------------------
+
+def _office_file(preview_name="Thumbnails/thumbnail.png", preview=None, mimetype=True):
+    """A minimal Office zip: an OpenDocument-style mimetype entry and,
+    unless preview_name is None, a preview picture under that name."""
+    out = io.BytesIO()
+    import zipfile
+    with zipfile.ZipFile(out, "w") as z:
+        if mimetype:
+            z.writestr("mimetype", "application/vnd.oasis.opendocument.text")
+        z.writestr("content.xml", "<office:document-content/>")
+        if preview_name:
+            z.writestr(preview_name, preview if preview is not None else _png(color=(0, 120, 0, 255)))
+    return out.getvalue()
+
+
+def _office_upload(dataset, body, filename):
+    return factories.Resource(
+        package_id=dataset["id"], url=filename, url_type="upload",
+        format=filename.rsplit(".", 1)[1].upper(),
+        upload=FileStorage(io.BytesIO(body), filename=filename))
+
+
+def _embed(file_url):
+    from urllib.parse import quote_plus
+    return "https://view.officeapps.live.com/op/embed.aspx?src=" + quote_plus(file_url)
+
+
+class TestOfficePreview:
+    def test_opendocument_thumbnail(self):
+        out = thumbnails.office_preview(_office_file())
+        with Image.open(io.BytesIO(out)) as im:
+            assert im.format == "JPEG"
+
+    def test_ooxml_thumbnail(self):
+        source = io.BytesIO()
+        Image.new("RGB", (400, 300), "navy").save(source, "JPEG")
+        assert thumbnails.office_preview(
+            _office_file("docProps/thumbnail.jpeg", source.getvalue(), mimetype=False))
+
+    def test_none_without_a_preview(self):
+        assert thumbnails.office_preview(_office_file(preview_name=None)) is None
+
+    def test_oversized_preview_refused(self):
+        big = _office_file(preview=b"\0" * (thumbnails.MAX_IMAGE_BYTES + 1))
+        assert thumbnails.office_preview(big) is None
+
+    def test_not_a_zip(self):
+        assert thumbnails.office_preview(b"\xd0\xcf\x11\xe0 an old binary .doc") is None
+
+    def test_office_file(self):
+        assert thumbnails.office_file(_embed("https://x.org/a.odt")) == "https://x.org/a.odt"
+        assert thumbnails.office_file(_embed("https://x.org/a.docx")) == "https://x.org/a.docx"
+        # The older binary formats keep their preview elsewhere.
+        assert thumbnails.office_file(_embed("https://x.org/a.doc")) is None
+        assert thumbnails.office_file(PAGE) is None
+
+
+@pytest.mark.ckan_config("ckan.plugins",
+                         "webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins", "counts_table", "local_storage")
+class TestOfficeAndPdfViews:
+    def test_uploaded_office_file_without_fetching(self, app, monkeypatch, ckan_config):
+        # CKAN's own upload is read from storage: no fetch, so no setting needed.
+        _no_fetching(monkeypatch)
+        dataset = factories.Dataset()
+        doc = _office_upload(dataset, _office_file(), "minutes.odt")
+        download = "{}/dataset/{}/resource/{}/download/minutes.odt".format(
+            ckan_config["ckan.site_url"].rstrip("/"), dataset["id"], doc["id"])
+        view = _view(doc["id"], page_url=_embed(download), preset="interactive")
+        row = thumbnails.stored(view["id"])
+        assert row["source"] == "office:" + download
+        body = _page(app, dataset)
+        assert url_for("webpageviewplus_thumbnails.serve", view_id=view["id"],
+                       v=row["digest"][:16]).replace("&", "&amp;") in body
+        assert "ODT" in body  # the file keeps its own format label
+
+    def test_office_file_elsewhere_needs_fetching(self, monkeypatch):
+        _no_fetching(monkeypatch)
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url="https://files.example.com/a.odt",
+                                  format="ODT")
+        view = _view(page["id"], page_url=_embed("https://files.example.com/a.odt"),
+                     preset="interactive")
+        assert thumbnails.stored(view["id"]) is None
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.thumbnail_fetch", "true")
+    def test_office_file_elsewhere_fetched(self, monkeypatch):
+        from ckanext.webpageviewplus import frameability as fa
+        calls = []
+
+        def fetch_body(url, deadline, max_bytes, user_agent, truncate=False):
+            calls.append(url)
+            return fa.Body(url, "application/vnd.oasis.opendocument.text", None, _office_file())
+
+        monkeypatch.setattr(fa, "fetch_body", fetch_body)
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url="https://files.example.com/a.odt",
+                                  format="ODT")
+        view = _view(page["id"], page_url=_embed("https://files.example.com/a.odt"),
+                     preset="interactive")
+        assert thumbnails.stored(view["id"])["source"] == "office:https://files.example.com/a.odt"
+        assert calls == ["https://files.example.com/a.odt"]
+
+    def test_opt_out_respected(self, monkeypatch, ckan_config):
+        dataset = factories.Dataset()
+        doc = _office_upload(dataset, _office_file(), "minutes.odt")
+        download = "{}/dataset/{}/resource/{}/download/minutes.odt".format(
+            ckan_config["ckan.site_url"].rstrip("/"), dataset["id"], doc["id"])
+        view = _view(doc["id"], page_url=_embed(download), preset="interactive",
+                     no_auto_thumbnail=True)
+        assert thumbnails.stored(view["id"]) is None
+
+    def test_pdf_view_picked_image(self, app):
+        dataset = factories.Dataset()
+        report = factories.Resource(package_id=dataset["id"], url="https://files.example.com/r.pdf",
+                                    format="PDF")
+        image = _image(dataset)
+        view = helpers.call_action(
+            "resource_view_create",
+            context={"user": factories.Sysadmin()["name"], "ignore_auth": True},
+            resource_id=report["id"], view_type="pdf_view_plus", title="Report",
+            thumbnail_resource=image["id"])
+        row = thumbnails.stored(view["id"])
+        assert row["source"] == "resource:" + image["id"]
+        assert url_for("webpageviewplus_thumbnails.serve", view_id=view["id"],
+                       v=row["digest"][:16]).replace("&", "&amp;") in _page(app, dataset)
+        assert app.get(url_for("webpageviewplus_thumbnails.serve", view_id=view["id"])).status_code == 200
+
+    def test_pdf_view_image_from_another_dataset_refused(self):
+        dataset = factories.Dataset()
+        report = factories.Resource(package_id=dataset["id"], url="https://files.example.com/r.pdf",
+                                    format="PDF")
+        other = _image(factories.Dataset())
+        with pytest.raises(ValidationError):
+            helpers.call_action(
+                "resource_view_create",
+                context={"user": factories.Sysadmin()["name"], "ignore_auth": True},
+                resource_id=report["id"], view_type="pdf_view_plus", title="Report",
+                thumbnail_resource=other["id"])

@@ -461,6 +461,8 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
                 "height_mode": [ignore_empty, unicode_safe, v.pdf_height_mode_validator],
                 "height_value": [ignore_empty, unicode_safe],
                 "hide_controls": [ignore_missing, boolean_validator],
+                # Used by webpage_view_plus_thumbnails; checked in __after.
+                "thumbnail_resource": [ignore_empty, unicode_safe],
                 "__after": [v.pdf_after_validator],
             },
             "iframed": False,
@@ -496,6 +498,11 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
             "height_modes": pdf.HEIGHT_MODES,
             "isolated": settings.isolating_content_origin(),
             "allowed_hosts": settings.allowed_hosts(),
+            # The images this view may use, when thumbnails are on.
+            "thumbnail_choices": (
+                thumbnails.choices(data_dict.get("package"))
+                if thumbnails.enabled() else None
+            ),
         }
         if not settings.isolating_content_origin():
             return dict(form_vars, frame=None, frame_error="content_origin")

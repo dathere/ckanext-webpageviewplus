@@ -920,7 +920,7 @@ which views show the "doesn't allow" card.
 <img src="https://raw.githubusercontent.com/dathere/ckanext-webpageviewplus/main/docs/thumbnails.png" width="715" alt="A dataset's resource list with thumbnails: an uploaded chart picked by the editor, a Datawrapper chart, a YouTube video's and a Tableau Public workbook's own thumbnails, pages' preview images, the Vimeo and Observable logos, and the HTML format icon where there's no image or the view opts out">
 
 The `webpage_view_plus_thumbnails` plugin replaces the format icon in a dataset's resource
-list for resources with a Website (Plus) view. It's a plugin of its own, so a site that
+list for resources with a Website (Plus) or PDF (Plus) view. It's a plugin of its own, so a site that
 doesn't enable it never loads its override of `package/snippets/resource_item.html` (the
 `resource_item_title` block), which could clash with a theme's. It needs Pillow
 (`pip install ckanext-webpageviewplus[thumbnails]`), and CKAN won't start without it. The
@@ -934,8 +934,17 @@ image comes from, first match wins:
    whoever may see the dataset. Images kept by a cloud storage extension on CKAN 2.10 or 2.11
    can't be read, so they get no thumbnail; on 2.12 any `ckan.files` storage that can stream is
    read. A good source for qsv Data Schematics is their static image export
-   (`viz_static`), uploaded as a second resource.
-2. **The page's own preview image**, with `ckanext.webpageviewplus.thumbnail_fetch = true`
+   (`viz_static`), uploaded as a second resource. PDF (Plus) views take only this: pick an
+   image of the report's cover, for example.
+2. **An Office file's own preview**, for a Website (Plus) view of Microsoft's Office viewer.
+   OpenDocument files (`.odt`, `.ods`, `.odp`) always carry a small picture of their first
+   page, and Word, Excel and PowerPoint files (`.docx`, `.xlsx`, `.pptx`, `.ppsx`) do when
+   saved with one (Office's "Save preview picture"; not the older `.doc`, `.xls`, `.ppt`).
+   When the view is saved, CKAN reads just that picture out of the file: an upload to the
+   same dataset is read from CKAN's storage, with no setting needed, and a file on another
+   site is fetched only with `thumbnail_fetch` on (at most 20 MB). The editor's "Don't use
+   the page's own preview image" turns it off too.
+3. **The page's own preview image**, with `ckanext.webpageviewplus.thumbnail_fetch = true`
    (off by default), fetched once when the view is saved and stored the same way. For YouTube,
    Datawrapper, Flourish, Tableau Public and Internet Archive it's the image each service
    publishes at a fixed address (YouTube's `i.ytimg.com/vi/<id>/mqdefault.jpg`, Datawrapper's
@@ -946,13 +955,13 @@ image comes from, first match wins:
    preview image" on a view. A copy counts only for the address it was taken from: when a
    view's page changes, its thumbnail goes until the view is saved again or `check-views`
    runs.
-3. **The service's logo**, when the resource has only this one view and its address is a
+4. **The service's logo**, when the resource has only this one view and its address is a
    [well-known service](#well-known-services-recognised-links)'s. The logos ship with the
    extension (from [Simple Icons](https://simpleicons.org/) 16.36.0, CC0; each brand's
    trademark rules still apply). Datawrapper, Flourish, Tableau Public, Power BI, Our World
    in Data, shinyapps.io, Infogram, Felt, uMap and Microsoft Office have none there, so they
    keep the format icon (an Office file keeps its own, such as DOCX). Looker Studio shows Looker's logo.
-4. Otherwise CKAN's format icon stays.
+5. Otherwise CKAN's format icon stays.
 
 A resource with several Website (Plus) views uses the first one in view order. When a resource
 has exactly one view and it's a well-known service's, screen readers hear the service's name

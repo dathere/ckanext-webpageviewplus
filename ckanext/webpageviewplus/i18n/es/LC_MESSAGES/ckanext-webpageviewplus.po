@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-01 20:33+0000\n"
+"POT-Creation-Date: 2026-11-01 22:32+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -40,11 +40,11 @@ msgstr "Página web incrustada"
 msgid "PDF (Plus)"
 msgstr "PDF (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:469
+#: ckanext/webpageviewplus/plugin.py:471
 msgid "PDF"
 msgstr "PDF"
 
-#: ckanext/webpageviewplus/plugin.py:513
+#: ckanext/webpageviewplus/plugin.py:524
 msgid "PDF document"
 msgstr "Documento PDF"
 
@@ -57,7 +57,7 @@ msgid "Preset is not one of the allowed presets"
 msgstr "El perfil no es uno de los perfiles permitidos"
 
 #: ckanext/webpageviewplus/validators.py:34
-#: ckanext/webpageviewplus/validators.py:213
+#: ckanext/webpageviewplus/validators.py:217
 msgid "Unknown height mode"
 msgstr "Modo de altura desconocido"
 
@@ -79,16 +79,12 @@ msgstr[1] "Estas funciones no se pueden conceder: {features}"
 msgid "Unknown referrer policy"
 msgstr "Política de referrer desconocida"
 
-#: ckanext/webpageviewplus/validators.py:134
-msgid "Choose an image from this dataset"
-msgstr "Elija una imagen de este conjunto de datos"
-
-#: ckanext/webpageviewplus/validators.py:148
-#: ckanext/webpageviewplus/validators.py:230
+#: ckanext/webpageviewplus/validators.py:133
+#: ckanext/webpageviewplus/validators.py:235
 msgid "Height value doesn't fit the height mode"
 msgstr "El valor de altura no corresponde al modo de altura"
 
-#: ckanext/webpageviewplus/validators.py:175
+#: ckanext/webpageviewplus/validators.py:160
 msgid ""
 "External is for third-party sites: uploaded HTML always gets a sandbox. "
 "Use Data Schematic or Interactive"
@@ -96,12 +92,12 @@ msgstr ""
 "Externo es para sitios de terceros: el HTML subido siempre lleva un "
 "sandbox. Use Data Schematic o Interactivo"
 
-#: ckanext/webpageviewplus/validators.py:188
-#: ckanext/webpageviewplus/validators.py:242
+#: ckanext/webpageviewplus/validators.py:173
+#: ckanext/webpageviewplus/validators.py:247
 msgid "This host isn't on the site's list of allowed hosts"
 msgstr "Este host no está en la lista de hosts permitidos del sitio"
 
-#: ckanext/webpageviewplus/validators.py:201
+#: ckanext/webpageviewplus/validators.py:186
 msgid ""
 "This frame can't let scripts keep a real origin: don't combine allow-"
 "scripts with allow-same-origin. Pages on this site never may; other pages"
@@ -111,6 +107,10 @@ msgstr ""
 "combine allow-scripts con allow-same-origin. Las páginas de este sitio "
 "nunca pueden; otras páginas pueden una vez que el HTML subido se sirva "
 "desde un origen de contenido separado"
+
+#: ckanext/webpageviewplus/validators.py:210
+msgid "Choose an image from this dataset"
+msgstr "Elija una imagen de este conjunto de datos"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:4
 msgid "Strict: static HTML, no scripts"
@@ -360,11 +360,13 @@ msgstr ""
 " valor."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:108
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:37
 msgid "Thumbnail in the resource list"
 msgstr "Miniatura en la lista de recursos"
 
 #. no thumbnail image chosen (the image, feminine in some languages).
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:112
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:41
 msgid "None"
 msgstr "Ninguna"
 
@@ -392,7 +394,7 @@ msgstr ""
 "datos. Con Ninguna, se muestra el logotipo de un servicio conocido o el "
 "icono del formato."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:127
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:126
 msgid "Don't use the page's own preview image"
 msgstr "No usar la imagen de vista previa de la propia página"
 
@@ -406,15 +408,24 @@ msgstr ""
 "imagen que la página indica para las vistas previas de enlaces, una vez "
 "al guardar la vista, y muestra una copia pequeña."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:141
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:38
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:130
+msgid ""
+"Otherwise, when no image is chosen above, an Office file uploaded to this"
+" dataset shows the preview picture saved inside it."
+msgstr ""
+"Si no, cuando no se elige ninguna imagen arriba, un archivo de Office "
+"subido a este conjunto de datos muestra la imagen de vista previa "
+"guardada en él."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:139
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:55
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
 msgstr ""
 "Ocultar la barra de controles (Abrir en una pestaña nueva, Pantalla "
 "completa, Recargar)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:142
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:39
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:140
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:56
 msgid ""
 "On phones and at high zoom, Open in new tab still shows, so visitors can "
 "always reach the page."
@@ -422,11 +433,11 @@ msgstr ""
 "En teléfonos y con mucho zoom, Abrir en una pestaña nueva sigue visible, "
 "para que los visitantes siempre puedan llegar a la página."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:146
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:144
 msgid "Ask before loading a page from another site"
 msgstr "Preguntar antes de cargar una página de otro sitio"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:147
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:145
 msgid ""
 "Visitors see a card naming the site, and nothing loads from it until they"
 " choose Load. Uploads and pages on this site load as usual."
@@ -435,14 +446,14 @@ msgstr ""
 " de él hasta que eligen Cargar. Los archivos subidos y las páginas de "
 "este sitio se cargan como siempre."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:152
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:150
 msgid "Count visits (daily totals only, nothing about visitors; the view says so)"
 msgstr ""
 "Contar visitas (solo totales diarios, nada sobre los visitantes; la vista"
 " lo indica)"
 
 #. view counts as "label: number" pairs, so no plural forms are needed.
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:158
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:156
 #, python-brace-format
 msgid ""
 "Last 30 days. Shown: {impressions}. Seen: {seen}. Loaded: {loaded}. Used:"
@@ -452,11 +463,11 @@ msgstr ""
 "Cargada: {loaded}. Usada: {engaged}. Con error: {failed}."
 
 #. heading of the advanced (sysadmin-only) settings.
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:167
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:165
 msgid "Advanced"
 msgstr "Avanzado"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:168
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:166
 msgid ""
 "Each field replaces the preset's value; leave it blank to keep the "
 "preset's. A sandbox with both allow-scripts and allow-same-origin is "
@@ -467,27 +478,27 @@ msgstr ""
 "se rechaza siempre que pudiera permitir a una página actuar como este "
 "sitio."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:169
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:167
 msgid "Sandbox tokens (replace the preset's)"
 msgstr "Tokens de sandbox (reemplazan los del perfil)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:169
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:167
 msgid "eg. allow-scripts allow-popups"
 msgstr "p. ej. allow-scripts allow-popups"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:170
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:168
 msgid "Allowed features (replace the preset's)"
 msgstr "Funciones permitidas (reemplazan las del perfil)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:170
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:168
 msgid "eg. fullscreen; clipboard-write"
 msgstr "p. ej. fullscreen; clipboard-write"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:172
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:170
 msgid "Referrer policy"
 msgstr "Política de referrer"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:175
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:173
 msgid "Site default"
 msgstr "La del sitio"
 
@@ -531,6 +542,15 @@ msgid ""
 msgstr ""
 "Píxeles para Fija, o un número del 1 al 100 para una parte de la ventana."
 " Vacío son 800 píxeles."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:47
+msgid ""
+"An image in this dataset (PNG, JPEG, WebP or GIF), shown small beside "
+"this resource in the dataset's list. With None, the format icon shows."
+msgstr ""
+"Una imagen de este conjunto de datos (PNG, JPEG, WebP o GIF), mostrada en"
+" pequeño junto a este recurso en la lista del conjunto. Con Ninguna, se "
+"muestra el icono del formato."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:8
 msgid ""

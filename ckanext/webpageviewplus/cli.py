@@ -407,7 +407,7 @@ def check_views(
     rows = []
     for view, resource, package in query:
         row = assess(view, resource, probes, timeout, store=not no_store)
-        if remake and view.view_type == thumbnails.VIEW_TYPE:
+        if remake and view.view_type in thumbnails.VIEW_TYPES:
             thumbnails.after_save(
                 dict(view.config or {}, id=view.id, view_type=view.view_type,
                      resource_id=view.resource_id),

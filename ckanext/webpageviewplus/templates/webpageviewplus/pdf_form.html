@@ -32,6 +32,23 @@
   <p class="form-text" id="help-height_value">{{ _('Pixels for Fixed, or a number from 1 to 100 for a share of the window. Blank is 800 pixels.') }}</p>
 {% endcall %}
 
+{% if thumbnail_choices is not none %}
+  <div class="form-group control-medium">
+    <label class="form-label" for="field-thumbnail_resource">{{ _('Thumbnail in the resource list') }}</label>
+    <div class="controls">
+      <select id="field-thumbnail_resource" name="thumbnail_resource" class="form-control form-select" aria-describedby="help-thumbnail_resource">
+        {# TRANSLATORS: no thumbnail image chosen (the image, feminine in some languages). #}
+        <option value="" {% if not data.thumbnail_resource %}selected{% endif %}>{{ _('None') }}</option>
+        {% for image in thumbnail_choices %}
+          <option value="{{ image.id }}" {% if data.thumbnail_resource == image.id %}selected{% endif %}>{{ image.name }}</option>
+        {% endfor %}
+      </select>
+      {% if errors.thumbnail_resource %}<span class="error-block">{{ errors.thumbnail_resource | join(', ') }}</span>{% endif %}
+      <p class="form-text" id="help-thumbnail_resource">{{ _("An image in this dataset (PNG, JPEG, WebP or GIF), shown small beside this resource in the dataset's list. With None, the format icon shows.") }}</p>
+    </div>
+  </div>
+{% endif %}
+
 <div class="form-group control-medium">
   <div class="form-check">
     <input class="form-check-input" type="checkbox" id="field-hide_controls" name="hide_controls" value="true" aria-describedby="help-hide_controls" {% if data.hide_controls in (true, 'true', 'True') %}checked{% endif %}>
