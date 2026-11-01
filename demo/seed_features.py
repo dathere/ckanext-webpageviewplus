@@ -11,6 +11,7 @@ settings (a content origin, frameability_check); their descriptions say so.
 import io
 import os
 import sys
+from urllib.parse import urlsplit
 
 from werkzeug.datastructures import FileStorage
 
@@ -264,6 +265,11 @@ SERVICE_PAGES = [
     ("Sketchfab", "https://sketchfab.com/3d-models/batmobile-hJ91ZS1d5kqX9N8HLqwfcHVKC9h",
      "A 3D model on Sketchfab. Its viewer refuses to run without its own origin, so "
      "`external`; press play, then drag to turn the model."),
+    ("Microsoft Office", "https://filesamples.com/samples/document/ppt/sample1.ppt",
+     "A PowerPoint file, the resource itself, shown through Microsoft's online viewer: step "
+     "through the slides. Microsoft's servers fetch the file, so it must be public (the form "
+     "says so for a private dataset). The viewer fails as soon as you scroll without its "
+     "own origin, so `external`. Word and Excel files work the same way."),
 ]
 
 
@@ -325,7 +331,10 @@ def main():
         # views, which may pick the image as their thumbnail.
         created = []
         for name, url, views in RESOURCES + list(service_resources()):
-            data = {"package_id": pkg["id"], "name": name, "format": "HTML"}
+            # An Office file keeps its own format (PPT...), as the resource list shows it.
+            ext = os.path.splitext(urlsplit(url).path)[1].lstrip(".").lower() if url else ""
+            fmt = ext.upper() if ext in services.OFFICE_EXTENSIONS else "HTML"
+            data = {"package_id": pkg["id"], "name": name, "format": fmt}
             if url:
                 data["url"] = url
             else:

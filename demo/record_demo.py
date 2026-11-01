@@ -30,7 +30,8 @@ W, H = 1280, 800
 CLIP = 2.5
 # Seconds to let a service draw after the page's load event, before its clip.
 SETTLE = {"Observable": 9, "Power BI": 5, "CARTO": 4, "Plotly Cloud": 4, "ArcGIS Online": 6,
-          "Looker Studio": 14, "Streamlit": 8, "Hugging Face Spaces": 5, "shinyapps.io": 6}
+          "Looker Studio": 14, "Streamlit": 8, "Hugging Face Spaces": 5, "shinyapps.io": 6,
+          "Microsoft Office": 6}
 # The montage, one per well-known service: (resource in wvp-features, view
 # title, caption label if not the title).
 SERVICE_VIEWS = [
@@ -63,6 +64,8 @@ SERVICE_VIEWS = [
     ("OpenStreetMap", "OpenStreetMap (external)", None),
     ("Internet Archive", "Internet Archive (external)", None),
     ("Sketchfab", "Sketchfab (external)", None),
+    ("Microsoft Office", "Microsoft Office (external)",
+     "Microsoft Office: a PowerPoint file (external)"),
 ]
 ENV = dict(l.strip().split("=", 1) for l in open(os.path.expanduser(
     os.environ.get("CKAN_DOCKER_ENV", "~/GitHub/ckan-docker/.env")))

@@ -25,6 +25,7 @@
 - The README says plainly that on CKAN 2.10 and 2.11, uploads kept by a cloud storage
   extension (ckanext-s3filestore, ckanext-cloudstorage) stay sandboxed on CKAN's address, and
   that upgrading to 2.12 lifts it.
+- The demo GIF's montage has 30 services, ending with a PowerPoint file in Microsoft's viewer.
 
 ## 0.6.0 (2026-10-31)
 
