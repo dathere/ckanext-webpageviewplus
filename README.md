@@ -262,10 +262,10 @@ CKAN notes which other sites uploaded pages fetch from (map tiles, a CDN), and
 
 `ckan webpageviewplus migrate` converts `webpage_view` views in place, keeping their id, title,
 description, order and page URL. It picks `data-schematic` for uploads that contain a qsv
-schematic, and the default preset otherwise. To tell, it reads each uploaded page (up to 64 MB),
-from cloud storage too on CKAN 2.12, even with `--dry-run`. It never stores a preset the site disallows or
-the [security rule](#how-the-protection-works) refuses: if none fits, it skips the view and says
-so. Back up the database first, and start with a dry run:
+schematic, and the default preset otherwise. To tell, it reads each uploaded page (up to
+64 MB), from cloud storage too on CKAN 2.12, even with `--dry-run`. It never stores a preset
+the site disallows or the [security rule](#how-the-protection-works) refuses: if none fits, it
+skips the view and says so. Back up the database first, and start with a dry run:
 
     ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate --dry-run
     ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate [--uploads-only] [--preset NAME]
@@ -540,12 +540,12 @@ How content is served:
   `ckan.files` storage that can stream its files: `ckan:fs` on disk, or a cloud storage through
   file-keeper's adapters, `file_keeper:s3`, `file_keeper:gcs` or `file_keeper:azure_blob`
   (each registers once its client library is installed: `boto3`, `google-cloud-storage` or
-  `azure-storage-blob`). CKAN reads a cloud
-  file and streams it to the visitor, so its bytes pass through CKAN (without range requests).
-  The storage's hash of the file is its ETag, so a browser revalidating an unchanged page gets
-  a 304 and the file isn't read again. Uploads on disk are sent as files, as before. This keeps every rule above in force
-  (signed URLs, `frame-ancestors`, no cookies) whatever the storage, where sending visitors to
-  the storage's own link would not.
+  `azure-storage-blob`). CKAN reads a cloud file and streams it to the visitor, so its bytes
+  pass through CKAN (without range requests). The storage's hash of the file is its ETag, so
+  a browser revalidating an unchanged page gets a 304 and the file isn't read again. Uploads
+  on disk are sent as files, as before. This keeps every rule above in force (signed URLs,
+  `frame-ancestors`, no cookies) whatever the storage, where sending visitors to the
+  storage's own link would not.
 - **CKAN 2.10 and 2.11 with cloud storage:** uploads kept by an extension such as
   ckanext-s3filestore or ckanext-cloudstorage aren't served: each has its own way of storing
   files, with no common way to read them. Their views stay framed from CKAN's origin under the
@@ -823,7 +823,9 @@ to point at your CKAN checkout's `test-core.ini`. The tests create the plugin's 
 themselves (CKAN's fixtures drop them when they reset the test database).
 
 `browser_tests/` drives a running CKAN with Playwright in Chromium, Firefox and WebKit; see
-`.github/workflows/test.yml` for how CI starts and seeds one.
+`.github/workflows/test.yml` for how CI starts and seeds one. The CKAN under test needs both
+plugins, `webpage_view_plus webpage_view_plus_thumbnails` (so the `[thumbnails]` extra), and a
+content origin, as in `browser_tests/ci.ini`.
 
 #### Releasing a new version of ckanext-webpageviewplus
 
