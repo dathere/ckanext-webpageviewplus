@@ -192,10 +192,15 @@ def view_after_validator(
         )
 
 
-def _check_thumbnail(data: FlattenDataDict, errors: FlattenErrorDict) -> None:
+def _check_thumbnail(
+    data: FlattenDataDict, errors: FlattenErrorDict, first_page: bool = False,
+) -> None:
     # The thumbnail route answers to whoever may see the view's dataset, so
-    # the picked image must be in that dataset too.
+    # the picked image must be in that dataset too. PDF (Plus) views may
+    # pick their PDF's first page instead.
     picked = _get(data, "thumbnail_resource")
+    if picked == thumbnails.FIRST_PAGE and first_page:
+        return
     if picked:
         resource = _resource(data)
         image = model.Resource.get(picked)
@@ -225,10 +230,13 @@ def pdf_after_validator(
     context: Context,
 ) -> None:
     """pdf_view_plus's checks across fields."""
-    _check_thumbnail(data, errors)
+    _check_thumbnail(data, errors, first_page=True)
     mode = _get(data, "height_mode")
-    if mode and not errors.get(("height_mode",)):
-        if not frame.height_value_valid(mode, _get(data, "height_value") or ""):
+    value = _get(data, "height_value")
+    # A blank value is the default (800 px, or 80% of the window), as the
+    # form says: its height list has no blank choice, so it always posts one.
+    if mode and value and not errors.get(("height_mode",)):
+        if not frame.height_value_valid(mode, value):
             _add_error(
                 errors,
                 "height_value",

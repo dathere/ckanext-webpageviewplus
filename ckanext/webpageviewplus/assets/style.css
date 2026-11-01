@@ -271,3 +271,17 @@
 .webpageviewplus-noscroll body {
   overflow: hidden;
 }
+
+/* The PDF view form's frame drawing the first page for a thumbnail. On
+   screen but practically invisible: browsers pause rendering in
+   cross-origin frames that are off screen or hidden. */
+.webpageviewplus-drawing {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 2px;
+  height: 2px;
+  border: 0;
+  opacity: 0.01;
+  pointer-events: none;
+}

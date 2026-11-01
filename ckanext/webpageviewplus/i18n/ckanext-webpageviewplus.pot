@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.7.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-01 22:32+0000\n"
+"POT-Creation-Date: 2026-11-01 23:10+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,8 +18,20 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.15.0\n"
 
-#: ckanext/webpageviewplus/actions.py:203
+#: ckanext/webpageviewplus/actions.py:204
 msgid "Must be a whole number"
+msgstr ""
+
+#: ckanext/webpageviewplus/actions.py:238
+msgid "PDF view not found"
+msgstr ""
+
+#: ckanext/webpageviewplus/actions.py:267
+msgid "Thumbnails aren't enabled on this site"
+msgstr ""
+
+#: ckanext/webpageviewplus/actions.py:277 ckanext/webpageviewplus/actions.py:280
+msgid "Not a usable image"
 msgstr ""
 
 #: ckanext/webpageviewplus/plugin.py:142
@@ -34,15 +46,15 @@ msgstr ""
 msgid "Embedded web page"
 msgstr ""
 
-#: ckanext/webpageviewplus/plugin.py:458
+#: ckanext/webpageviewplus/plugin.py:470
 msgid "PDF (Plus)"
 msgstr ""
 
-#: ckanext/webpageviewplus/plugin.py:471
+#: ckanext/webpageviewplus/plugin.py:483
 msgid "PDF"
 msgstr ""
 
-#: ckanext/webpageviewplus/plugin.py:524
+#: ckanext/webpageviewplus/plugin.py:545
 msgid "PDF document"
 msgstr ""
 
@@ -55,7 +67,7 @@ msgid "Preset is not one of the allowed presets"
 msgstr ""
 
 #: ckanext/webpageviewplus/validators.py:34
-#: ckanext/webpageviewplus/validators.py:217
+#: ckanext/webpageviewplus/validators.py:222
 msgid "Unknown height mode"
 msgstr ""
 
@@ -76,7 +88,7 @@ msgid "Unknown referrer policy"
 msgstr ""
 
 #: ckanext/webpageviewplus/validators.py:133
-#: ckanext/webpageviewplus/validators.py:235
+#: ckanext/webpageviewplus/validators.py:243
 msgid "Height value doesn't fit the height mode"
 msgstr ""
 
@@ -87,7 +99,7 @@ msgid ""
 msgstr ""
 
 #: ckanext/webpageviewplus/validators.py:173
-#: ckanext/webpageviewplus/validators.py:247
+#: ckanext/webpageviewplus/validators.py:255
 msgid "This host isn't on the site's list of allowed hosts"
 msgstr ""
 
@@ -98,7 +110,7 @@ msgid ""
 "uploaded HTML is served from a separate content origin"
 msgstr ""
 
-#: ckanext/webpageviewplus/validators.py:210
+#: ckanext/webpageviewplus/validators.py:215
 msgid "Choose an image from this dataset"
 msgstr ""
 
@@ -129,12 +141,12 @@ msgid "Auto"
 msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:13
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:4
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:6
 msgid "Fixed (px)"
 msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:14
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:5
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:7
 msgid "Share of the window height, in percent"
 msgstr ""
 
@@ -176,7 +188,7 @@ msgid ""
 msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:31
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:15
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:17
 msgid "This site accepts pages from these hosts only: {hosts}."
 msgstr ""
 
@@ -268,7 +280,7 @@ msgid ""
 msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:89
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:20
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:22
 msgid "Height"
 msgstr ""
 
@@ -283,7 +295,7 @@ msgid ""
 msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:102
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:31
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:33
 msgid "Height value"
 msgstr ""
 
@@ -298,13 +310,13 @@ msgid ""
 msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:108
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:37
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:39
 msgid "Thumbnail in the resource list"
 msgstr ""
 
 #. no thumbnail image chosen (the image, feminine in some languages).
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:112
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:41
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:43
 msgid "None"
 msgstr ""
 
@@ -340,12 +352,12 @@ msgid ""
 msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:139
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:55
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:69
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
 msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:140
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:56
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:70
 msgid ""
 "On phones and at high zoom, Open in new tab still shows, so visitors can "
 "always reach the page."
@@ -408,42 +420,69 @@ msgstr ""
 msgid "Site default"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:9
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:11
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:140
 msgid ""
 "This PDF can't be shown: the site needs a separate domain for uploaded "
 "content."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:12
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:14
 msgid "PDF url"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:12
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:14
 msgid "eg. https://example.com/report.pdf  (if blank uses resource url)"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:14
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:16
 msgid ""
 "Leave blank to show this resource's own file. A PDF on another site is "
 "fetched by this site and shown from here, so visitors never contact that "
 "site."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:31
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:33
 msgid "eg. 800 or 80"
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:32
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:34
 msgid ""
 "Pixels for Fixed, or a number from 1 to 100 for a share of the window. Blank "
 "is 800 pixels."
 msgstr ""
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:47
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:44
+msgid "The PDF's first page"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:50
 msgid ""
 "An image in this dataset (PNG, JPEG, WebP or GIF), shown small beside this "
 "resource in the dataset's list. With None, the format icon shows."
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:51
+msgid ""
+"The PDF's first page is drawn in your browser when you choose it, and again "
+"when you edit the view after an uploaded file has changed, or every time for "
+"a PDF linked from another site."
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:58
+msgid "Drawing the first page…"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:59
+msgid "The first page is ready. Save the view to use it."
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:60
+msgid "Couldn't draw the first page. Check the PDF shows in the view, then try again."
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:61
+msgid "Save the view first, then choose the first page again."
 msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:8

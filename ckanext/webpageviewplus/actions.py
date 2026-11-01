@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import dataclasses
 from typing import Any, Optional
 
@@ -229,3 +230,52 @@ def webpageviewplus_connections_show(
     toolkit.check_access("webpageviewplus_connections_show", context, data_dict)
     resource_id = toolkit.get_or_bust(data_dict, "id")
     return connections.hosts_for(resource_id)
+
+
+def _pdf_view(data_dict: dict[str, Any]):
+    view = model.ResourceView.get(data_dict.get("id") or "")
+    if view is None or view.view_type != thumbnails.PDF_VIEW_TYPE:
+        raise toolkit.ObjectNotFound(toolkit._("PDF view not found"))
+    return view
+
+
+def pdf_thumbnail_auth(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:
+    """Anyone who may edit the view: the picture becomes its thumbnail."""
+    try:
+        view = _pdf_view(data_dict)
+        toolkit.check_access("resource_view_update", context,
+                             {"id": view.id, "resource_id": view.resource_id})
+    except (toolkit.NotAuthorized, toolkit.ObjectNotFound, toolkit.ValidationError):
+        return {"success": False}
+    return {"success": True}
+
+
+def webpageviewplus_pdf_thumbnail(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:
+    """Store a picture of a PDF (Plus) view's first page, drawn by PDF.js in
+    the editor's browser (the view form sends it). It counts as the view's
+    thumbnail once the view's "Thumbnail in the resource list" is set to
+    the PDF's first page, while the file is unchanged.
+
+    :param id: the PDF (Plus) view's id
+    :param image: the picture, base64 (PNG, JPEG, WebP or GIF; it's
+        re-encoded)
+    :returns: ``{"source": ...}``
+    """
+    toolkit.check_access("webpageviewplus_pdf_thumbnail", context, data_dict)
+    view = _pdf_view(data_dict)
+    if not thumbnails.enabled():
+        raise toolkit.ValidationError({"id": [toolkit._("Thumbnails aren't enabled on this site")]})
+    raw = data_dict.get("image") or ""
+    if isinstance(raw, str) and raw.startswith("data:"):
+        raw = raw.partition(",")[2]
+    try:
+        # A base64 limit a little over the image cap, checked before decoding.
+        if len(raw) > thumbnails.MAX_IMAGE_BYTES * 4 // 3 + 4:
+            raise ValueError("too big")
+        png = base64.b64decode(raw, validate=True)
+    except (ValueError, TypeError):
+        raise toolkit.ValidationError({"image": [toolkit._("Not a usable image")]})
+    source = thumbnails.store_first_page(view, png)
+    if source is None:
+        raise toolkit.ValidationError({"image": [toolkit._("Not a usable image")]})
+    return {"source": source}

@@ -306,6 +306,16 @@ order now being built:
   `Thumbnails/thumbnail.png` in ODF, `docProps/thumbnail.*` in OOXML, entry capped), read from
   storage for an upload to the same dataset on CKAN's host (no `thumbnail_fetch` needed), else
   fetched only with `thumbnail_fetch`. The opt-out checkbox shows whenever thumbnails are on.
+  A PDF (Plus) view's `thumbnail_resource` may be `thumbnails.FIRST_PAGE`: the view form's
+  script (`setupPdfFirstPage`, class `webpageviewplus-drawing`) loads the saved view's viewer
+  through `pdf-view/<id>` in a tiny
+  on-screen frame (browsers pause rendering in off-screen cross-origin frames), asks it with
+  `webpageviewplus:pdf-thumbnail`, and posts the PNG to `webpageviewplus_pdf_thumbnail`
+  (auth `resource_view_update`, which needs `resource_id`), which re-encodes and stores it as
+  `pdf-page:<pdf_url | link | upload:<file name>>#<last_modified>` (`first_page_source`).
+  `after_save` never makes these: it keeps a matching copy and drops any other.
+  `first_page_ready` (form only) is never true for linked PDFs, which have no change stamp. The viewer
+  script answers only `window.parent`, and sets `externalLinkTarget` to a new tab.
   survives a failed refresh. The per-view opt-out is `no_auto_thumbnail`, not the spec's
   `auto_thumbnail`, because an unticked checkbox sends nothing (as with `hide_controls`). `thumbnail_resource` is in the main schema, and `view_after_validator` refuses an
   image outside the view's dataset, because `/webpageviewplus/thumbnail/<view_id>` authorises

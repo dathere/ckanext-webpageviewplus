@@ -673,9 +673,86 @@
     window.addEventListener("pagehide", function () { send(true); });
   }
 
+  // The PDF view form's "The PDF's first page" thumbnail: the saved view's
+  // viewer (PDF.js, on the content origin) draws page 1 in a hidden frame,
+  // and the picture goes to webpageviewplus_pdf_thumbnail, which re-encodes
+  // it. Only a reply from that frame, on that origin, is used.
+  var FIRST_PAGE = "pdf:first-page";
+  var PDF_THUMBNAIL = "webpageviewplus:pdf-thumbnail";
+
+  function csrfToken() {
+    var field = document.querySelector("meta[name=csrf_field_name]");
+    var meta = field && document.querySelector('meta[name="' + field.getAttribute("content") + '"]');
+    return meta ? meta.getAttribute("content") : "";
+  }
+
+  function toBase64(buffer) {
+    var bytes = new Uint8Array(buffer);
+    var binary = "";
+    for (var i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(binary);
+  }
+
+  function setupPdfFirstPage() {
+    var status = document.querySelector("[data-webpageviewplus-first-page]");
+    var select = document.getElementById("field-thumbnail_resource");
+    if (!status || !select) return;
+    var busy = false;
+    function say(name) { status.textContent = status.getAttribute(name) || ""; }
+    function make() {
+      if (busy || select.value !== FIRST_PAGE) return;
+      var viewId = status.getAttribute("data-view-id");
+      if (!viewId) { say("data-save-first"); return; }
+      busy = true;
+      say("data-working");
+      var origin = status.getAttribute("data-content-origin");
+      var frame = document.createElement("iframe");
+      frame.setAttribute("sandbox", "allow-scripts allow-same-origin");
+      frame.setAttribute("aria-hidden", "true");
+      frame.setAttribute("tabindex", "-1");
+      frame.setAttribute("title", "");
+      frame.className = "webpageviewplus-drawing";
+      var finished = false;
+      var timer = setTimeout(function () { finish(false); }, 30000);
+      function finish(ok) {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        window.removeEventListener("message", onReply);
+        if (frame.parentNode) frame.parentNode.removeChild(frame);
+        busy = false;
+        say(ok ? "data-done" : "data-failed");
+      }
+      function onReply(event) {
+        if (event.source !== frame.contentWindow || event.origin !== origin) return;
+        var data = event.data || {};
+        if (data.type !== PDF_THUMBNAIL) return;
+        if (!data.png) { finish(false); return; }
+        fetch(status.getAttribute("data-api"), {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken()},
+          body: JSON.stringify({id: viewId, image: toBase64(data.png)})
+        }).then(function (response) { finish(response.ok); }, function () { finish(false); });
+      }
+      window.addEventListener("message", onReply);
+      frame.addEventListener("load", function () {
+        if (frame.contentWindow) frame.contentWindow.postMessage({type: PDF_THUMBNAIL}, origin);
+      });
+      frame.src = status.getAttribute("data-open-url");
+      document.body.appendChild(frame);
+    }
+    select.addEventListener("change", make);
+    // Already chosen, but the file changed since (or no copy was made).
+    if (select.value === FIRST_PAGE && status.getAttribute("data-ready") !== "true") make();
+  }
+
   function init() {
     setupFrameabilityCheck();
     setupServiceSuggest();
+    setupPdfFirstPage();
     var nodes = document.querySelectorAll("iframe.webpageviewplus-frame");
     for (var i = 0; i < nodes.length; i++) setup(nodes[i]);
     setupControls();

@@ -39,8 +39,35 @@ def test_options_applied(viewer):
         scripting: PDFViewerApplicationOptions.get('enableScripting'),
         editor: PDFViewerApplicationOptions.get('annotationEditorMode'),
         range: PDFViewerApplicationOptions.get('disableRange'),
+        links: PDFViewerApplicationOptions.get('externalLinkTarget'),
     })""")
-    assert options == {"scripting": False, "editor": -1, "range": True}
+    assert options == {"scripting": False, "editor": -1, "range": True, "links": 2}
+
+
+def test_first_page_on_request(viewer):
+    # What the view form asks for a "The PDF's first page" thumbnail: the
+    # framing page asks, the viewer answers it alone with a PNG of page 1.
+    # (The form and the action that stores it need a login; unit tests cover
+    # those.)
+    page, _ = viewer
+    answer = page.evaluate("""() => new Promise((resolve) => {
+        const frame = document.querySelector('iframe.webpageviewplus-frame');
+        const origin = new URL(frame.src).origin;
+        window.addEventListener('message', (event) => {
+            const data = event.data || {};
+            if (event.source !== frame.contentWindow || event.origin !== origin) return;
+            if (data.type !== 'webpageviewplus:pdf-thumbnail') return;
+            if (!data.png) { resolve('error'); return; }
+            const bytes = new Uint8Array(data.png);
+            resolve([bytes.length, Array.from(bytes.slice(1, 4))]);
+        });
+        frame.contentWindow.postMessage({type: 'webpageviewplus:pdf-thumbnail'}, origin);
+        setTimeout(() => resolve('timeout'), 20000);
+    })""")
+    assert answer != "timeout" and answer != "error", answer
+    size, magic = answer
+    assert magic == [80, 78, 71]  # "PNG"
+    assert size > 1000
 
 
 @pytest.mark.parametrize("button", [

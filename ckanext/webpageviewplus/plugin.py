@@ -433,7 +433,19 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
 
     plugins.implements(plugins.IConfigurable)
     plugins.implements(plugins.IBlueprint)
+    plugins.implements(plugins.IActions)
+    plugins.implements(plugins.IAuthFunctions)
     plugins.implements(plugins.IResourceView, inherit=True)
+
+    # IActions
+
+    def get_actions(self):
+        return {"webpageviewplus_pdf_thumbnail": actions.webpageviewplus_pdf_thumbnail}
+
+    # IAuthFunctions
+
+    def get_auth_functions(self):
+        return {"webpageviewplus_pdf_thumbnail": actions.pdf_thumbnail_auth}
 
     # IConfigurable
 
@@ -496,6 +508,15 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
         resource = data_dict["resource"]
         form_vars = {
             "height_modes": pdf.HEIGHT_MODES,
+            "content_origin": settings.content_origin(),
+            # Whether the stored first-page copy still matches the file, so
+            # the form redraws it only when needed.
+            "first_page_ready": (
+                thumbnails.first_page_ready(resource_view, resource)
+                if has_request_context()
+                and (request.endpoint or "").endswith(("edit_view", "new_view"))
+                else False
+            ),
             "isolated": settings.isolating_content_origin(),
             "allowed_hosts": settings.allowed_hosts(),
             # The images this view may use, when thumbnails are on.

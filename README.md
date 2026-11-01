@@ -526,10 +526,11 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 - **Q: How do I get a picture in the resource list?**<br>
   A: Where your site has thumbnails on, pick an image uploaded to the same dataset under
-  "Thumbnail in the resource list" in the view form. Without one, a well-known service shows its
-  own thumbnail or logo, and where the site allows it the page's own preview image is used; tick
-  "Don't use the page's own preview image" to leave that out. See [Thumbnails in the resource
-  list](#thumbnails-in-the-resource-list).
+  "Thumbnail in the resource list" in the view form; for a PDF (Plus) view you can pick "The
+  PDF's first page" there instead. Without one, a well-known service shows its own thumbnail or
+  logo, an Office file shows the preview picture saved inside it, and where the site allows it
+  the page's own preview image is used; tick "Don't use the page's own preview image" to leave
+  those out. See [Thumbnails in the resource list](#thumbnails-in-the-resource-list).
 
 - **Q: Why do visitors see "This view loads content from …" first?**<br>
   A: That's the consent card: the site, or you for this view, asked visitors to agree before a
@@ -934,8 +935,14 @@ image comes from, first match wins:
    whoever may see the dataset. Images kept by a cloud storage extension on CKAN 2.10 or 2.11
    can't be read, so they get no thumbnail; on 2.12 any `ckan.files` storage that can stream is
    read. A good source for qsv Data Schematics is their static image export
-   (`viz_static`), uploaded as a second resource. PDF (Plus) views take only this: pick an
-   image of the report's cover, for example.
+   (`viz_static`), uploaded as a second resource. PDF (Plus) views take a picked image too,
+   or **the PDF's first page**: choose it in the same list and PDF.js draws page 1 in your
+   browser, from the saved view, and sends the picture to CKAN (the
+   `webpageviewplus_pdf_thumbnail` action, for those who may edit the view), which re-encodes
+   it like any image. Save the view to use it. CKAN itself never renders a PDF. For an upload
+   the copy is tied to the resource's last change: when the file is replaced, it stops showing
+   until someone opens the view form, which draws it again. A PDF linked from another site has
+   no such record, so the form draws its first page again every time it's opened.
 2. **An Office file's own preview**, for a Website (Plus) view of Microsoft's Office viewer.
    OpenDocument files (`.odt`, `.ods`, `.odp`) always carry a small picture of their first
    page, and Word, Excel and PowerPoint files (`.docx`, `.xlsx`, `.pptx`, `.ppsx`) do when
@@ -1052,11 +1059,14 @@ on any version. Then remove `pdf_view` from
   applies to these links too, and they need `ckan.storage_path` set. A linked PDF in a private
   dataset is still a public file on its own site: the signed address hides which view shows it,
   not the file.
+- **A thumbnail** in the dataset's resource list, with the thumbnails plugin: the PDF's first
+  page, drawn in the editor's browser, or an image the editor picks. See
+  [Thumbnails in the resource list](#thumbnails-in-the-resource-list).
 
 **How it's locked down.** PDF.js runs in the `data-schematic` sandbox on the content domain,
 with the same origin as uploaded pages and never CKAN's. A PDF's own JavaScript never runs in
 the view (PDF.js's scripting is off and not shipped), the viewer is read-only (no annotation or
-signature tools), and its page may only load files from its own domain. Its Download, Print
+signature tools), a PDF's links open in a new tab and never navigate the viewer itself, and its page may only load files from its own domain. Its Download, Print
 and Open buttons are hidden: the control bar's Open in new tab reaches the file, opening the
 original (CKAN's download address for an upload, the other site's for a link) in the browser's
 own viewer, which may run a PDF's scripts as it would for any PDF. The copy the view reads is
@@ -1085,6 +1095,7 @@ docstring.
 | Height | at least the window's height | per view: 800 px or a share of the window |
 | Controls | the browser viewer's | PDF.js's toolbar (page, zoom, search), and the control bar; download and print through Open in new tab |
 | Languages | the browser's | English and ten more, following the CKAN page |
+| Resource list | the format label | with the thumbnails plugin, the PDF's first page or an image the editor picks |
 | Moving over | n/a | `ckan webpageviewplus migrate-pdf` converts existing views in place |
 
 ### Privacy and telemetry
@@ -1194,7 +1205,9 @@ API actions: `webpageviewplus_frameability` and `webpageviewplus_service_suggest
 `resource_id`; for those who may add views; the second fetches nothing),
 `webpageviewplus_view_stats_show` (`id` of a view, optional `days`) and
 `webpageviewplus_connections_show` (`id` of a resource), both for those who may update the
-resource.
+resource, and with `pdf_view_plus` and thumbnails, `webpageviewplus_pdf_thumbnail` (`id` of a PDF
+view, `image` in base64; for those who may edit the view), which the view form uses to store a
+picture of the PDF's first page.
 
 ### Contributing
 

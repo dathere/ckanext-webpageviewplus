@@ -333,6 +333,9 @@ class TestView:
         with pytest.raises(helpers.logic.ValidationError):
             _view(resource, height_mode="viewport", height_value="150")
         assert _view(resource, height_mode="viewport", height_value="70")
+        # What the form posts for a view saved without a height: the first
+        # mode and a blank value, which means the default.
+        assert _view(resource, height_mode="fixed", height_value="")
 
 
 def test_not_offered_without_content_origin(monkeypatch):

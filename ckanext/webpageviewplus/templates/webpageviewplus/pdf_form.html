@@ -1,4 +1,6 @@
 {% import 'macros/form.html' as form %}
+{% asset 'webpageviewplus/webpageviewplus-css' %}
+{% asset 'webpageviewplus/webpageviewplus-js' %}
 
 {% set height_labels = {
   'fixed': _('Fixed (px)'),
@@ -39,12 +41,24 @@
       <select id="field-thumbnail_resource" name="thumbnail_resource" class="form-control form-select" aria-describedby="help-thumbnail_resource">
         {# TRANSLATORS: no thumbnail image chosen (the image, feminine in some languages). #}
         <option value="" {% if not data.thumbnail_resource %}selected{% endif %}>{{ _('None') }}</option>
+        <option value="pdf:first-page" {% if data.thumbnail_resource == 'pdf:first-page' %}selected{% endif %}>{{ _("The PDF's first page") }}</option>
         {% for image in thumbnail_choices %}
           <option value="{{ image.id }}" {% if data.thumbnail_resource == image.id %}selected{% endif %}>{{ image.name }}</option>
         {% endfor %}
       </select>
       {% if errors.thumbnail_resource %}<span class="error-block">{{ errors.thumbnail_resource | join(', ') }}</span>{% endif %}
-      <p class="form-text" id="help-thumbnail_resource">{{ _("An image in this dataset (PNG, JPEG, WebP or GIF), shown small beside this resource in the dataset's list. With None, the format icon shows.") }}</p>
+      <p class="form-text" id="help-thumbnail_resource">{{ _("An image in this dataset (PNG, JPEG, WebP or GIF), shown small beside this resource in the dataset's list. With None, the format icon shows.") }}
+        {{ _("The PDF's first page is drawn in your browser when you choose it, and again when you edit the view after an uploaded file has changed, or every time for a PDF linked from another site.") }}</p>
+      <p class="form-text" role="status" aria-live="polite" data-webpageviewplus-first-page
+         data-view-id="{{ data.id or '' }}"
+         data-ready="{{ 'true' if first_page_ready else 'false' }}"
+         data-open-url="{{ h.url_for('webpageviewplus_pdf.open_viewer', view_id=data.id) if data.id else '' }}"
+         data-content-origin="{{ content_origin or '' }}"
+         data-api="{{ h.url_for('api.action', ver=3, logic_function='webpageviewplus_pdf_thumbnail') }}"
+         data-working="{{ _('Drawing the first page…') }}"
+         data-done="{{ _('The first page is ready. Save the view to use it.') }}"
+         data-failed="{{ _('Couldn\'t draw the first page. Check the PDF shows in the view, then try again.') }}"
+         data-save-first="{{ _('Save the view first, then choose the first page again.') }}"></p>
     </div>
   </div>
 {% endif %}

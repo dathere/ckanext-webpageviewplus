@@ -792,3 +792,128 @@ class TestOfficeAndPdfViews:
                 context={"user": factories.Sysadmin()["name"], "ignore_auth": True},
                 resource_id=report["id"], view_type="pdf_view_plus", title="Report",
                 thumbnail_resource=other["id"])
+
+
+# --- a PDF's first page, drawn by PDF.js in the editor's browser -------------
+
+def _png_b64(**kw):
+    import base64
+    return base64.b64encode(_png(**kw)).decode()
+
+
+def _pdf_view(resource_id, **fields):
+    return helpers.call_action(
+        "resource_view_create",
+        context={"user": factories.Sysadmin()["name"], "ignore_auth": True},
+        resource_id=resource_id, view_type="pdf_view_plus", title="Report", **fields)
+
+
+@pytest.mark.ckan_config("ckan.plugins",
+                         "webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins", "counts_table", "local_storage")
+class TestPdfFirstPage:
+    def _report(self, dataset):
+        return factories.Resource(package_id=dataset["id"], url="https://files.example.com/r.pdf",
+                                  format="PDF")
+
+    def test_stored_then_counts_once_chosen(self, app):
+        dataset = factories.Dataset()
+        report = self._report(dataset)
+        view = _pdf_view(report["id"])
+        sysadmin = factories.Sysadmin()
+        result = helpers.call_action(
+            "webpageviewplus_pdf_thumbnail", context={"user": sysadmin["name"]},
+            id=view["id"], image=_png_b64())
+        assert result["source"].startswith("pdf-page:https://files.example.com/r.pdf#")
+        # Not chosen yet: the copy is kept but not shown.
+        assert "webpageviewplus/thumbnail/" not in _page(app, dataset)
+        view = _update(view, thumbnail_resource=thumbnails.FIRST_PAGE)
+        row = thumbnails.stored(view["id"])
+        assert row["source"] == result["source"]  # the save kept it
+        assert url_for("webpageviewplus_thumbnails.serve", view_id=view["id"],
+                       v=row["digest"][:16]).replace("&", "&amp;") in _page(app, dataset)
+
+    def test_changed_file_stops_counting(self, app):
+        dataset = factories.Dataset()
+        report = self._report(dataset)
+        view = _pdf_view(report["id"])
+        helpers.call_action("webpageviewplus_pdf_thumbnail",
+                            context={"user": factories.Sysadmin()["name"]},
+                            id=view["id"], image=_png_b64())
+        _update(view, thumbnail_resource=thumbnails.FIRST_PAGE)
+        assert "webpageviewplus/thumbnail/" in _page(app, dataset)
+        import datetime
+        helpers.call_action("resource_patch", id=report["id"],
+                            last_modified=datetime.datetime(2030, 1, 1).isoformat())
+        assert "webpageviewplus/thumbnail/" not in _page(app, dataset)
+
+    def test_upload_source_same_from_model_and_dict(self):
+        # The database keeps an upload's url bare; the resource list sees
+        # its download URL. Both must name the same copy.
+        bare = thumbnails.first_page_source({}, "report.pdf", "upload", "2026-11-01T10:00:00")
+        full = thumbnails.first_page_source(
+            {}, "http://test.ckan.net/dataset/x/resource/y/download/report.pdf", "upload",
+            "2026-11-01T10:00:00")
+        assert bare == full
+
+    def test_not_an_image_refused(self):
+        view = _pdf_view(self._report(factories.Dataset())["id"])
+        import base64
+        with pytest.raises(ValidationError):
+            helpers.call_action("webpageviewplus_pdf_thumbnail",
+                                context={"user": factories.Sysadmin()["name"]},
+                                id=view["id"], image=base64.b64encode(b"<svg/>").decode())
+        with pytest.raises(ValidationError):
+            helpers.call_action("webpageviewplus_pdf_thumbnail",
+                                context={"user": factories.Sysadmin()["name"]},
+                                id=view["id"], image="not base64!")
+
+    def test_only_editors(self):
+        from ckan.plugins.toolkit import NotAuthorized
+        org = factories.Organization()
+        view = _pdf_view(self._report(factories.Dataset(owner_org=org["id"]))["id"])
+        stranger = factories.User()
+        for user in ("", stranger["name"]):
+            with pytest.raises(NotAuthorized):
+                helpers.call_action("webpageviewplus_pdf_thumbnail",
+                                    context={"user": user, "ignore_auth": False},
+                                    id=view["id"], image=_png_b64())
+
+    def test_only_pdf_views(self):
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        view = _view(page["id"])
+        from ckan.plugins.toolkit import ObjectNotFound
+        with pytest.raises(ObjectNotFound):
+            helpers.call_action("webpageviewplus_pdf_thumbnail",
+                                context={"user": factories.Sysadmin()["name"]},
+                                id=view["id"], image=_png_b64())
+        # And a Website (Plus) view can't pick "the first page".
+        with pytest.raises(ValidationError):
+            _view(page["id"], thumbnail_resource=thumbnails.FIRST_PAGE)
+
+
+@pytest.mark.ckan_config("ckan.plugins",
+                         "webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.ckan_config("ckanext.webpageviewplus.content_origin", "http://127.0.0.1")
+@pytest.mark.ckan_config("ckanext.webpageviewplus.signing_secret", "k" * 40)
+@pytest.mark.usefixtures("non_clean_db", "with_plugins", "counts_table", "local_storage")
+def test_first_page_check_only_in_the_form(app, monkeypatch):
+    # Rendering a PDF view for a visitor mustn't query for the form's copy.
+    monkeypatch.setattr(thumbnails, "first_page_ready",
+                        lambda *a: pytest.fail("checked outside the form"))
+    dataset = factories.Dataset()
+    report = factories.Resource(package_id=dataset["id"], url="https://files.example.com/r.pdf",
+                                format="PDF")
+    view = _pdf_view(report["id"])
+    body = app.get(url_for("dataset_resource.read", id=dataset["name"],
+                           resource_id=report["id"], view_id=view["id"])).body
+    assert "webpageviewplus/pdfjs/" in body
+
+
+def test_linked_pdf_never_ready():
+    view = {"id": "v", "pdf_url": "https://files.example.com/r.pdf"}
+    assert thumbnails.first_page_ready(view, {"url_type": "upload"}) is False
+    assert thumbnails.first_page_ready({"id": "v"}, {"url": "https://x.org/a.pdf"}) is False

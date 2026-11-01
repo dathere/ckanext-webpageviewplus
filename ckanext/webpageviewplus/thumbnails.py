@@ -58,6 +58,10 @@ VIEW_TYPE = "webpage_view_plus"
 # View types that may have a copy: PDF (Plus) views take a picked image only.
 PDF_VIEW_TYPE = "pdf_view_plus"
 VIEW_TYPES = (VIEW_TYPE, PDF_VIEW_TYPE)
+# A PDF (Plus) view's thumbnail_resource may name this instead of an image:
+# the PDF's first page, drawn by PDF.js in the editor's browser (pdf.py's
+# viewer script) and sent by the view form, as the server never renders PDFs.
+FIRST_PAGE = "pdf:first-page"
 PLUGIN = "webpage_view_plus_thumbnails"
 
 # The stored copy fits in this box, keeping its aspect ratio; the list shows
@@ -162,8 +166,33 @@ def auto(config: dict[str, Any]) -> bool:
     return settings.thumbnail_fetch() and not toolkit.asbool(config.get("no_auto_thumbnail"))
 
 
+def _stamp(last_modified: Any) -> str:
+    """A resource's last_modified as the resource dict shows it."""
+    if isinstance(last_modified, datetime.datetime):
+        return last_modified.isoformat()
+    return str(last_modified or "")
+
+
+def first_page_source(
+    config: dict[str, Any], resource_url: str, url_type: str, last_modified: Any,
+) -> str:
+    """The source of a copy of a PDF's first page: which file (the view's
+    pdf_url, a link, or an upload by its file name, as the database keeps
+    an upload's url bare and the resource list sees its download URL) and
+    the resource's last change, so a replaced file's copy stops counting."""
+    pdf_url = config.get("pdf_url")
+    if pdf_url:
+        target = pdf_url
+    elif url_type == "upload":
+        target = "upload:" + (resource_url or "").rsplit("/", 1)[-1]
+    else:
+        target = resource_url
+    return "pdf-page:{}#{}".format(target, _stamp(last_modified))
+
+
 def source_for(
     config: dict[str, Any], resource_url: str, url_type: str, view_type: str = VIEW_TYPE,
+    last_modified: Any = None,
 ) -> Optional[str]:
     """What a view's stored copy must have been made from to count:
     ``resource:<id>`` (a picked image); ``office:<url>`` (the preview
@@ -171,8 +200,12 @@ def source_for(
     or while fetching is allowed one elsewhere); or, while fetching is
     allowed, for the page the view frames: ``service:<url>`` (its
     service's fixed thumbnail address) or ``page:<url>`` (its preview
-    image). PDF (Plus) views take a picked image only."""
+    image). PDF (Plus) views take a picked image, or ``pdf-page:...``
+    (first_page_source) for FIRST_PAGE."""
     picked = config.get("thumbnail_resource")
+    if picked == FIRST_PAGE:
+        return first_page_source(config, resource_url, url_type, last_modified) \
+            if view_type == PDF_VIEW_TYPE else None
     if picked:
         return "resource:" + picked
     if view_type != VIEW_TYPE or toolkit.asbool(config.get("no_auto_thumbnail")):
@@ -497,7 +530,14 @@ def after_save(
         source = image = None
         if resource is not None:
             source = source_for(view, resource.url or "", resource.url_type or "",
-                                view["view_type"])
+                                view["view_type"], resource.last_modified)
+        if source and source.startswith("pdf-page:"):
+            # Made in the editor's browser (store_first_page), never here:
+            # keep a copy that still matches, drop any other.
+            row = stored(view["id"])
+            if not (row and row["source"] == source):
+                delete(view["id"])
+            return
         if source:
             if deadline is None:
                 deadline = time.monotonic() + FETCH_SECONDS
@@ -556,7 +596,7 @@ def _source_active(source: str, pkg: Optional[dict[str, Any]] = None) -> bool:
     query. Page sources need nothing more than source_for."""
     kind, _, picked = source.partition(":")
     if kind != "resource":
-        return kind in ("page", "service", "office")
+        return kind in ("page", "service", "office", "pdf-page")
     resources = (pkg or {}).get("resources")
     if resources is not None:
         image = next((r for r in resources if r.get("id") == picked), None)
@@ -582,6 +622,38 @@ def refresh_from(resource_id: str) -> None:
             continue
         after_save(dict(view.config or {}, id=view.id, view_type=view.view_type,
                         resource_id=view.resource_id))
+
+
+def first_page_ready(view: dict[str, Any], resource: dict[str, Any]) -> bool:
+    """Whether a PDF (Plus) view has a first-page copy matching its file now.
+    Only an upload's last_modified says its file changed: a linked PDF's
+    copy is never taken as current, so the form redraws it each time."""
+    if not view.get("id") or not enabled():
+        return False
+    if view.get("pdf_url") or resource.get("url_type") != "upload":
+        return False
+    row = stored(view["id"])
+    return bool(row) and row["source"] == first_page_source(
+        view, resource.get("url") or "", resource.get("url_type") or "",
+        resource.get("last_modified"))
+
+
+def store_first_page(view: model.ResourceView, png: bytes) -> Optional[str]:
+    """Store a picture of a PDF (Plus) view's first page, drawn by PDF.js
+    in the editor's browser. It's re-encoded like any image, so only a
+    valid picture is kept. It counts once the view's thumbnail is set to
+    FIRST_PAGE, while the file is unchanged. Returns its source, or None
+    for anything that isn't a usable image."""
+    resource = model.Resource.get(view.resource_id)
+    if resource is None or len(png) > MAX_IMAGE_BYTES:
+        return None
+    image = encode(png)
+    if image is None:
+        return None
+    source = first_page_source(view.config or {}, resource.url or "", resource.url_type or "",
+                               resource.last_modified)
+    store(view.id, source, image)
+    return source
 
 
 def service_format(context: dict[str, Any], view: dict[str, Any]) -> None:
@@ -633,7 +705,7 @@ def for_resource(pkg: dict[str, Any], res: dict[str, Any]) -> Optional[dict[str,
         service = found.service if found and found.service != services.OFFICE else None
     src = None
     source = source_for(config, res.get("url") or "", res.get("url_type") or "",
-                        plus["view_type"])
+                        plus["view_type"], res.get("last_modified"))
     if source and plus["digest"] and plus["source"] == source \
             and _source_active(source, pkg):
         src = toolkit.url_for(
@@ -675,7 +747,7 @@ def serve(view_id: str):
         abort(404)  # not 403: don't confirm that a private dataset exists
     row = stored(view_id)
     source = source_for(view.config or {}, resource.url or "", resource.url_type or "",
-                        view.view_type)
+                        view.view_type, resource.last_modified)
     if row is None or not source or row["source"] != source or not _source_active(source):
         abort(404)
     # CKAN's response hook sets Cache-Control from __no_cache__ after this

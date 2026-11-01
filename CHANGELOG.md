@@ -14,14 +14,19 @@
   to be PDFs, capped at `pdf_max_size` MB (default 25) and kept under `ckan.storage_path` for
   `pdf_cache_seconds` (default an hour), so visitors never contact the other site and a busy
   view costs one fetch an hour. A PDF's own JavaScript never runs, the viewer is read-only, and
-  its Download and Print buttons give way to the control bar. Reload and Load go through a CKAN
+  its Download and Print buttons give way to the control bar, and a PDF's links open in a new
+  tab. Reload and Load go through a CKAN
   route that re-checks access and signs a fresh viewer URL. The viewer follows the page's
   language: English plus the ten languages CKAN portals use most (Spanish, Brazilian
   Portuguese, Thai, German, Italian, French, Japanese, Indonesian, Ukrainian, Turkish). Proxies
   must forward `/webpageviewplus/pdfjs/` and `/webpageviewplus/pdf/` on the content domain.
   `scripts/vendor_pdfjs.py` updates the vendored copy.
 - Thumbnails (`webpage_view_plus_thumbnails`): PDF (Plus) views take an image the editor picks,
-  and a Website (Plus) view of an Office file shows the preview picture inside the file
+  or the PDF's first page, drawn by PDF.js in the editor's browser when it's chosen in the view
+  form and sent to the new `webpageviewplus_pdf_thumbnail` action (for those who may edit the
+  view), which re-encodes it; CKAN never renders PDFs. For an upload it's tied to the file's
+  last change, and the form redraws it once the file has changed; a linked PDF's is redrawn
+  whenever the form is opened. A Website (Plus) view of an Office file shows the preview picture inside the file
   (always in OpenDocument; in `.docx`, `.xlsx`, `.pptx` and `.ppsx` when saved with one). An
   upload to the dataset is read from storage with no setting needed; a file elsewhere is
   fetched only with `thumbnail_fetch`, at most 20 MB.
