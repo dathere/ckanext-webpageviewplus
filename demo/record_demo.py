@@ -223,7 +223,29 @@ def main():
         suggestion.get_by_role("button", name="Use them").click()
         page.wait_for_timeout(3000)
 
-        # 6. Thumbnails in the resource list (webpage_view_plus_thumbnails).
+        # 6. pdf_view_plus: PDF.js from the content origin (seeded where the
+        # plugin is on).
+        if "PDF on another site" in present:
+            linked_pdf = view_url("wvp-features", "PDF on another site", "PDF on another site")
+            page.goto(linked_pdf)
+            page.frame_locator("iframe").first.locator(".page canvas").first.wait_for()
+            page.wait_for_timeout(800)
+            caption(page, "PDF (Plus) view: PDF.js from the content origin, sandboxed, the same "
+                          "on every browser and phone; a PDF's scripts never run")
+            scroll(page, 330, steps=10, pause=40)
+            page.wait_for_timeout(1200)
+            box = frame_box()
+            page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+            scroll(page, 1400, steps=35, pause=60)
+            page.wait_for_timeout(1000)
+            page.goto(linked_pdf.replace(B, B + "/de", 1))
+            page.frame_locator("iframe").first.locator(".page canvas").first.wait_for()
+            caption(page, "A PDF on another site is fetched and cached by CKAN; "
+                          "the toolbar follows the page's language")
+            scroll(page, 330, steps=10, pause=40)
+            page.wait_for_timeout(3000)
+
+        # 7. Thumbnails in the resource list (webpage_view_plus_thumbnails).
         page.goto(B + "/dataset/wvp-features")
         page.wait_for_timeout(800)
         caption(page, "Thumbnails: a picked image, a page's own preview image, or the "
@@ -244,7 +266,7 @@ def main():
         video = page.video.path()
         page.close()
 
-        # 7. Every well-known service, one short clip each.
+        # 8. Every well-known service, one short clip each.
         clips = []
         for n, (resource, title, label) in enumerate(services, 1):
             shot = ctx.new_page()

@@ -17,9 +17,10 @@ from werkzeug.datastructures import FileStorage
 
 from ckan.cli import load_config
 from ckan.config.middleware import make_app
+import ckan.plugins as plugins
 import ckan.plugins.toolkit as tk
 
-from ckanext.webpageviewplus import services
+from ckanext.webpageviewplus import pdf, services
 
 DATASET = "wvp-features"
 ORG = "wvp-demo-org"
@@ -305,6 +306,49 @@ def preview_png():
     return out.getvalue()
 
 
+# pdf_view_plus: PDF.js's own sample paper, pinned to the vendored release.
+LINKED_PDF = (
+    "https://cdn.jsdelivr.net/gh/mozilla/pdf.js@v{}/web/compressed.tracemonkey-pldi-09.pdf"
+)
+
+
+def report_pdf():
+    """A two-page report with the same bar chart, drawn with Pillow, or None
+    without Pillow."""
+    try:
+        from PIL import Image, ImageDraw
+    except ImportError:
+        return None
+
+    pages = []
+    for title, heights in (("Quarterly totals", (120, 200, 160, 260, 230, 290)),
+                           ("By region", (260, 90, 180, 140, 210, 70))):
+        im = Image.new("RGB", (850, 1100), "white")
+        draw = ImageDraw.Draw(im)
+        draw.text((80, 80), "webpageviewplus demo report: " + title, fill="#222222")
+        draw.line([(80, 700), (770, 700)], fill="#444444", width=3)
+        for i, height in enumerate(heights):
+            x = 110 + i * 110
+            draw.rectangle([x, 700 - height * 2, x + 70, 699], fill="#1f77b4")
+        pages.append(im)
+    out = io.BytesIO()
+    pages[0].save(out, "PDF", save_all=True, append_images=pages[1:], resolution=100)
+    return out.getvalue()
+
+
+PDF_VIEWS = [
+    ("Uploaded PDF", None,
+     "An uploaded PDF, shown by PDF.js (it ships with the extension) from the content "
+     "origin, in a sandbox. The same viewer works in every browser, phones included, "
+     "where a browser's own PDF viewer often shows nothing. A PDF's own scripts never "
+     "run, and the viewer is read-only. The toolbar follows the page's language."),
+    ("PDF on another site", "linked",
+     "A PDF on another site (PDF.js's own sample paper). CKAN fetches it, checks it "
+     "really is a PDF, keeps a copy for an hour and serves it from the content origin, "
+     "so your browser never contacts that site."),
+]
+
+
 def main():
     app = make_app(load_config(os.environ["CKAN_INI"]))
     with app._wsgi_app.test_request_context():
@@ -377,6 +421,29 @@ def main():
                     resource_id=res["id"], view_type="webpage_view_plus",
                     title=title, description=description, **fields))
                 print("  {}: {}/dataset/{}/resource/{}?view_id={}".format(
+                    title, site, DATASET, res["id"], view["id"]))
+
+        # pdf_view_plus, where it's enabled (it needs a content origin).
+        if plugins.plugin_loaded(pdf.VIEW_TYPE):
+            body = report_pdf()
+            for title, kind, description in PDF_VIEWS:
+                if kind is None and body is None:
+                    print("skipped (no Pillow): {}".format(title))
+                    continue
+                data = {"package_id": pkg["id"], "name": title, "format": "PDF"}
+                if kind is None:
+                    data["url"] = "report.pdf"
+                    data["upload"] = FileStorage(io.BytesIO(body), filename="report.pdf",
+                                                 content_type="application/pdf")
+                else:
+                    data["url"] = LINKED_PDF.format(pdf.PDFJS_VERSION)
+                res = act("resource_create")(ctx(), data)
+                for v in act("resource_view_list")(ctx(), {"id": res["id"]}):
+                    act("resource_view_delete")(ctx(), {"id": v["id"]})
+                view = act("resource_view_create")(ctx(), {
+                    "resource_id": res["id"], "view_type": pdf.VIEW_TYPE,
+                    "title": title, "description": description})
+                print("{}\n  {}/dataset/{}/resource/{}?view_id={}".format(
                     title, site, DATASET, res["id"], view["id"]))
 
 
