@@ -328,15 +328,17 @@ class TestStreamedStorage:
         # The storage's hash of the file.
         assert response.headers["ETag"] == '"{}"'.format(stored.etag)
 
-    def test_unchanged_page_revalidates_without_reading(self, app, monkeypatch):
+    @pytest.mark.parametrize("weak", [False, True])
+    def test_unchanged_page_revalidates_without_reading(self, app, monkeypatch, weak):
         resource = _upload(factories.Dataset())
         etag = _get(app, _content_url(resource)).headers["ETag"]
+        sent = "W/" + etag if weak else etag
         storage = content.get_resource_uploader(resource).storage
 
         def no_read(*args, **kwargs):
             raise AssertionError("read the file for a 304")
         monkeypatch.setattr(type(storage), "stream", no_read)
-        response = _get(app, _content_url(resource), headers={"If-None-Match": etag}, status=304)
+        response = _get(app, _content_url(resource), headers={"If-None-Match": sent}, status=304)
         assert response.headers["ETag"] == etag
         assert response.body == ""
         assert response.headers["Cache-Control"] == "public, no-cache"

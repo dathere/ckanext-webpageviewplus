@@ -257,9 +257,11 @@ def serve(resource_id: str, filename: str):
     request.environ[CACHE_ENVIRON_KEY] = "private" if private else "public"
     if stored.path:
         response = send_file(stored.path, mimetype="text/html", conditional=True)
-    elif stored.etag and stored.etag in request.if_none_match:
+    elif stored.etag and request.if_none_match.contains_weak(stored.etag):
         # A browser revalidating an unchanged page (public ones are sent
         # no-cache): answered without reading the file from the storage.
+        # Compared weakly, as If-None-Match is: a proxy that compresses
+        # (nginx's gzip) weakens ETags.
         response = Response(status=304)
         response.set_etag(stored.etag)
     else:
