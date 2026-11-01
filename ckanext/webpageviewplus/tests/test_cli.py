@@ -99,9 +99,11 @@ class TestMigrate:
         assert result.exit_code == 0, result.output
         assert _show(view)["preset"] == "data-schematic"
 
-    def test_schematic_detected_in_a_real_upload(self, local_storage):
-        # Reads the file itself, so it runs against CKAN 2.12's storage too.
-        # Called directly: the CLI reloads test.ini, losing local_storage.
+    @pytest.mark.parametrize("storage", ["local_storage", "memory_storage"])
+    def test_schematic_detected_in_a_real_upload(self, request, storage):
+        # Reads the file itself, on disk or streamed (memory: CKAN 2.12+).
+        # Called directly: the CLI reloads test.ini, losing the storage.
+        request.getfixturevalue(storage)
         def upload(body):
             resource = factories.Resource(
                 url="s.html", url_type="upload",
@@ -143,16 +145,23 @@ class TestMigrate:
         assert result.exit_code != 0
 
 
-@pytest.mark.parametrize("offset", [0, wvp_cli.CHUNK - 5, wvp_cli.CHUNK + 3])
-def test_file_contains_across_chunks(tmp_path, offset):
-    path = tmp_path / "s.html"
-    path.write_bytes(b"x" * offset + wvp_cli.SCHEMATIC_MARKER + b"y" * 10)
-    assert wvp_cli.file_contains(str(path), wvp_cli.SCHEMATIC_MARKER)
+CHUNK = 1024
 
 
-def test_file_contains_respects_limit(tmp_path):
-    path = tmp_path / "s.html"
-    path.write_bytes(b"x" * (2 * wvp_cli.CHUNK) + wvp_cli.SCHEMATIC_MARKER)
-    assert not wvp_cli.file_contains(
-        str(path), wvp_cli.SCHEMATIC_MARKER, limit=wvp_cli.CHUNK
-    )
+def _chunks(body, size=CHUNK):
+    return (body[i:i + size] for i in range(0, len(body), size))
+
+
+@pytest.mark.parametrize("offset", [0, CHUNK - 5, CHUNK + 3])
+@pytest.mark.parametrize("size", [CHUNK, 7])  # 7: chunks shorter than the marker
+def test_contains_across_chunks(offset, size):
+    body = b"x" * offset + wvp_cli.SCHEMATIC_MARKER + b"y" * 10
+    assert wvp_cli.contains(_chunks(body, size), wvp_cli.SCHEMATIC_MARKER)
+
+
+def test_contains_respects_limit():
+    body = b"x" * (2 * CHUNK) + wvp_cli.SCHEMATIC_MARKER
+    assert not wvp_cli.contains(_chunks(body), wvp_cli.SCHEMATIC_MARKER, limit=CHUNK)
+    # Cut mid-chunk too: the limit isn't rounded up to a whole chunk.
+    body = b"x" * (CHUNK // 2) + wvp_cli.SCHEMATIC_MARKER
+    assert not wvp_cli.contains(_chunks(body), wvp_cli.SCHEMATIC_MARKER, limit=CHUNK // 2)

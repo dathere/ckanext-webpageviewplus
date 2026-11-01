@@ -1,3 +1,4 @@
+import contextlib
 import logging
 
 import pytest
@@ -81,14 +82,36 @@ def _reset_storages():
     files.storages.collect()
 
 
+@contextlib.contextmanager
+def _storage(ckan_config, name, values):
+    """Use ckan.files storage ``name`` (CKAN 2.12+) for uploads while inside,
+    rebuilding storages on the way in and out, so later tests don't keep one
+    that points at a deleted folder."""
+    old = {key: ckan_config.get(key, _MISSING) for key in values}
+    ckan_config.update(values)
+    _reset_storages()
+    try:
+        yield
+    finally:
+        # Loading the app adds the storage's declared defaults too: drop them all.
+        prefix = "ckan.files.storage.{}.".format(name)
+        for key in [k for k in ckan_config if k.startswith(prefix)]:
+            ckan_config.pop(key, None)
+        for key, value in old.items():
+            if value is _MISSING:
+                ckan_config.pop(key, None)
+            else:
+                ckan_config[key] = value
+        _reset_storages()
+
+
 @pytest.fixture
 def local_storage(tmp_path, ckan_config):
     """Keep uploads on the local filesystem under tmp_path. CKAN 2.12 stores
     them through ckan.files storages (its test config uses memory storage)
     and ignores ckan.storage_path; earlier versions ignore the ckan.files
-    keys. Storages are rebuilt now and again afterwards, so later tests don't
-    keep one pointing at this test's deleted folder."""
-    values = {
+    keys."""
+    with _storage(ckan_config, "wvp_local", {
         "ckan.storage_path": str(tmp_path),
         "ckan.files.default_storages.default": "wvp_local",
         "ckan.files.storage.wvp_local.type": "ckan:fs",
@@ -96,17 +119,20 @@ def local_storage(tmp_path, ckan_config):
         "ckan.files.storage.wvp_local.initialize": True,
         # Replacing a resource's upload writes to the same location.
         "ckan.files.storage.wvp_local.overwrite_existing": True,
-    }
-    old = {key: ckan_config.get(key, _MISSING) for key in values}
-    ckan_config.update(values)
-    _reset_storages()
-    yield tmp_path
-    # Loading the app adds the storage's declared defaults too: drop them all.
-    for key in [k for k in ckan_config if k.startswith("ckan.files.storage.wvp_local.")]:
-        ckan_config.pop(key, None)
-    for key, value in old.items():
-        if value is _MISSING:
-            ckan_config.pop(key, None)
-        else:
-            ckan_config[key] = value
-    _reset_storages()
+    }):
+        yield tmp_path
+
+
+@pytest.fixture
+def memory_storage(ckan_config):
+    """Keep uploads in a ckan.files memory storage (CKAN 2.12+): not on
+    disk, read by streaming, as a cloud storage (S3 and the like) is."""
+    pytest.importorskip("ckan.lib.files", reason="ckan.files is CKAN 2.12+")
+    with _storage(ckan_config, "wvp_memory", {
+        "ckan.files.default_storages.default": "wvp_memory",
+        "ckan.files.storage.wvp_memory.type": "ckan:memory",
+        # CKAN derives the resource storage from this one's path.
+        "ckan.files.storage.wvp_memory.path": "wvp",
+        "ckan.files.storage.wvp_memory.overwrite_existing": True,
+    }):
+        yield

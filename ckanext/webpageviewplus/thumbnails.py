@@ -198,19 +198,27 @@ def encode(data: bytes) -> Optional[bytes]:
 
 
 def read_upload(resource_id: str, package_id: str) -> Optional[bytes]:
-    """The bytes of an image uploaded to this dataset, if CKAN keeps them
-    on its own filesystem (cloud storages aren't read yet)."""
+    """The bytes of an image uploaded to this dataset, from any storage
+    content.stored_file can read, or None (missing, unreadable, too big)."""
     resource = model.Resource.get(resource_id)
     if resource is None or resource.state != "active" or resource.package_id != package_id:
         return None
     resource_dict = content.resource_dict(resource)
     if not is_image_upload(resource_dict):
         return None
-    path = content.local_path(resource_dict)
-    if not path or not os.path.isfile(path) or os.path.getsize(path) > MAX_UPLOAD_BYTES:
+    try:
+        stored = content.stored_file(resource_dict)
+        if stored is None or stored.size > MAX_UPLOAD_BYTES:
+            return None
+        body = bytearray()
+        for chunk in stored.chunks():
+            body += chunk
+            if len(body) > MAX_UPLOAD_BYTES:
+                return None
+    except Exception:
+        log.warning("webpageviewplus: can't read the image of resource %s", resource_id)
         return None
-    with open(path, "rb") as f:
-        return f.read(MAX_UPLOAD_BYTES + 1)
+    return bytes(body)
 
 
 class _HeadDone(Exception):

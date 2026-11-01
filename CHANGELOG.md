@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- On CKAN 2.12, the content origin serves uploaded HTML kept in cloud storage too: any
+  `ckan.files` storage that can stream its files (S3, Google Cloud Storage, Azure and others,
+  through file-keeper). CKAN streams the file, so the content origin's rules hold whatever the
+  storage. Views of these uploads, including qsv Data Schematics, now run with their own origin
+  (maps, saved data) instead of sandboxed on CKAN's address. Picked thumbnails and `migrate`'s
+  schematic check read them too.
+
+### Changed
+
+- The README says plainly that on CKAN 2.10 and 2.11, uploads kept by a cloud storage
+  extension (ckanext-s3filestore, ckanext-cloudstorage) stay sandboxed on CKAN's address, and
+  that upgrading to 2.12 lifts it.
+
 ## 0.6.0 (2026-10-31)
 
 ### Added

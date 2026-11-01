@@ -22,9 +22,11 @@ pytestmark = [
 ]
 
 
-@pytest.fixture
-def storage(local_storage):
-    return local_storage
+@pytest.fixture(params=["local", "memory"])
+def storage(request):
+    """Every test using it runs twice: uploads on disk (sent as a file), and
+    in a memory storage (CKAN 2.12+), streamed as a cloud storage's are."""
+    return request.getfixturevalue("{}_storage".format(request.param))
 
 
 def _upload(dataset, body=HTML, filename="s.html", fmt="HTML"):
@@ -309,3 +311,33 @@ def test_held_back_upload_loads_through_download_url(app):
     assert "/webpageviewplus/content/" not in stage
     assert 'data-frame-origin="{}"'.format(CONTENT) in stage
     assert '<link rel="preconnect"' not in body
+
+
+@pytest.mark.usefixtures("memory_storage")
+class TestStreamedStorage:
+    """An upload in a ckan.files storage that isn't on disk (memory here,
+    S3 and the like on real sites) is streamed through CKAN."""
+
+    def test_streamed_not_sent_as_a_file(self, app):
+        resource = _upload(factories.Dataset())
+        stored = content.stored_file(resource)
+        assert stored.path is None and stored.size == len(HTML)
+        response = _get(app, _content_url(resource))
+        assert response.body == HTML.decode()
+        assert response.headers["Content-Length"] == str(len(HTML))
+        assert "ETag" not in response.headers
+
+    def test_missing_file_is_a_404(self, app):
+        resource = _upload(factories.Dataset())
+        upload = content.get_resource_uploader(resource)
+        assert upload.storage.remove(content.fk.FileData(upload.get_path(resource["id"])))
+        assert content.serves(resource)  # a type check, never a read
+        assert content.stored_file(resource) is None
+        assert _get(app, _content_url(resource), status=404).status_code == 404
+
+    def test_storage_that_cannot_stream_stays_on_ckan_origin(self, monkeypatch):
+        resource = _upload(factories.Dataset())
+        monkeypatch.setattr(type(content.get_resource_uploader(resource).storage),
+                            "supports", lambda self, capability: False)
+        assert not content.serves(resource)
+        assert content.stored_file(resource) is None

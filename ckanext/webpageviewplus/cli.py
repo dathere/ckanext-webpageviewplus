@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Optional
+from typing import Iterable, Optional
 
 import click
 
@@ -13,35 +13,34 @@ from ckanext.webpageviewplus import content, frame, frameability, health, settin
 SCHEMATIC_MARKER = b"qsv-schematic-source"
 # Stop scanning large uploads after this many bytes.
 SCAN_LIMIT = 64 * 1024 * 1024
-CHUNK = 1024 * 1024
 
 
-def file_contains(path: str, marker: bytes, limit: int = SCAN_LIMIT) -> bool:
-    """Scan a file in chunks for a marker, overlapping chunks so a marker that
-    straddles a boundary is still found."""
+def contains(chunks: Iterable[bytes], marker: bytes, limit: int = SCAN_LIMIT) -> bool:
+    """Scan a file's chunks for a marker, overlapping chunks so a marker that
+    straddles a boundary is still found. Stops after ``limit`` bytes."""
     tail = b""
     read = 0
-    with open(path, "rb") as f:
-        while read < limit:
-            chunk = f.read(CHUNK)
-            if not chunk:
-                return False
-            if marker in tail + chunk:
-                return True
-            tail = chunk[-(len(marker) - 1):]
-            read += len(chunk)
+    for chunk in chunks:
+        if read >= limit:
+            return False
+        chunk = chunk[:limit - read]
+        if marker in tail + chunk:
+            return True
+        tail = (tail + chunk)[-(len(marker) - 1):]
+        read += len(chunk)
     return False
 
 
 def looks_like_schematic(resource: model.Resource) -> bool:
     """A qsv Data Schematic carries a qsv-schematic-source block. Only uploads
-    on CKAN's own filesystem are checked: linked pages aren't fetched, and
-    cloud or memory storages count as not a schematic."""
+    are checked (linked pages aren't fetched), reading the head of the file
+    from whatever storage content.stored_file can read, cloud ones included;
+    an unreadable upload counts as not a schematic."""
     if resource.url_type != "upload":
         return False
     try:
-        path = content.local_path(content.resource_dict(resource))
-        return bool(path) and file_contains(path, SCHEMATIC_MARKER)
+        stored = content.stored_file(content.resource_dict(resource))
+        return stored is not None and contains(stored.chunks(), SCHEMATIC_MARKER)
     except Exception:  # missing files: treat as not a schematic
         return False
 

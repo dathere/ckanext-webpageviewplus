@@ -145,6 +145,16 @@ class TestThumbnails:
         again = app.get(src, headers={"If-None-Match": etag})
         assert again.status_code == 304
 
+    def test_picked_image_streamed_from_storage(self, request):
+        # A storage that isn't on disk (memory here; S3 and the like on real
+        # sites, CKAN 2.12+) is read by streaming.
+        request.getfixturevalue("memory_storage")
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        image = _image(dataset)
+        view = _view(page["id"], thumbnail_resource=image["id"])
+        assert thumbnails.stored(view["id"])["source"] == "resource:" + image["id"]
+
     def test_image_from_another_dataset_refused(self):
         dataset = factories.Dataset()
         page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")

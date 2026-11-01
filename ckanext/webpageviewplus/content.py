@@ -17,7 +17,8 @@ import logging
 import os
 import re
 import time
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any, Callable, Iterable, Optional
 from urllib.parse import quote, urlsplit
 
 from flask import Blueprint, Response, abort, request, send_file
@@ -26,9 +27,11 @@ import ckan.model as model
 import ckan.plugins.toolkit as toolkit
 from ckan.lib.uploader import ResourceUpload, get_resource_uploader
 
-try:  # CKAN 2.12+: uploads go through ckan.files storages
+try:  # CKAN 2.12+: uploads go through ckan.files (file-keeper) storages
+    import file_keeper as fk
     from ckan.lib.files.default.fs import FsStorage
 except ImportError:
+    fk = None
     FsStorage = None
 
 from ckanext.webpageviewplus import connections, events, frame, settings
@@ -39,6 +42,7 @@ PATH = "/webpageviewplus/content/<resource_id>/<path:filename>"
 HTML_FORMATS = ("html", "htm")
 HTML_MIMETYPES = ("text/html", "application/xhtml+xml")
 SIGNATURE_RE = re.compile(r"^[0-9a-f]{64}$")
+CHUNK = 64 * 1024
 # Set by serve() for ContentHostMiddleware, which owns Cache-Control.
 CACHE_ENVIRON_KEY = "webpageviewplus.cache"
 
@@ -68,38 +72,83 @@ def resource_dict(resource_obj: model.Resource) -> dict[str, Any]:
 
 def serves(resource: dict[str, Any]) -> bool:
     """Whether this resource is framed from the content origin: one is
-    configured, it's an HTML upload, and the file is on CKAN's own
-    filesystem storage. Other uploaders (cloud storage) aren't supported yet,
-    so their uploads stay framed from CKAN's origin, sandboxed."""
+    configured, it's an HTML upload, and this extension can read its file
+    (see _readable_uploader). Runs at render time, so it never touches the
+    storage. Uploads it can't read stay framed from CKAN's origin, sandboxed."""
     if not settings.content_origin() or not is_html_upload(resource):
         return False
-    return _local_uploader(resource) is not None
+    return _readable_uploader(resource) is not None
 
 
-def _local_uploader(resource: dict[str, Any]) -> Any:
-    """The resource's uploader if its files are on CKAN's own filesystem:
-    the classic ResourceUpload, or, on CKAN 2.12+, one whose ckan.files
-    storage is a filesystem storage. None for anything else (cloud, memory)."""
+def _readable_uploader(resource: dict[str, Any]) -> Any:
+    """The resource's uploader if this extension can read its files: the
+    classic ResourceUpload (CKAN's upload folder), or, on CKAN 2.12+, one
+    whose ckan.files storage can stream, on disk or in the cloud (S3, Google
+    Cloud Storage, Azure). None for anything else, such as a cloud storage
+    extension on CKAN 2.10/2.11. Storages are built once at startup, so this
+    is a type check, cheap enough for every render."""
     try:
         upload = get_resource_uploader(resource)
     except Exception:
         return None
     if isinstance(upload, ResourceUpload):
         return upload
-    if FsStorage is not None and isinstance(getattr(upload, "storage", None), FsStorage):
+    storage = getattr(upload, "storage", None)
+    if fk is not None and isinstance(storage, fk.Storage) \
+            and storage.supports(fk.Capability.STREAM):
         return upload
     return None
 
 
-def local_path(resource: dict[str, Any]) -> Optional[str]:
-    upload = _local_uploader(resource)
+@dataclass(frozen=True)
+class StoredFile:
+    """An upload's bytes, wherever its storage keeps them. ``path`` is set
+    when they're a file on CKAN's own disk."""
+    size: int
+    path: Optional[str]
+    _chunks: Callable[[], Iterable[bytes]]
+
+    def chunks(self) -> Iterable[bytes]:
+        return self._chunks()
+
+
+def _file_chunks(path: str) -> Callable[[], Iterable[bytes]]:
+    def read() -> Iterable[bytes]:
+        with open(path, "rb") as f:
+            while True:
+                chunk = f.read(CHUNK)
+                if not chunk:
+                    return
+                yield chunk
+    return read
+
+
+def stored_file(resource: dict[str, Any]) -> Optional[StoredFile]:
+    """The resource's upload, or None when it can't be read (another
+    uploader, or no file). Asks the storage, which may be across the
+    network: never call it while rendering a page."""
+    upload = _readable_uploader(resource)
     if upload is None:
         return None
-    path = upload.get_path(resource["id"])
+    location = upload.get_path(resource["id"])
     if isinstance(upload, ResourceUpload):
-        return path
-    # A ckan.files location; full_path refuses traversal and null bytes.
-    return upload.storage.full_path(path)
+        path = location
+    elif FsStorage is not None and isinstance(upload.storage, FsStorage):
+        # A ckan.files location; full_path refuses traversal and null bytes.
+        path = upload.storage.full_path(location)
+    else:
+        path = None
+    if path is not None:
+        if not os.path.isfile(path):
+            return None
+        return StoredFile(os.path.getsize(path), path, _file_chunks(path))
+    storage = upload.storage
+    try:
+        size = storage.size(location)
+    except (fk.exc.MissingFileError, fk.exc.LocationError):
+        return None
+    data = fk.FileData(location, size=size)
+    return StoredFile(size, None, lambda: storage.stream(data))
 
 
 def _window(now: Optional[float] = None) -> int:
@@ -191,17 +240,24 @@ def serve(resource_id: str, filename: str):
         abort(404)  # not 403: don't confirm that a private resource exists
 
     try:
-        path = local_path(resource)
+        stored = stored_file(resource)
     except Exception:
-        log.warning("webpageviewplus: no local file for resource %s", resource_id)
-        abort(404)
-    if not path or not os.path.isfile(path):
+        log.warning("webpageviewplus: can't read the upload of resource %s", resource_id)
+        stored = None
+    if stored is None:
         abort(404)
 
     # Cache-Control is set by ContentHostMiddleware from this decision: CKAN's
     # own response hooks run after this view and would overwrite it.
     request.environ[CACHE_ENVIRON_KEY] = "private" if private else "public"
-    response = send_file(path, mimetype="text/html", conditional=True)
+    if stored.path:
+        response = send_file(stored.path, mimetype="text/html", conditional=True)
+    else:
+        # A cloud storage: the bytes pass through CKAN (no ETag or ranges).
+        response = Response(
+            stored.chunks(), mimetype="text/html",
+            headers={"Content-Length": str(stored.size)},
+        )
     if settings.connection_reports():
         # Never blocks: only tells CKAN which hosts the page contacts.
         response.headers["Content-Security-Policy-Report-Only"] = connections.policy(resource_id)

@@ -16,8 +16,11 @@ code departs from the earlier sections. Keep it current when you depart further.
 order now being built:
 1. Done: attribute builder, presets (`strict`, `interactive`, `external`, `data-schematic`),
    per-view form, `ckan webpageviewplus migrate`.
-2. Done (filesystem uploads): content-origin route, signed URLs. Not yet: cloud-storage
-   redirects.
+2. Done: content-origin route, signed URLs, and on CKAN 2.12 cloud storage: any `ckan.files`
+   storage with `Capability.STREAM` is read and streamed through CKAN (not redirected to the
+   storage's link, which would lose the route's headers and signing). 2.10/2.11 cloud
+   extensions (s3filestore, cloudstorage) stay sandboxed on CKAN's origin, on purpose: the
+   docs point those sites at 2.12.
 3. Done: self-sizing (generic `webpageviewplus:resize` message + qsv adapter), control bar,
    frameability check. **Target the qsv release after 27.0.1**: its schematics send
    `qsvVizHeight` themselves when framed (qsv PR #4949). Never inject a height reporter into
@@ -149,10 +152,14 @@ order now being built:
   `src` from `resource_view`/`resource` in templates.
 - `content.py`: the content origin.
   - **The route** `/webpageviewplus/content/<id>/<file>` serves HTML uploads, but only on the
-    content host and only for filesystem uploads (`content.serves`): a `ResourceUpload`, or on
-    CKAN 2.12 an uploader whose `ckan.files` storage is an `FsStorage` (paths via its
-    `full_path`). 2.12's test config uses memory storage, so tests that need a local upload use
-    the `local_storage` fixture (`tests/conftest.py`), which also rebuilds CKAN's storages. Public means an
+    content host and only for uploads this extension can read (`content.serves`, a type check
+    that never touches the storage, as it runs at render): a `ResourceUpload`, or on CKAN 2.12
+    an uploader whose `ckan.files` storage supports `STREAM`. `content.stored_file` is the one
+    reader (the route, picked thumbnails, `migrate`'s schematic check): a file on disk
+    (`ResourceUpload`, or `FsStorage.full_path`) is sent with `send_file`; anything else is
+    streamed. Tests: `local_storage` and `memory_storage` (`tests/conftest.py`; memory stands in
+    for a cloud storage, 2.12 only) rebuild CKAN's storages; `test_content.py`'s `storage`
+    fixture runs each route test on both. Public means an
     anonymous `package_show` succeeds. Private needs an HMAC over `resource_id:window`, accepting
     the current and previous `url_ttl` window.
   - **`ContentHostMiddleware`** (WSGI, via `IMiddleware`) confines the content host to that route
@@ -264,8 +271,8 @@ order now being built:
   survives a failed refresh. The per-view opt-out is `no_auto_thumbnail`, not the spec's
   `auto_thumbnail`, because an unticked checkbox sends nothing (as with `hide_controls`). `thumbnail_resource` is in the main schema, and `view_after_validator` refuses an
   image outside the view's dataset, because `/webpageviewplus/thumbnail/<view_id>` authorises
-  against the view's dataset. Uploads are read through `content.local_path` (filesystem
-  storages only). Rendering does one query per dataset (`_views`, cached on `g`), which reads
+  against the view's dataset. Uploads are read through `content.stored_file` (disk, or on 2.12 any
+  storage that streams). Rendering does one query per dataset (`_views`, cached on `g`), which reads
   every view type, since logos and names need the resource's only view to be a known
   service's. Logos are Simple Icons SVGs in `public/webpageviewplus/logos/`, named in
   `services.LOGOS` by the name `suggest()` gives a stored embed URL.

@@ -207,8 +207,11 @@ keeps them apart from CKAN's pages, logins and API. It's what lets the `external
 
 It must be a separately registered domain, not a subdomain of CKAN's, pointed at the same CKAN
 through your web server, and it takes two settings. The steps are under
-[Deploying a content origin](#deploying-a-content-origin). For now it serves only uploads stored
-on CKAN's own disk, not cloud storage.
+[Deploying a content origin](#deploying-a-content-origin). It serves uploads on CKAN's own
+disk, and on **CKAN 2.12**, uploads in cloud storage too. On CKAN 2.10 and 2.11, uploads kept by
+a cloud storage extension (ckanext-s3filestore, ckanext-cloudstorage) can't be served from it:
+they stay sandboxed on CKAN's own address, without maps or saved data. Upgrading to 2.12 and
+its file storage removes that limit.
 
 
 ## Optional features
@@ -258,7 +261,8 @@ CKAN notes which other sites uploaded pages fetch from (map tiles, a CDN), and
 
 `ckan webpageviewplus migrate` converts `webpage_view` views in place, keeping their id, title,
 description, order and page URL. It picks `data-schematic` for uploads that contain a qsv
-schematic, and the default preset otherwise. It never stores a preset the site disallows or
+schematic, and the default preset otherwise. To tell, it reads each uploaded page (up to 64 MB),
+from cloud storage too on CKAN 2.12, even with `--dry-run`. It never stores a preset the site disallows or
 the [security rule](#how-the-protection-works) refuses: if none fits, it skips the view and says
 so. Back up the database first, and start with a dry run:
 
@@ -531,9 +535,18 @@ How content is served:
   copies already in a viewer's browser last until their `max-age` runs out.
 - Responses send `frame-ancestors` (only CKAN's hosts may frame them) and `nosniff`, and never
   set a cookie.
-- **Only filesystem uploads are served** for now: CKAN's own upload folder, or on CKAN 2.12 a
-  `ckan.files` storage of type `ckan:fs`. With cloud storage (for example ckanext-cloudstorage,
-  or a cloud `ckan.files` storage), uploads stay framed from CKAN's origin under the sandbox.
+- **Which uploads are served:** those in CKAN's own upload folder, and on CKAN 2.12 those in any
+  `ckan.files` storage that can stream its files: `ckan:fs` on disk, or a cloud storage (S3,
+  Google Cloud Storage, Azure and others, through file-keeper's adapters). CKAN reads a cloud
+  file and streams it to the visitor, so its bytes pass through CKAN, without ETags or range
+  requests; uploads on disk are sent as files, as before. This keeps every rule above in force
+  (signed URLs, `frame-ancestors`, no cookies) whatever the storage, where sending visitors to
+  the storage's own link would not.
+- **CKAN 2.10 and 2.11 with cloud storage:** uploads kept by an extension such as
+  ckanext-s3filestore or ckanext-cloudstorage aren't served: each has its own way of storing
+  files, with no common way to read them. Their views stay framed from CKAN's origin under the
+  sandbox, so a qsv Data Schematic loses its maps and saved data there. CKAN 2.12's file
+  storage gives them one way to read any storage; upgrade to it to have these uploads served.
 - **Rollback:** unset `content_origin` and restart. No data changes, and views fall back to the
   sandboxed behaviour.
 
@@ -613,8 +626,9 @@ image comes from, first match wins:
    When the view is saved, CKAN reads it from its storage (or fetches it), shrinks it to fit
    320 x 180, drops its metadata and stores it as a small JPEG in the database (table
    `webpage_view_plus_thumbnails`). It's served from `/webpageviewplus/thumbnail/<view_id>` to
-   whoever may see the dataset. Uploads on a 2.12 cloud storage can't be read yet, so they get
-   no thumbnail. A good source for qsv Data Schematics is their static image export
+   whoever may see the dataset. Images kept by a cloud storage extension on CKAN 2.10 or 2.11
+   can't be read, so they get no thumbnail; on 2.12 any `ckan.files` storage that can stream is
+   read. A good source for qsv Data Schematics is their static image export
    (`viz_static`), uploaded as a second resource.
 2. **The page's own preview image**, with `ckanext.webpageviewplus.thumbnail_fetch = true`
    (off by default), fetched once when the view is saved and stored the same way. For YouTube,
