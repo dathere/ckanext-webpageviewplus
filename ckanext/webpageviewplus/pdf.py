@@ -128,8 +128,8 @@ def cached_pdf(url: str) -> Optional[str]:
     pdf_cache_seconds and shared by every visitor (and every CKAN worker
     using the same storage_path), so a busy view doesn't make CKAN download
     the file again for each one. None when it can't be fetched or isn't a
-    PDF, or when ckan.storage_path isn't set; a failed refresh keeps no
-    stale copy."""
+    PDF, or when ckan.storage_path isn't set; a failed refresh serves
+    nothing."""
     folder = _cache_dir()
     if folder is None:
         return None
@@ -139,12 +139,8 @@ def cached_pdf(url: str) -> Optional[str]:
     body = frameability.fetch_body(
         url, time.monotonic() + FETCH_SECONDS, settings.pdf_max_size(), USER_AGENT)
     if body is None or not looks_like_pdf(body.data):
-        # Unless another worker has just stored a fresh copy meanwhile.
-        if not _fresh(path):
-            try:
-                os.remove(path)
-            except OSError:
-                pass
+        # The stale copy stays on disk (never served; _prune drops it):
+        # removing it here could remove a fresh one another worker just stored.
         return None
     os.makedirs(folder, exist_ok=True)
     # A name of its own: two threads may fetch the same PDF at once.
