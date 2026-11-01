@@ -1,0 +1,13 @@
+/* pdf_view_plus: CKAN's bar under the frame has Open in new tab, which
+   reaches the file; the sandbox may not allow PDF.js's own downloads and
+   printing, and the viewer is read-only. */
+#downloadButton,
+#printButton,
+#secondaryDownload,
+#secondaryPrint,
+#secondaryOpenFile,
+#editorModeButtons,
+#editorModeSeparator,
+#viewsManagerAddFileButton {
+  display: none !important;
+}

@@ -49,3 +49,6 @@ docs/_build/
 
 # Built by demo/build_schematics.sh
 /demo/schematics/
+
+# The vendored PDF.js has a build/ folder of its own (scripts/vendor_pdfjs.py).
+!ckanext/webpageviewplus/pdfjs/*/build/
