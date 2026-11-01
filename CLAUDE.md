@@ -235,7 +235,8 @@ order now being built:
   `_office` as a `view.officeapps.live.com/op/embed.aspx?src=` address, rebuilt from the
   checked file URL. Its viewer fetches the file itself, so `service_suggest` reports
   `private_dataset`, and `for_resource`/`service_format` keep the file's own format.
-  OpenDocument isn't listed: neither Microsoft's viewer nor Google's opens it. With an empty
+  OpenDocument (`.odt`, `.ods`, `.odp`) is listed too: the viewer opens it, but refuses some
+  files (filesamples.com's `sample1.*` all fail), so test with more than one file. With an empty
   page URL, the form suggests from the resource's own URL (`data-resource-url`).
 - `health.py`: views whose page can't be shown. **Rendering never fetches**: with
   `frameability_check` on, `resource_view_create`/`_update` are chained (`actions.py`) to probe

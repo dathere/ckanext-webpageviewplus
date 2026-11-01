@@ -340,6 +340,13 @@ OFFICE_EMBED = "https://view.officeapps.live.com/op/embed.aspx?src="
      "https%3A%2F%2Ffiles.example.org%3A80%2Fr%2Fa.docx", ("fixed", "800")),
     ("http://files.example.org:443/r/a.docx",
      "http%3A%2F%2Ffiles.example.org%3A443%2Fr%2Fa.docx", ("fixed", "800")),
+    # OpenDocument: text and spreadsheets at 800 px, presentations 16/9.
+    ("https://files.example.org/r/minutes.odt",
+     "https%3A%2F%2Ffiles.example.org%2Fr%2Fminutes.odt", ("fixed", "800")),
+    ("https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fx.org%2Fa.ods",
+     "https%3A%2F%2Fx.org%2Fa.ods", ("fixed", "800")),
+    ("https://files.example.org/r/Talk.ODP",
+     "https%3A%2F%2Ffiles.example.org%2Fr%2FTalk.ODP", ("aspect", "16/9")),
     # A download link with no extension, through the viewer.
     ("https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fx.org%2Fdownload%2F7",
      "https%3A%2F%2Fx.org%2Fdownload%2F7", ("fixed", "800")),
@@ -353,9 +360,9 @@ def test_office_documents(url, src, height):
 
 
 @pytest.mark.parametrize("url", [
-    # OpenDocument: the viewer can't open it.
-    "https://files.example.org/r/minutes.odt",
-    "https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fx.org%2Fa.ods",
+    # Formats the viewer doesn't open.
+    "https://files.example.org/r/minutes.xlsb",
+    "https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fx.org%2Fa.pdf",
     # Not a public http(s) address it could fetch.
     "https://view.officeapps.live.com/op/embed.aspx?src=javascript%3Aalert(1)",
     "https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fu%3Ap%40x.org%2Fa.docx",

@@ -593,9 +593,10 @@ def _jupyter(host: str, path: str, query: dict[str, list[str]]) -> Optional[Sugg
 OFFICE = "Microsoft Office"
 _OFFICE_VIEWER = "view.officeapps.live.com"
 # Formats Microsoft's viewer was seen rendering from a public link, in Chrome.
-# It can't open OpenDocument (.odt, .ods, .odp), and a .xlsb didn't open.
-OFFICE_EXTENSIONS = ("doc", "docx", "xls", "xlsx", "ppt", "pptx", "ppsx")
-_SLIDES = ("ppt", "pptx", "ppsx")
+# A .xlsb didn't open. Some OpenDocument files are refused (filesamples.com's
+# sample1.odt/.ods/.odp all were), but others render, so the formats are listed.
+OFFICE_EXTENSIONS = ("doc", "docx", "xls", "xlsx", "ppt", "pptx", "ppsx", "odt", "ods", "odp")
+_SLIDES = ("ppt", "pptx", "ppsx", "odp")
 
 
 def _extension(path: str) -> str:

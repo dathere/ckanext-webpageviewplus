@@ -426,9 +426,9 @@ to web"), or link to it instead. See
 
 **Can I show a Word, Excel or PowerPoint file?** Yes, if it's public and your site has a
 separate domain for uploads: paste the file's address as the page URL, or leave the page URL
-empty on the file's own resource, and the form suggests Microsoft's online viewer. Files in
-private datasets can't be shown that way, since Microsoft fetches the file itself, and
-OpenDocument files (`.odt`, `.ods`, `.odp`) aren't supported. Your site administrator decides
+empty on the file's own resource, and the form suggests Microsoft's online viewer. OpenDocument
+files (`.odt`, `.ods`, `.odp`) work too. Files in private datasets can't be shown that way,
+since Microsoft fetches the file itself. Your site administrator decides
 whether Office resources offer the view. See
 [Well-known services: recognised links](#well-known-services-recognised-links).
 
@@ -602,7 +602,7 @@ checked in Chrome under each preset:
 | [Sketchfab](https://sketchfab.com/) | 3D models, `sketchfab.com/3d-models/<name>-<id>` or `sketchfab.com/models/<id>` | `external` | 16/9 |
 | [Google Colab](https://colab.research.google.com/) | notebooks Colab opens from GitHub, `colab.research.google.com/github/...`, shown read-only through [nbviewer](https://nbviewer.org/) (Colab itself refuses every frame; Drive notebooks can't be shown) | `interactive` | 800 px |
 | [Jupyter](https://jupyter.org/) | any public `.ipynb`: `github.com/.../blob/...`, `raw.githubusercontent.com/...`, `gist.github.com/<user>/<id>`, `nbviewer.org/...`, or any `https://` URL ending `.ipynb` (without a query), shown read-only through nbviewer | `interactive` | 800 px |
-| [Microsoft Office](https://www.microsoft.com/microsoft-365/free-office-online-for-the-web) | public Word, Excel and PowerPoint files (`.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`, `.ppsx`) on any site, CKAN's own uploads included, or Microsoft's own `view.officeapps.live.com/op/view.aspx?src=...` address, shown through Microsoft's viewer | `external` | 800 px; slides 16/9 |
+| [Microsoft Office](https://www.microsoft.com/microsoft-365/free-office-online-for-the-web) | public Word, Excel and PowerPoint files (`.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`, `.ppsx`) and OpenDocument files (`.odt`, `.ods`, `.odp`) on any site, CKAN's own uploads included, or Microsoft's own `view.officeapps.live.com/op/view.aspx?src=...` address, shown through Microsoft's viewer | `external` | 800 px; slides 16/9 |
 
 YouTube, Vimeo, Observable, Tableau Public, ArcGIS StoryMaps and ArcGIS Online, Looker
 Studio, Infogram, uMap, the Internet Archive and Sketchfab fail inside a sandbox without
@@ -625,10 +625,10 @@ Microsoft's own servers. So the file must be public: for a resource in a private
 form says it can't be shown. Each view sends the visitor to Microsoft and gives Microsoft the
 file's address, so consider `consent_gate`; with `allowed_hosts`, list
 `view.officeapps.live.com`. To offer the view on Office resources, add their formats to
-`ckanext.webpageviewplus.formats` (for example `html htm doc docx xls xlsx ppt pptx ppsx`);
+`ckanext.webpageviewplus.formats` (for example `html htm doc docx xls xlsx ppt pptx ppsx odt ods odp`);
 with no page URL, the form then suggests the viewer for the resource's own file. The resource
-list keeps the file's own format (DOCX, XLSX...). The viewer can't open OpenDocument files
-(`.odt`, `.ods`, `.odp`), and neither can Google's. [ckanext-officedocs](https://github.com/jqnatividad/ckanext-officedocs)
+list keeps the file's own format (DOCX, XLSX...). OpenDocument files (`.odt`, `.ods`, `.odp`) render too,
+though the viewer refuses some files it can't read: check yours. [ckanext-officedocs](https://github.com/jqnatividad/ckanext-officedocs)
 shows Office files without a sandbox, so it also works on sites without a separate domain.
 
 Only public embeds are recognised. Power BI reports shared inside an organisation and private

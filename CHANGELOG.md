@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- OpenDocument files (`.odt`, `.ods`, `.odp`) join the Microsoft Office service: the form
+  suggests Microsoft's viewer for them, with `external`, and presentations get a 16/9 height.
+  0.7.0 refused them because the sample files it was tested with fail to open. Others render
+  (checked in Chrome under `external`, clicking and scrolling in), though the viewer still
+  refuses some files.
+
 ## 0.7.0 (2026-11-01)
 
 ### Added
