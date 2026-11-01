@@ -131,8 +131,11 @@ def test_landscape_lock_in_fullscreen(page, view_urls, title, viewport, wide):
     page.goto(view_urls[title])
     if not page.evaluate("document.fullscreenEnabled && !!window.wvpLocks"):
         pytest.skip("no element fullscreen or screen.orientation in this browser")
-    page.locator(FRAME).scroll_into_view_if_needed()
     button = page.locator(EXPAND)
+    # Scrolled first, not by click(): a click dispatched right after its own
+    # scroll can be routed by the frame's old position, into the
+    # cross-origin frame (seen in Chrome 156 stable).
+    button.scroll_into_view_if_needed()
     button.click()
     page.wait_for_function("() => document.fullscreenElement !== null")
     page.wait_for_timeout(200)
