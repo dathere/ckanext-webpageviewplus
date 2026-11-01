@@ -19,6 +19,7 @@ from werkzeug.datastructures import FileStorage
 
 from ckan.cli import load_config
 from ckan.config.middleware import make_app
+import ckan.plugins as plugins
 import ckan.plugins.toolkit as tk
 from PIL import Image, ImageDraw
 
@@ -162,6 +163,22 @@ def main():
             resource_with_view(
                 {"name": name, "url": url}, "{} ({})".format(found.service, found.preset),
                 **fields)
+
+        # pdf_view_plus: an uploaded PDF, shown by PDF.js from the content origin.
+        if plugins.plugin_loaded("pdf_view_plus"):
+            with open(os.path.join(FIXTURES, "document.pdf"), "rb") as f:
+                body = f.read()
+            resource = act("resource_create")(ctx(), {
+                "package_id": pkg["id"], "name": "PDF fixture", "format": "PDF",
+                "url": "document.pdf",
+                "upload": _upload(body, "document.pdf", "application/pdf"),
+            })
+            for v in act("resource_view_list")(ctx(), {"id": resource["id"]}):
+                act("resource_view_delete")(ctx(), {"id": v["id"]})
+            act("resource_view_create")(ctx(), {
+                "resource_id": resource["id"], "view_type": "pdf_view_plus",
+                "title": "PDF fixture",
+            })
 
 
 if __name__ == "__main__":

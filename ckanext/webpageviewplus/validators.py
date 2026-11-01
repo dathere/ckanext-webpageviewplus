@@ -205,3 +205,39 @@ def view_after_validator(
                 "from a separate content origin"
             ),
         )
+
+
+def pdf_height_mode_validator(value: Any, context: Context) -> Any:
+    # A PDF viewer scrolls inside, so its height never follows the page.
+    if value and value not in ("fixed", "viewport"):
+        raise toolkit.Invalid(toolkit._("Unknown height mode"))
+    return value
+
+
+def pdf_after_validator(
+    key: FlattenKey,
+    data: FlattenDataDict,
+    errors: FlattenErrorDict,
+    context: Context,
+) -> None:
+    """pdf_view_plus's checks across fields."""
+    mode = _get(data, "height_mode")
+    if mode and not errors.get(("height_mode",)):
+        if not frame.height_value_valid(mode, _get(data, "height_value") or ""):
+            _add_error(
+                errors,
+                "height_value",
+                toolkit._("Height value doesn't fit the height mode"),
+            )
+    pdf_url = _get(data, "pdf_url")
+    allowed_hosts = settings.allowed_hosts()
+    if (
+        pdf_url and allowed_hosts and not errors.get(("pdf_url",))
+        and not frame.is_ckan_host(pdf_url, settings.ckan_hosts())
+        and frame.url_host(pdf_url) not in allowed_hosts
+    ):
+        _add_error(
+            errors,
+            "pdf_url",
+            toolkit._("This host isn't on the site's list of allowed hosts"),
+        )

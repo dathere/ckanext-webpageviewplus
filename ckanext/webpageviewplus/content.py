@@ -255,27 +255,34 @@ def serve(resource_id: str, filename: str):
     # Cache-Control is set by ContentHostMiddleware from this decision: CKAN's
     # own response hooks run after this view and would overwrite it.
     request.environ[CACHE_ENVIRON_KEY] = "private" if private else "public"
+    response = file_response(stored, "text/html")
+    if settings.connection_reports():
+        # Never blocks: only tells CKAN which hosts the page contacts.
+        response.headers["Content-Security-Policy-Report-Only"] = connections.policy(resource_id)
+        response.headers["Reporting-Endpoints"] = connections.reporting_endpoints(resource_id)
+    return response
+
+
+def file_response(stored: StoredFile, mimetype: str) -> Response:
+    """The response sending an upload: from disk, or streamed from its
+    storage."""
     if stored.path:
-        response = send_file(stored.path, mimetype="text/html", conditional=True)
-    elif stored.etag and request.if_none_match.contains_weak(stored.etag):
-        # A browser revalidating an unchanged page (public ones are sent
+        return send_file(stored.path, mimetype=mimetype, conditional=True)
+    if stored.etag and request.if_none_match.contains_weak(stored.etag):
+        # A browser revalidating an unchanged file (public ones are sent
         # no-cache): answered without reading the file from the storage.
         # Compared weakly, as If-None-Match is: a proxy that compresses
         # (nginx's gzip) weakens ETags.
         response = Response(status=304)
         response.set_etag(stored.etag)
-    else:
-        # A cloud storage: the bytes pass through CKAN (no range requests).
-        response = Response(
-            stored.chunks(), mimetype="text/html",
-            headers={"Content-Length": str(stored.size)},
-        )
-        if stored.etag:
-            response.set_etag(stored.etag)
-    if settings.connection_reports():
-        # Never blocks: only tells CKAN which hosts the page contacts.
-        response.headers["Content-Security-Policy-Report-Only"] = connections.policy(resource_id)
-        response.headers["Reporting-Endpoints"] = connections.reporting_endpoints(resource_id)
+        return response
+    # A cloud storage: the bytes pass through CKAN (no range requests).
+    response = Response(
+        stored.chunks(), mimetype=mimetype,
+        headers={"Content-Length": str(stored.size)},
+    )
+    if stored.etag:
+        response.set_etag(stored.etag)
     return response
 
 
@@ -328,6 +335,8 @@ class ContentHostMiddleware:
     """
 
     PREFIX = "/webpageviewplus/content/"
+    # pdf_view_plus: the vendored PDF.js viewer and the PDFs it shows.
+    PDF_PREFIXES = ("/webpageviewplus/pdfjs/", "/webpageviewplus/pdf/")
 
     def __init__(self, app: Any):
         self.app = app
@@ -342,7 +351,7 @@ class ContentHostMiddleware:
         if host != frame.url_host(origin):
             return self.app(environ, start_response)
         if not (environ.get("PATH_INFO") or "").startswith(
-            (self.PREFIX, connections.PREFIX)
+            (self.PREFIX, connections.PREFIX) + self.PDF_PREFIXES
         ):
             start_response(
                 "404 Not Found",
@@ -369,9 +378,16 @@ def cache_control(status: str, visibility: Optional[str]) -> str:
     content origin) but must be revalidated with CKAN on every use, a cheap
     304 via its ETag, so making a dataset private takes effect at once.
     Private content may be kept only by the viewer's own browser, for one
-    url_ttl. Anything the route didn't explicitly mark (errors) not at all."""
+    url_ttl. Anything the route didn't explicitly mark (errors) not at all.
+    pdf_view_plus adds two: "immutable" for the versioned PDF.js files, and
+    "max-age=N" for a public dataset's PDF linked from another site, which
+    is public at its source, so caching it revokes nothing."""
     if not status.startswith(("200", "304")):
         return "no-store"
+    if visibility == "immutable":
+        return "public, max-age=31536000, immutable"
+    if visibility and visibility.startswith("max-age="):
+        return "public, " + visibility
     if visibility == "public":
         return "public, no-cache"
     if visibility == "private":

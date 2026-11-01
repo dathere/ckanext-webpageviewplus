@@ -241,3 +241,24 @@ groups:
         type: list
         description: |
           Resource formats (and URL extensions) the view is offered for.
+
+      - key: ckanext.webpageviewplus.pdf_max_size
+        default: 25
+        type: int
+        description: |
+          pdf_view_plus: the largest PDF on another site, in MB, that CKAN
+          fetches to show it. CKAN holds the file in memory while fetching
+          it, then keeps a copy under ckan.storage_path. Uploaded PDFs have
+          no limit here.
+
+      - key: ckanext.webpageviewplus.pdf_cache_seconds
+        default: 3600
+        type: int
+        description: |
+          pdf_view_plus: how long CKAN keeps its copy of a PDF linked from
+          another site (under ckan.storage_path, shared by every visitor)
+          before fetching it again, and how long browsers and caches may
+          keep it for a public dataset. Such a file is public at its source,
+          so there's nothing to revoke; uploads are revalidated on every use
+          as before.
+          Linked PDFs need ckan.storage_path, where the copies are kept.

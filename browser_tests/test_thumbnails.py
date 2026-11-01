@@ -7,6 +7,8 @@ from another site.
 import pytest
 from axe_playwright_python.sync_playwright import Axe
 
+from conftest import DATASET, _api
+
 AXE = Axe()
 THUMB = ".webpageviewplus-thumbnail img"
 
@@ -80,7 +82,8 @@ def test_names_clear_of_icons(listing):
         return [heading.textContent.trim().slice(0, 30),
                 icon.getBoundingClientRect().right, range.getBoundingClientRect().left];
     })""")
-    assert len(edges) == 6
+    # Every seeded resource (seed.py adds a PDF where pdf_view_plus is on).
+    assert len(edges) == len(_api("package_show", id=DATASET)["resources"])
     overlaps = [(name, right, left) for name, right, left in edges if right > left]
     assert overlaps == []
 

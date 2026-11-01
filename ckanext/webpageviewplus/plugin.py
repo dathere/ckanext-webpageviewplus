@@ -19,6 +19,7 @@ from ckanext.webpageviewplus import (
     downloads,
     events,
     health,
+    pdf,
     stats,
     frame,
     services,
@@ -424,3 +425,160 @@ class WebpageviewplusThumbnailsPlugin(plugins.SingletonPlugin):
             "webpageviewplus_thumbnail": thumbnails.for_resource,
             "webpageviewplus_replace_format_label": thumbnails.replace_format_label,
         }
+
+
+class PdfViewPlusPlugin(plugins.SingletonPlugin):
+    """PDF views shown with PDF.js from the content origin (pdf.py). Offered
+    only where uploads are isolated, as PDF.js needs an origin of its own."""
+
+    plugins.implements(plugins.IConfigurable)
+    plugins.implements(plugins.IBlueprint)
+    plugins.implements(plugins.IResourceView, inherit=True)
+
+    # IConfigurable
+
+    def configure(self, config_: CKANConfig):
+        # Its templates, styles, script, translations and middleware come
+        # from the main plugin.
+        if not plugins.plugin_loaded("webpage_view_plus"):
+            raise CkanConfigurationException(
+                "pdf_view_plus needs the webpage_view_plus plugin: "
+                "add it to ckan.plugins before pdf_view_plus")
+
+    # IBlueprint
+
+    def get_blueprint(self):
+        return [pdf.pdf]
+
+    # IResourceView
+
+    def info(self) -> dict[str, Any]:
+        return {
+            "name": pdf.VIEW_TYPE,
+            "title": toolkit._("PDF (Plus)"),
+            "schema": {
+                "pdf_url": [ignore_empty, unicode_safe, v.http_url_validator],
+                "height_mode": [ignore_empty, unicode_safe, v.pdf_height_mode_validator],
+                "height_value": [ignore_empty, unicode_safe],
+                "hide_controls": [ignore_missing, boolean_validator],
+                "__after": [v.pdf_after_validator],
+            },
+            "iframed": False,
+            "icon": "file-pdf",
+            "always_available": False,
+            "default_title": toolkit._("PDF"),
+        }
+
+    def can_view(self, data_dict: dict[str, Any]) -> bool:
+        if not settings.isolating_content_origin():
+            return False
+        resource = data_dict["resource"]
+        if (resource.get("format") or "").lower() in pdf.PDF_FORMATS:
+            return True
+        try:
+            path = urlsplit(resource.get("url") or "").path
+        except ValueError:
+            return False
+        return path.lower().endswith(".pdf")
+
+    def setup_template_variables(
+        self, context: Context, data_dict: dict[str, Any]
+    ) -> dict[str, Any]:
+        # Checked again at render time, like webpage_view_plus: resource_view
+        # is None on the "new view" form, and unsaved form data in previews.
+        resource_view = data_dict.get("resource_view") or {}
+        resource = data_dict["resource"]
+        form_vars = {
+            "height_modes": pdf.HEIGHT_MODES,
+            "isolated": settings.isolating_content_origin(),
+            "allowed_hosts": settings.allowed_hosts(),
+        }
+        if not settings.isolating_content_origin():
+            return dict(form_vars, frame=None, frame_error="content_origin")
+        found = pdf.source(resource_view, resource)
+        if found is None:
+            return dict(form_vars, frame=None, frame_error="pdf_url")
+        kind, url = found
+        if kind == "link" and not pdf.host_allowed(url):
+            return dict(form_vars, frame=None, frame_error="host")
+        view_id = resource_view.get("id")
+        if not view_id:
+            # The form's preview of an unsaved view: there's no view to serve
+            # the file for yet.
+            return dict(form_vars, frame=None, frame_error="unsaved")
+
+        package_id = (data_dict.get("package") or {}).get("id") or resource.get("package_id")
+        private = not content.is_public(package_id)
+        lang = toolkit.h.lang() if has_request_context() else "en"
+        title = resource_view.get("title") or toolkit._("PDF document")
+        mode = resource_view.get("height_mode") or pdf.DEFAULT_HEIGHT[0]
+        value = resource_view.get("height_value") or (
+            pdf.DEFAULT_HEIGHT[1] if mode == pdf.DEFAULT_HEIGHT[0] else "80")
+        built = frame.build_frame(
+            pdf.viewer_url(view_id, kind, url, resource, bool(private), lang),
+            "data-schematic",
+            ckan_hosts=settings.ckan_hosts(),
+            is_upload=True,
+            content_origin=settings.isolating_content_origin(),
+            referrer_policy=settings.referrer_policy(),
+            height_mode=mode,
+            height_value=value,
+            min_height=settings.min_height(),
+            max_height=settings.max_height(),
+            title=title,
+        )
+        # Open in new tab: the file itself, from CKAN (an upload's download
+        # URL re-checks access) or from its own site. Reload and Load: CKAN's
+        # route minting a fresh viewer URL, as the frame's may have expired.
+        open_url = url if kind == "link" else resource.get("url")
+        reload_url = pdf.open_path(view_id)
+        save_data = False
+        if has_request_context():
+            save_data = request.headers.get("Save-Data", "").strip().lower() == "on"
+            g.webpageviewplus_vary_held_back = True
+        events.emit("view_rendered", preset=built.preset, requested_preset=pdf.VIEW_TYPE,
+                    notices=",".join(built.notices) or "-",
+                    endpoint=request.endpoint if has_request_context() else None)
+        package = data_dict.get("package") or {}
+        share_url = toolkit.url_for(
+            "{}_resource.read".format(package.get("type") or "dataset"),
+            id=package.get("name") or resource.get("package_id"),
+            resource_id=resource.get("id"),
+            view_id=view_id,
+            qualified=True,
+        )
+        try:
+            size = int(resource.get("size") or 0) if kind == "upload" else 0
+        except (TypeError, ValueError):
+            size = 0
+        return dict(
+            form_vars,
+            frame=built,
+            share_url=share_url,
+            # The visitor never contacts a linked PDF's site (CKAN fetches
+            # it), so there's no consent card: only Save-Data holds it back.
+            held_back="save-data" if save_data else None,
+            save_data=save_data,
+            count_url=None,
+            privacy_policy_url=settings.privacy_policy_url(),
+            connections=[],
+            consent_host=frame.url_host(built.src),
+            deferred_src=reload_url,
+            load_size=toolkit.h.localised_filesize(size) if size > 0 else None,
+            frame_error=None,
+            refused=None,
+            refused_host=None,
+            open_url=open_url,
+            reload_url=reload_url,
+            controls=settings.controls(),
+            show_controls=not toolkit.asbool(resource_view.get("hide_controls")),
+            color_scheme=settings.color_scheme(),
+            narrow_width=settings.narrow_width(),
+            preconnect=settings.content_origin(),
+        )
+
+    def view_template(self, context: Context, data_dict: dict[str, Any]) -> str:
+        return "webpageviewplus/view.html"
+
+    def form_template(self, context: Context, data_dict: dict[str, Any]) -> str:
+        return "webpageviewplus/pdf_form.html"

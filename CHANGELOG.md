@@ -4,6 +4,22 @@
 
 ### Added
 
+- A second view type, **PDF (Plus)** (plugin `pdf_view_plus`, after `webpage_view_plus`), on
+  sites with a content origin. It shows PDFs with PDF.js 6.5.438, which ships with the
+  extension and is served from the content origin only, in the `data-schematic` sandbox. The
+  same viewer runs in every browser, phones included, where ckanext-pdfview's browser viewer
+  shows nothing; Chrome refuses its own viewer in any sandbox. Uploaded PDFs come from CKAN's
+  storage, with signed URLs for private datasets. PDFs on other sites (the view's PDF url, or
+  the resource's own link) are fetched by CKAN with the frameability check's guards, checked
+  to be PDFs, capped at `pdf_max_size` MB (default 25) and kept under `ckan.storage_path` for
+  `pdf_cache_seconds` (default an hour), so visitors never contact the other site and a busy
+  view costs one fetch an hour. A PDF's own JavaScript never runs, the viewer is read-only, and
+  its Download and Print buttons give way to the control bar. Reload and Load go through a CKAN
+  route that re-checks access and signs a fresh viewer URL. The viewer follows the page's
+  language: English plus the ten languages CKAN portals use most (Spanish, Brazilian
+  Portuguese, Thai, German, Italian, French, Japanese, Indonesian, Ukrainian, Turkish). Proxies
+  must forward `/webpageviewplus/pdfjs/` and `/webpageviewplus/pdf/` on the content domain.
+  `scripts/vendor_pdfjs.py` updates the vendored copy.
 - OpenDocument files (`.odt`, `.ods`, `.odp`) join the Microsoft Office service: the form
   suggests Microsoft's viewer for them, with `external`, and presentations get a 16/9 height.
   0.7.0 refused them because the sample files it was tested with fail to open. Others render

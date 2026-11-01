@@ -4,3 +4,5 @@ include requirements.txt
 recursive-include ckanext/webpageviewplus *.html *.json *.js *.less *.css *.mo *.po *.pot *.yml *.yaml
 recursive-include ckanext/webpageviewplus/migration *.ini *.py *.mako
 recursive-include ckanext/webpageviewplus/public *.*
+# pdf_view_plus: the vendored PDF.js viewer (scripts/vendor_pdfjs.py).
+recursive-include ckanext/webpageviewplus/pdfjs *

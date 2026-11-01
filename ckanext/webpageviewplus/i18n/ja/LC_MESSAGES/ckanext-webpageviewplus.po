@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-01 16:38+0000\n"
+"POT-Creation-Date: 2026-11-01 20:33+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -24,17 +24,29 @@ msgstr ""
 msgid "Must be a whole number"
 msgstr "整数で指定してください"
 
-#: ckanext/webpageviewplus/plugin.py:141
+#: ckanext/webpageviewplus/plugin.py:142
 msgid "Website (Plus)"
 msgstr "ウェブサイト (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:163
+#: ckanext/webpageviewplus/plugin.py:164
 msgid "Website"
 msgstr "ウェブサイト"
 
-#: ckanext/webpageviewplus/plugin.py:267
+#: ckanext/webpageviewplus/plugin.py:268
 msgid "Embedded web page"
 msgstr "埋め込みウェブページ"
+
+#: ckanext/webpageviewplus/plugin.py:458
+msgid "PDF (Plus)"
+msgstr "PDF (Plus)"
+
+#: ckanext/webpageviewplus/plugin.py:469
+msgid "PDF"
+msgstr "PDF"
+
+#: ckanext/webpageviewplus/plugin.py:513
+msgid "PDF document"
+msgstr "PDF ドキュメント"
 
 #: ckanext/webpageviewplus/validators.py:19
 msgid "Web Page url must be an http:// or https:// URL"
@@ -45,6 +57,7 @@ msgid "Preset is not one of the allowed presets"
 msgstr "このプリセットは許可されていません"
 
 #: ckanext/webpageviewplus/validators.py:34
+#: ckanext/webpageviewplus/validators.py:213
 msgid "Unknown height mode"
 msgstr "不明な高さモードです"
 
@@ -69,6 +82,7 @@ msgid "Choose an image from this dataset"
 msgstr "このデータセットの画像を選んでください"
 
 #: ckanext/webpageviewplus/validators.py:148
+#: ckanext/webpageviewplus/validators.py:230
 msgid "Height value doesn't fit the height mode"
 msgstr "高さの値が高さモードに合っていません"
 
@@ -81,6 +95,7 @@ msgstr ""
 "Schematic」または「インタラクティブ」を使用してください"
 
 #: ckanext/webpageviewplus/validators.py:188
+#: ckanext/webpageviewplus/validators.py:242
 msgid "This host isn't on the site's list of allowed hosts"
 msgstr "このホストはサイトの許可ホスト一覧にありません"
 
@@ -123,10 +138,12 @@ msgid "Auto"
 msgstr "自動"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:13
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:4
 msgid "Fixed (px)"
 msgstr "固定 (px)"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:14
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:5
 msgid "Share of the window height, in percent"
 msgstr "ウィンドウの高さに対する割合 (パーセント)"
 
@@ -172,6 +189,7 @@ msgstr ""
 "のリンクを貼り付けると、フォームが埋め込み用アドレスと必要な設定を提案します。"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:31
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:15
 msgid "This site accepts pages from these hosts only: {hosts}."
 msgstr "このサイトでは次のホストのページのみ使用できます: {hosts}。"
 
@@ -278,6 +296,7 @@ msgstr ""
 "や保存データなしで読み込むため、ページ内のログインやログイン用ポップアップは動作しません。"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:89
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:20
 msgid "Height"
 msgstr "高さ"
 
@@ -292,6 +311,7 @@ msgid ""
 msgstr "自動は、qsv の Data Schematic のように自身の高さを通知するページに合わせます。それ以外のページは固定の予備の高さのままです。"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:102
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:31
 msgid "Height value"
 msgstr "高さの値"
 
@@ -343,10 +363,12 @@ msgid ""
 msgstr "チェックしない場合、上で画像が選ばれていなければ、このサイトはページがリンクのプレビュー用に指定している画像を、ビューの保存時に一度だけ取得し、小さなコピーを表示します。"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:141
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:38
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
 msgstr "コントロールバーを隠す (新しいタブで開く、全画面、再読み込み)"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:142
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:39
 msgid ""
 "On phones and at high zoom, Open in new tab still shows, so visitors can "
 "always reach the page."
@@ -413,6 +435,40 @@ msgstr "リファラーポリシー"
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:175
 msgid "Site default"
 msgstr "サイトの既定値"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:9
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:140
+msgid ""
+"This PDF can't be shown: the site needs a separate domain for uploaded "
+"content."
+msgstr "この PDF は表示できません。アップロードされたコンテンツ用の別のドメインがサイトに必要です。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:12
+msgid "PDF url"
+msgstr "PDF の URL"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:12
+msgid "eg. https://example.com/report.pdf  (if blank uses resource url)"
+msgstr "例: https://example.com/report.pdf (空の場合はリソースの URL を使用)"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:14
+msgid ""
+"Leave blank to show this resource's own file. A PDF on another site is "
+"fetched by this site and shown from here, so visitors never contact that "
+"site."
+msgstr ""
+"空のままにすると、このリソース自身のファイルを表示します。他のサイトにある PDF "
+"はこのサイトが取得してここから表示するため、訪問者がそのサイトに接続することはありません。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:31
+msgid "eg. 800 or 80"
+msgstr "例: 800 または 80"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:32
+msgid ""
+"Pixels for Fixed, or a number from 1 to 100 for a share of the window. "
+"Blank is 800 pixels."
+msgstr "固定の場合はピクセル数、ウィンドウに対する割合の場合は 1 から 100 の数値。空の場合は 800 ピクセルです。"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:8
 msgid ""
@@ -540,13 +596,23 @@ msgstr "再読み込み"
 msgid "Share"
 msgstr "共有"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:140
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:142
+msgid ""
+"There is no PDF to show: only uploaded files and http:// or https:// "
+"links are supported."
+msgstr "表示する PDF がありません。アップロードされたファイルと http:// または https:// のリンクのみ対応しています。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:144
+msgid "Save the view to see the PDF."
+msgstr "PDF を表示するにはビューを保存してください。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:146
 msgid ""
 "This page can't be embedded: its host isn't on this site's list of "
 "allowed hosts."
 msgstr "このページは埋め込めません。ホストがこのサイトの許可ホスト一覧にありません。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:142
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:148
 msgid ""
 "This page cannot be embedded: only http:// and https:// URLs are "
 "supported."

@@ -120,7 +120,7 @@
         {% endif %}
         {% if 'reload' in controls %}
           {# TRANSLATORS: a button reloading the embedded page. #}
-          <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-action="reload" data-reload-url="{{ open_url }}" hidden>{{ _('Reload') }}</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-webpageviewplus-action="reload" data-reload-url="{{ reload_url or open_url }}" hidden>{{ _('Reload') }}</button>
         {% endif %}
         {# Shares the CKAN page, not the frame's URL. Shown where
            navigator.share exists. #}
@@ -136,6 +136,12 @@
       <a class="btn btn-sm btn-outline-secondary webpageviewplus-narrow-open" href="{{ open_url }}" target="_blank" rel="noopener noreferrer">{{ _('Open in new tab') }}</a>
     {% endif %}
   </div>
+{% elif frame_error == 'content_origin' %}
+  <p class="text-muted">{{ _("This PDF can't be shown: the site needs a separate domain for uploaded content.") }}</p>
+{% elif frame_error == 'pdf_url' %}
+  <p class="text-muted">{{ _('There is no PDF to show: only uploaded files and http:// or https:// links are supported.') }}</p>
+{% elif frame_error == 'unsaved' %}
+  <p class="text-muted">{{ _('Save the view to see the PDF.') }}</p>
 {% elif frame_error == 'host' %}
   <p class="text-muted">{{ _("This page can't be embedded: its host isn't on this site's list of allowed hosts.") }}</p>
 {% else %}

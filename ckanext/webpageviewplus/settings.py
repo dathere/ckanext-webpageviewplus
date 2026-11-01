@@ -126,6 +126,15 @@ def formats() -> list[str]:
     return [f.lower() for f in toolkit.aslist(_get("formats"))]
 
 
+def pdf_max_size() -> int:
+    """The largest linked PDF CKAN fetches for pdf_view_plus, in bytes."""
+    return int(_get("pdf_max_size")) * 1024 * 1024
+
+
+def pdf_cache_seconds() -> int:
+    return int(_get("pdf_cache_seconds"))
+
+
 LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "[::1]")
 _psl = None
 
@@ -255,6 +264,10 @@ def check() -> None:
         raise CkanConfigurationException(
             PREFIX + "color_scheme: must be one of " + " ".join(COLOR_SCHEMES)
         )
+    if _get("pdf_max_size") is not None and pdf_max_size() < 1:
+        raise CkanConfigurationException(PREFIX + "pdf_max_size: must be at least 1 (MB)")
+    if _get("pdf_cache_seconds") is not None and pdf_cache_seconds() < 0:
+        raise CkanConfigurationException(PREFIX + "pdf_cache_seconds: can't be negative")
     if url_ttl() < 30:
         raise CkanConfigurationException(
             PREFIX + "url_ttl: must be at least 30 seconds"

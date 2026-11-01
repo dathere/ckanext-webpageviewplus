@@ -253,6 +253,11 @@ instead of the format icon, beside each resource with a Website (Plus) view. Wit
 `thumbnail_fetch = true`, CKAN also takes the page's own preview image when a view is saved. See
 [Thumbnails in the resource list](#thumbnails-in-the-resource-list).
 
+**Show PDFs.** Add `pdf_view_plus` to `ckan.plugins` after `webpage_view_plus`, on a site with a
+separate domain for uploads. PDF resources then get a PDF (Plus) view: PDF.js, which ships with
+the extension, shows uploaded PDFs and PDFs linked from other sites, the same in every browser,
+phones included. See [PDF views](#pdf-views).
+
 **See what uploaded pages contact.** With `connection_reports = true` and a content origin,
 CKAN notes which other sites uploaded pages fetch from (map tiles, a CDN), and
 `show_connections = true` lists them under the view. See
@@ -375,6 +380,11 @@ migrating.
 **Which languages does it come in?** English, German, Spanish, French, Italian, Japanese and
 Brazilian Portuguese, following the visitor's CKAN language. See [Translations](#translations).
 
+**Can it replace ckanext-pdfview?** Yes, on a site with a separate domain for uploads: enable
+`pdf_view_plus` and add a PDF (Plus) view to your PDF resources. It shows PDFs with PDF.js
+from that domain, so phones see them too, and a PDF's scripts never run. Linked PDFs are
+fetched by CKAN and cached, at most `pdf_max_size` MB each. See [PDF views](#pdf-views).
+
 ### For editors
 
 **What does "sandboxed" mean for my page?** The browser runs the page in a locked room: it
@@ -464,6 +474,11 @@ and browser-feature fields are for sysadmins, so the preset is the editor's choi
 visits" on the view; its daily totals then show in the view form. Visitors see that the view
 counts visits, and nothing about them is kept. See [Opt-in view counting](#opt-in-view-counting).
 
+
+**Can I show a PDF?** Yes, if your site has the PDF (Plus) view: add it to the PDF resource.
+It shows the resource's own file, uploaded or linked, or another PDF whose address you paste
+as the PDF url. Readers can page, zoom and search it, on phones too. See
+[PDF views](#pdf-views).
 
 ## Advanced
 
@@ -690,6 +705,12 @@ workers work, and the browser keeps them apart from CKAN's pages, cookies and AP
                proxy_set_header Host $host;
                proxy_set_header X-Forwarded-Proto $scheme;
            }
+           # only needed with the pdf_view_plus plugin: PDF.js and the PDFs it shows
+           location ~ ^/webpageviewplus/(pdfjs|pdf)/ {
+               proxy_pass http://127.0.0.1:5000;
+               proxy_set_header Host $host;
+               proxy_set_header X-Forwarded-Proto $scheme;
+           }
            location / { return 404; }
        }
 
@@ -870,6 +891,65 @@ the dataset's activity stream and runs other plugins' resource hooks.
 from cron it picks up changed pages and images replaced through `package_update`. When
 remaking one fails, it keeps the copy it has.
 
+### PDF views
+
+The `pdf_view_plus` plugin adds a **PDF (Plus)** view type for resources whose format is PDF
+(or whose URL ends in `.pdf`). It shows the file with [PDF.js](https://mozilla.github.io/pdf.js/)
+6.5.438, Mozilla's PDF viewer, which ships inside the extension. It replaces
+[ckanext-pdfview](https://github.com/ckan/ckanext-pdfview) on sites with a separate domain
+for uploads.
+
+**Why not the browser's own viewer?** ckanext-pdfview hands the file to the browser. Phone
+browsers don't show PDFs inside a page, so iOS and Android visitors get a blank box or a
+download. Chrome refuses to show its viewer inside any sandboxed frame, so this extension
+couldn't sandbox one. PDF.js draws the pages with the browser's own scripts, so it works
+everywhere, and it runs in a sandbox.
+
+**Requirements.** A content origin with `harden_downloads` on (see
+[A separate domain for uploads](#a-separate-domain-for-uploads)): PDF.js runs with a real
+origin of its own, so it's only ever served from the content domain, never from CKAN's. The
+view isn't offered on sites without one. Your proxy must forward `/webpageviewplus/pdfjs/` and
+`/webpageviewplus/pdf/` on the content domain to CKAN (see
+[Deploying a content origin](#deploying-a-content-origin)).
+
+**Enable it.** Add the plugin after `webpage_view_plus`:
+
+    ckan.plugins = ... webpage_view_plus pdf_view_plus
+
+Then add a **PDF (Plus)** view to a PDF resource. To create it by default for new PDF
+resources, add `pdf_view_plus` to `ckan.views.default_views`. With ckanext-pdfview installed
+too, remove its `pdf_view` from the plugins once your views are replaced.
+
+**What it shows.**
+
+- **Uploaded PDFs**, from CKAN's own storage (on CKAN 2.12, cloud storage too). Private
+  datasets get signed addresses, as uploaded HTML does.
+- **PDFs on other sites.** Set the view's **PDF url**, or leave it empty for a resource that
+  links to a PDF. CKAN fetches the file and serves it from the content domain, so visitors
+  never contact the other site. The fetch has the same guards as the frameability check:
+  public addresses only, redirects checked, a 30-second deadline, at most `pdf_max_size` MB
+  (default 25), and the file must really be a PDF. CKAN keeps one copy under
+  `ckan.storage_path` for `pdf_cache_seconds` (default an hour) and serves every visitor from
+  it, so a popular view doesn't make CKAN download the file again and again. `allowed_hosts`
+  applies to these links too, and they need `ckan.storage_path` set. A linked PDF in a private dataset is still a public file on its
+  own site: the signed address hides which view shows it, not the file.
+
+**How it's locked down.** PDF.js runs in the `data-schematic` sandbox on the content domain,
+with the same origin as uploaded pages and never CKAN's. A PDF's own JavaScript never runs
+(PDF.js's scripting is off and not shipped), the viewer is read-only (no annotation or
+signature tools), and its page may only load files from its own domain. Its Download, Print
+and Open buttons are hidden: the control bar's Open in new tab reaches the file. The PDF itself
+is served with a CSP `sandbox`, so opened on its own it can't run anything either.
+
+**Languages.** The viewer follows the CKAN page's language. It ships English and the ten
+languages CKAN portals most often use, from the [datashades.info](https://datashades.info)
+census of about 900 portals: Spanish, Brazilian Portuguese, Thai, German, Italian, French,
+Japanese, Indonesian, Ukrainian and Turkish. Other languages show English.
+
+**Updating PDF.js.** `scripts/vendor_pdfjs.py` downloads a release, checks its SHA-256 and
+writes the trimmed copy (no source maps, debugger or scripting sandbox; about 8 MB). See its
+docstring.
+
 ### Privacy and telemetry
 
 By default the extension sends no telemetry and adds no tracking. Every frame's `allow` list
@@ -955,6 +1035,8 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.privacy_policy_url` | empty | Linked from "This view counts visits"; required with `view_counting` |
 | `ckanext.webpageviewplus.connection_reports` | `false` | Report which hosts uploaded pages contact (needs a content origin) |
 | `ckanext.webpageviewplus.show_connections` | `false` | Show those hosts under the view |
+| `ckanext.webpageviewplus.pdf_max_size` | `25` | With `pdf_view_plus`, the largest PDF on another site CKAN fetches, in MB |
+| `ckanext.webpageviewplus.pdf_cache_seconds` | `3600` | With `pdf_view_plus`, how long CKAN (and browsers, for public datasets) keep a linked PDF before fetching it again |
 
 ### Commands and API
 
@@ -1043,3 +1125,7 @@ content origin, as in `browser_tests/ci.ini`.
 ## License
 
 [AGPL](https://www.gnu.org/licenses/agpl-3.0.en.html)
+
+The `pdf_view_plus` plugin ships [PDF.js](https://github.com/mozilla/pdf.js) (Apache License
+2.0), with its decoders and fonts (BSD-style, MIT and the Liberation fonts' licence). Each
+licence is beside its files under `ckanext/webpageviewplus/pdfjs/<version>/`.

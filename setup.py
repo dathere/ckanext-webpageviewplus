@@ -13,6 +13,8 @@ setup(
     # http://babel.pocoo.org/docs/messages/#extraction-method-mapping-and-configuration
     message_extractors={
         'ckanext': [
+            # The vendored PDF.js viewer has its own translations.
+            ('**/pdfjs/**', 'ignore', None),
             ('**.py', 'python', None),
             ('**.js', 'javascript', None),
             ('**/templates/**.html', 'ckan', None),

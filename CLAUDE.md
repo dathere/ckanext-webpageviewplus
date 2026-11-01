@@ -71,7 +71,7 @@ order now being built:
      only a timeout on loads the script starts (Load, Reload): the first load may finish before
      the script runs. `data-load-timeout` on the wrapper is a test hook.
    - `events.emit` logs structured events (`view_rendered`, `same_origin_refused`,
-     `signature_refused`, `frameability_blocked`) on `ckanext.webpageviewplus.events`, with
+     `signature_refused`, `frameability_blocked`, `pdf_fetch_failed`) on `ckanext.webpageviewplus.events`, with
      fields in `record.webpageviewplus` and nothing about the viewer. Tests use the
      `events_log` fixture (`tests/conftest.py`).
    - Opt-in view counting (`stats.py`), trimmed scope as decided: the site's `view_counting`
@@ -105,6 +105,9 @@ order now being built:
    Flourish, Tableau Public, Internet Archive; source `service:<url>`). Stage 4 done:
    `service_format` (`thumbnails.service_format`, after each view save: `resource_patch`
    with `ignore_auth`, only for an empty or HTML format and a resource's only view).
+10. Done (unreleased, for 0.8.0): `pdf_view_plus` (spec section "PDF viewer on the content
+   origin"): PDF.js from the content origin for uploaded and linked PDFs; see `pdf.py` below.
+   Not built yet: `migrate` from ckanext-pdfview's `pdf_view`, and a PDF view in `demo/`.
 
 ## The security model (read before touching frame, validator, content or download code)
 
@@ -238,6 +241,23 @@ order now being built:
   OpenDocument (`.odt`, `.ods`, `.odp`) is listed too: the viewer opens it, but refuses some
   files (filesamples.com's `sample1.*` all fail), so test with more than one file. With an empty
   page URL, the form suggests from the resource's own URL (`data-resource-url`).
+- `pdf.py` + `PdfViewPlusPlugin` (`plugin.py`): the `pdf_view_plus` view type (a plugin of its
+  own, needing `webpage_view_plus`; `can_view` only with an isolating content origin). PDF.js
+  is vendored in `pdfjs/<PDFJS_VERSION>/` by `scripts/vendor_pdfjs.py` (pinned SHA-256; no maps,
+  debugger, scripting sandbox; English + 10 languages from the datashades.info census), which
+  also copies `scripts/pdfjs/wvp-viewer.{js,css}` in: options set on `webviewerloaded`
+  (scripting off, read-only, no ranges, the page's language as `wvp_lang`) and the hidden
+  Download/Print/Open/editor buttons. Never serve it on CKAN's origin. Routes, content host
+  only: `/webpageviewplus/pdfjs/<version>/...` (allow-listed types, `immutable`, its own CSP)
+  and `/webpageviewplus/pdf/<view_id>/<file>` (signed per view as `pdf:<view_id>` for private
+  datasets; uploads via `content.file_response`, links via `cached_pdf`: `fetch_body`, `%PDF-`
+  in the first 1024 bytes, a copy under `ckan.storage_path` for `pdf_cache_seconds`). On
+  CKAN's host, `/webpageviewplus/pdf-view/<view_id>` re-checks `resource_view_show` and
+  redirects to a fresh viewer URL: it's the Reload and Load URL (`reload_url`), as a raw PDF in
+  the sandbox would be blocked by Chrome. The frame is `build_frame(..., "data-schematic",
+  is_upload=True)`; `view.html` is shared. The PDF.js webviewerloaded event reaches the
+  viewer's own document only because the CKAN page is cross-origin;
+  `browser_tests/test_pdf.py` checks the options took effect.
 - `health.py`: views whose page can't be shown. **Rendering never fetches**: with
   `frameability_check` on, `resource_view_create`/`_update` are chained (`actions.py`) to probe
   the page once after the save (`health.after_save`, `SAVE_SECONDS` overall via

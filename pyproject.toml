@@ -33,6 +33,7 @@ Homepage = "https://github.com/dathere/ckanext-webpageviewplus"
 [project.entry-points."ckan.plugins"]
 webpage_view_plus = "ckanext.webpageviewplus.plugin:WebpageviewplusPlugin"
 webpage_view_plus_thumbnails = "ckanext.webpageviewplus.plugin:WebpageviewplusThumbnailsPlugin"
+pdf_view_plus = "ckanext.webpageviewplus.plugin:PdfViewPlusPlugin"
 
 
 [build-system]

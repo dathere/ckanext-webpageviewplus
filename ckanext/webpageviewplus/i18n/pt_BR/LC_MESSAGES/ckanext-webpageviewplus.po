@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-01 16:38+0000\n"
+"POT-Creation-Date: 2026-11-01 20:33+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: pt_BR\n"
@@ -24,17 +24,29 @@ msgstr ""
 msgid "Must be a whole number"
 msgstr "Deve ser um número inteiro"
 
-#: ckanext/webpageviewplus/plugin.py:141
+#: ckanext/webpageviewplus/plugin.py:142
 msgid "Website (Plus)"
 msgstr "Site (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:163
+#: ckanext/webpageviewplus/plugin.py:164
 msgid "Website"
 msgstr "Site"
 
-#: ckanext/webpageviewplus/plugin.py:267
+#: ckanext/webpageviewplus/plugin.py:268
 msgid "Embedded web page"
 msgstr "Página web incorporada"
+
+#: ckanext/webpageviewplus/plugin.py:458
+msgid "PDF (Plus)"
+msgstr "PDF (Plus)"
+
+#: ckanext/webpageviewplus/plugin.py:469
+msgid "PDF"
+msgstr "PDF"
+
+#: ckanext/webpageviewplus/plugin.py:513
+msgid "PDF document"
+msgstr "Documento PDF"
 
 #: ckanext/webpageviewplus/validators.py:19
 msgid "Web Page url must be an http:// or https:// URL"
@@ -45,6 +57,7 @@ msgid "Preset is not one of the allowed presets"
 msgstr "O perfil não é um dos perfis permitidos"
 
 #: ckanext/webpageviewplus/validators.py:34
+#: ckanext/webpageviewplus/validators.py:213
 msgid "Unknown height mode"
 msgstr "Modo de altura desconhecido"
 
@@ -71,6 +84,7 @@ msgid "Choose an image from this dataset"
 msgstr "Escolha uma imagem deste conjunto de dados"
 
 #: ckanext/webpageviewplus/validators.py:148
+#: ckanext/webpageviewplus/validators.py:230
 msgid "Height value doesn't fit the height mode"
 msgstr "O valor da altura não corresponde ao modo de altura"
 
@@ -83,6 +97,7 @@ msgstr ""
 "sandbox. Use Data Schematic ou Interativo"
 
 #: ckanext/webpageviewplus/validators.py:188
+#: ckanext/webpageviewplus/validators.py:242
 msgid "This host isn't on the site's list of allowed hosts"
 msgstr "Este host não está na lista de hosts permitidos do site"
 
@@ -128,10 +143,12 @@ msgid "Auto"
 msgstr "Automática"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:13
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:4
 msgid "Fixed (px)"
 msgstr "Fixa (px)"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:14
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:5
 msgid "Share of the window height, in percent"
 msgstr "Parte da altura da janela, em porcentagem"
 
@@ -178,6 +195,7 @@ msgstr ""
 "configurações necessárias."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:31
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:15
 msgid "This site accepts pages from these hosts only: {hosts}."
 msgstr "Este site aceita páginas apenas destes hosts: {hosts}."
 
@@ -301,6 +319,7 @@ msgstr ""
 " pop-ups de login não vão funcionar."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:89
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:20
 msgid "Height"
 msgstr "Altura"
 
@@ -318,6 +337,7 @@ msgstr ""
 "reserva."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:102
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:31
 msgid "Height value"
 msgstr "Valor da altura"
 
@@ -380,10 +400,12 @@ msgstr ""
 "visualização, e mostra uma cópia pequena."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:141
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:38
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
 msgstr "Ocultar a barra de controles (Abrir em nova aba, Tela cheia, Recarregar)"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:142
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:39
 msgid ""
 "On phones and at high zoom, Open in new tab still shows, so visitors can "
 "always reach the page."
@@ -458,6 +480,45 @@ msgstr "Política de referenciador"
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:175
 msgid "Site default"
 msgstr "A do site"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:9
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:140
+msgid ""
+"This PDF can't be shown: the site needs a separate domain for uploaded "
+"content."
+msgstr ""
+"Este PDF não pode ser exibido: o site precisa de um domínio separado para"
+" o conteúdo enviado."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:12
+msgid "PDF url"
+msgstr "URL do PDF"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:12
+msgid "eg. https://example.com/report.pdf  (if blank uses resource url)"
+msgstr "ex. https://example.com/report.pdf  (se vazio, usa a URL do recurso)"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:14
+msgid ""
+"Leave blank to show this resource's own file. A PDF on another site is "
+"fetched by this site and shown from here, so visitors never contact that "
+"site."
+msgstr ""
+"Deixe vazio para mostrar o arquivo deste recurso. Um PDF em outro site é "
+"buscado por este site e exibido daqui, então os visitantes nunca acessam "
+"aquele site."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:31
+msgid "eg. 800 or 80"
+msgstr "ex. 800 ou 80"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:32
+msgid ""
+"Pixels for Fixed, or a number from 1 to 100 for a share of the window. "
+"Blank is 800 pixels."
+msgstr ""
+"Pixels para Fixa, ou um número de 1 a 100 para uma parte da janela. Vazio"
+" são 800 pixels."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:8
 msgid ""
@@ -589,7 +650,19 @@ msgstr "Recarregar"
 msgid "Share"
 msgstr "Compartilhar"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:140
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:142
+msgid ""
+"There is no PDF to show: only uploaded files and http:// or https:// "
+"links are supported."
+msgstr ""
+"Não há PDF para mostrar: apenas arquivos enviados e links http:// ou "
+"https:// são suportados."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:144
+msgid "Save the view to see the PDF."
+msgstr "Salve a visualização para ver o PDF."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:146
 msgid ""
 "This page can't be embedded: its host isn't on this site's list of "
 "allowed hosts."
@@ -597,7 +670,7 @@ msgstr ""
 "Esta página não pode ser incorporada: o host dela não está na lista de "
 "hosts permitidos deste site."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:142
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:148
 msgid ""
 "This page cannot be embedded: only http:// and https:// URLs are "
 "supported."

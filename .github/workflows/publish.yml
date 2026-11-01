@@ -33,7 +33,7 @@ jobs:
         twine check --strict dist/*
     # `ckan db upgrade -p` reads these from the installed package; an
     # editable install in the test job wouldn't notice them missing.
-    - name: Check the wheel has the migration files and translations
+    - name: Check the wheel has the migration files, translations and PDF.js
       run: |
         unzip -Z1 dist/*.whl > files.txt
         m=ckanext/webpageviewplus/migration/webpage_view_plus
@@ -44,6 +44,11 @@ jobs:
         for l in de es fr it ja pt_BR; do
           p=ckanext/webpageviewplus/i18n/$l/LC_MESSAGES/ckanext-webpageviewplus.mo
           grep -qx "$p" files.txt || { echo "missing from wheel: $p"; exit 1; }
+        done
+        # pdf_view_plus's vendored viewer: a file of each kind it needs.
+        v=ckanext/webpageviewplus/pdfjs/$(python -c "import re;print(re.search(r'PDFJS_VERSION = \"(.+)\"', open('ckanext/webpageviewplus/pdf.py').read())[1])")
+        for f in web/viewer.html web/viewer.mjs build/pdf.worker.mjs web/wasm/openjpeg.wasm web/cmaps/UniJIS-UTF16-H.bcmap web/standard_fonts/FoxitSerif.pfb web/locale/locale.json web/locale/th/viewer.ftl wvp-viewer.js wvp-viewer.css; do
+          grep -qx "$v/$f" files.txt || { echo "missing from wheel: $v/$f"; exit 1; }
         done
     - uses: actions/upload-artifact@v4
       with:
