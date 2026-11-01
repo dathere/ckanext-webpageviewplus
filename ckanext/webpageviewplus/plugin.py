@@ -473,6 +473,10 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
         if not settings.isolating_content_origin():
             return False
         resource = data_dict["resource"]
+        if resource.get("url_type") == "upload" and pdf.source({}, resource) is None:
+            # Kept by a storage this extension can't read (a cloud storage
+            # extension on CKAN 2.10/2.11): the view would show nothing.
+            return False
         if (resource.get("format") or "").lower() in pdf.PDF_FORMATS:
             return True
         try:

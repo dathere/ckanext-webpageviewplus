@@ -231,6 +231,18 @@ class TestMigratePdf:
         assert _view_row(kept).view_type == "pdf_view"
         assert _view_row(moved).view_type == "pdf_view_plus"
 
+    def test_unreadable_upload_skipped(self, cli, monkeypatch):
+        # A cloud storage extension on CKAN 2.10/2.11: the converted view
+        # couldn't read the file, while pdfview's (the browser) can.
+        from ckanext.webpageviewplus import content
+        monkeypatch.setattr(content, "_readable_uploader", lambda resource: None)
+        resource = factories.Resource(url="a.pdf", url_type="upload", format="PDF")
+        view_id = _pdfview_view(resource)
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate-pdf"])
+        assert result.exit_code == 0, result.output
+        assert "can't read" in result.output
+        assert _view_row(view_id).view_type == "pdf_view"
+
     def test_needs_content_origin(self, cli, monkeypatch):
         from ckanext.webpageviewplus import settings
         monkeypatch.setattr(settings, "isolating_content_origin", lambda: None)

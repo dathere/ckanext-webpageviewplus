@@ -110,6 +110,8 @@ order now being built:
    `ckan webpageviewplus migrate-pdf` converts ckanext-pdfview's `pdf_view` views (same
    `pdf_url` field); its tests patch `cli._plugin_loaded`, never `ckan.plugins.plugin_loaded`
    (that fools `with_plugins`' teardown on CKAN 2.10).
+   Uploads `pdf.source` can't read (a cloud storage extension on 2.10/2.11) are never
+   offered the view (`can_view`) and `migrate-pdf` leaves their `pdf_view` views alone.
 
 ## The security model (read before touching frame, validator, content or download code)
 

@@ -349,6 +349,12 @@ def test_offered_for_pdfs():
     assert not view_plugin.can_view({"resource": {"format": "CSV", "url": "https://a.org/b.csv"}})
 
 
+def test_not_offered_for_unreadable_uploads(monkeypatch):
+    monkeypatch.setattr(content, "_readable_uploader", lambda resource: None)
+    upload = {"format": "PDF", "url": "a.pdf", "url_type": "upload", "id": "x"}
+    assert not plugin.PdfViewPlusPlugin().can_view({"resource": upload})
+
+
 def test_needs_main_plugin(monkeypatch):
     # Patches plugin.py's own name only: patching ckan.plugins.plugin_loaded
     # would also fool with_plugins' teardown, which then unloads nothing

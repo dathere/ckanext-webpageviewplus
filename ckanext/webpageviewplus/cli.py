@@ -207,11 +207,24 @@ def migrate_pdf(dry_run: bool):
     for view in views:
         config = dict(view.config or {})
         pdf_url = (config.get("pdf_url") or "").strip()
+        resource = model.Resource.get(view.resource_id)
+        found = None if resource is None else pdf.source(
+            {"pdf_url": pdf_url} if pdf_url else {}, content.resource_dict(resource))
         problem = None
-        if pdf_url and not frame.is_http_url(pdf_url):
+        if resource is None:
+            problem = "its resource is gone"
+        elif pdf_url and not frame.is_http_url(pdf_url):
             problem = "its pdf_url isn't an http(s) URL"
-        elif pdf_url and not pdf.host_allowed(pdf_url):
-            problem = "its pdf_url's host isn't in allowed_hosts"
+        elif found is None and resource.url_type == "upload":
+            # Uploads kept by a cloud storage extension on CKAN 2.10/2.11: the
+            # converted view couldn't read the file. pdfview can (the browser
+            # fetches it from CKAN), so the view stays as it is.
+            problem = ("its uploaded file is in a storage this extension can't read "
+                       "(a cloud storage extension on CKAN 2.10/2.11; CKAN 2.12 can)")
+        elif found is None:
+            problem = "its resource's URL isn't an http(s) URL"
+        elif found[0] == "link" and not pdf.host_allowed(found[1]):
+            problem = "its PDF's host isn't in allowed_hosts"
         if problem:
             click.echo("{} {} skipped: {}; left on pdf_view".format(
                 view.id, view.resource_id, problem), err=True)

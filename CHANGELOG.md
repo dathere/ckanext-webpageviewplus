@@ -22,8 +22,10 @@
   `scripts/vendor_pdfjs.py` updates the vendored copy.
 - `ckan webpageviewplus migrate-pdf [--dry-run]` converts ckanext-pdfview's `pdf_view` views to
   PDF (Plus) in place, keeping id, title, description, order and PDF url. It needs
-  `pdf_view_plus` and a content origin, and skips views whose PDF url isn't http(s) or whose
-  host isn't in `allowed_hosts`.
+  `pdf_view_plus` and a content origin, and skips views whose PDF url isn't http(s), whose
+  host isn't in `allowed_hosts`, or whose upload it can't read: on CKAN 2.10/2.11, files kept by
+  a cloud storage extension, for which PDF (Plus) isn't offered either. Such sites keep
+  ckanext-pdfview for uploads until CKAN 2.12.
 - OpenDocument files (`.odt`, `.ods`, `.odp`) join the Microsoft Office service: the form
   suggests Microsoft's viewer for them, with `external`, and presentations get a 16/9 height.
   0.7.0 refused them because the sample files it was tested with fail to open. Others render
