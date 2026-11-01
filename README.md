@@ -289,6 +289,172 @@ very welcome, as pull requests to
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 
+## FAQ
+
+### For site administrators
+
+**What exactly does the sandbox stop, and what doesn't it?** It stops an embedded page from
+acting as CKAN: it can't read CKAN's pages, cookies or storage, or use a visitor's login to
+change anything, whether it's a third-party page or HTML someone uploaded. Without a separate
+domain for uploads, no frame is ever allowed to run scripts with a real origin, as that's the
+one combination that could reach an upload and run it as CKAN. It doesn't vouch for what a
+page says or loads: a page can still be misleading, and loading a third-party page still sends
+that site the visitor's own cookies for it, which is what the consent card is for. See
+[How the protection works](#how-the-protection-works) and
+[Keeping your site safe](#keeping-your-site-safe).
+
+**Do I need a separate domain for uploads?** Not to install it: without one, every view and
+upload is sandboxed so it can't act as CKAN, and that's already safer than `webpage_view`.
+What you lose is full strength: `external` and `data-schematic` run as `interactive`, so
+third-party apps lose their logins and saved settings, and qsv Data Schematics lose their maps.
+See [A separate domain for uploads](#a-separate-domain-for-uploads).
+
+**Is it safe to switch on a live site?** Yes. It runs beside `webpage_view`, and nothing
+changes until editors add "Website (Plus)" views or you run `migrate` (start with
+`--dry-run`). One thing changes at once: uploaded HTML, SVG and XML opened from their download
+links run sandboxed. See [Migrating from webpage_view](#migrating-from-webpage_view) and
+[Uploaded HTML downloads are sandboxed](#uploaded-html-downloads-are-sandboxed).
+
+**Does it make my server fetch things from other sites?** Not by default, and never while
+showing a page to a visitor. Two settings make CKAN fetch when a view is saved: the
+[frameability check](#frameability-check) and `thumbnail_fetch`, both off by default and both
+limited to public addresses.
+
+**We keep uploads in S3 or other cloud storage. Does it work?** On CKAN 2.12, yes: uploads in
+any `ckan.files` storage that can stream, S3 included, are served from your separate domain. On
+CKAN 2.10 and 2.11, uploads kept by ckanext-s3filestore or ckanext-cloudstorage stay sandboxed
+on CKAN's own address, so schematics lose their maps there. Upgrading to 2.12 lifts that. See
+[Deploying a content origin](#deploying-a-content-origin).
+
+**Can I control what editors embed?** Yes: limit the presets, keep `editor_can_loosen` off so
+only sysadmins can change a view's sandbox, and list the sites editors may embed with
+`allowed_hosts`. See [Keeping your site safe](#keeping-your-site-safe).
+
+**Does it track visitors?** No. It sends no telemetry, and frames deny ad and tracking
+features. You can ask visitors before loading third-party pages (`consent_gate`, or
+`privacy_profile = eu`), and opt in to anonymous daily view counts. See
+[Privacy and telemetry](#privacy-and-telemetry).
+
+**How do I find embeds that have stopped working?** Run `ckan webpageviewplus check-views` from
+cron: it lists views, core `webpage_view` ones too, whose page is gone, unreachable or refuses
+to be embedded. See [Finding broken views](#finding-broken-views).
+
+**What do I run after upgrading?** `ckan db upgrade -p webpage_view_plus`, every time, then
+restart CKAN. Settings are checked at startup, and an unsafe combination stops CKAN with a
+message naming the setting.
+
+**Will it slow down dataset pages?** No. Frames load only when scrolled into view, and showing
+a page never fetches anything from another site: the frameability check and thumbnails are
+made when a view is saved and only read afterwards. Thumbnails add one database query per
+dataset page. With view counting on, each page view that shows a counted view adds a count.
+
+**Does it work with private datasets?** Yes. A view of a private resource shows only to people
+who may see it, as in CKAN. An upload served from your separate domain gets a short-lived
+signed address there, since that domain has no logins; it stops working within one to two
+`url_ttl` windows (5 to 10 minutes by default). See [Deploying a content origin](#deploying-a-content-origin).
+
+**We run several CKAN servers behind a load balancer. Anything to know?** Give every server
+the same `signing_secret`, so an address signed on one is accepted by another, and point your
+separate domain at the same servers as CKAN. Stored checks, thumbnails and view counts are in
+the database, so they need no shared disk. Uploads need shared storage as they always do in
+CKAN.
+
+**Which browsers does it support?** Chrome and Edge 88+, Firefox 89+ and Safari 15+, on
+desktops, phones and tablets. The protection works in every browser still in use; older ones
+just show less around the view. See [Browser support](#browser-support).
+
+**How do I turn it off or roll back?** Unsetting `content_origin` and restarting falls back to
+the sandboxed behaviour at once, with no data changes. Removing `webpage_view_plus` from
+`ckan.plugins` hides its views, as CKAN hides any view whose plugin isn't enabled, but keeps
+them in the database: enabling it again brings them back. There's no command to convert views
+back to `webpage_view`, so run `migrate --dry-run` first and back up the database before
+migrating.
+
+**Which languages does it come in?** English, German, Spanish, French, Italian, Japanese and
+Brazilian Portuguese, following the visitor's CKAN language. See [Translations](#translations).
+
+### For editors
+
+**What does "sandboxed" mean for my page?** The browser runs the page in a locked room: it
+still shows, and depending on the preset its scripts run, but it can't reach CKAN, the visitor's
+login or other tabs. A preset is a ready-made sandbox. Under `strict` nothing runs; under
+`interactive` scripts, forms, popups and downloads work, but the page can't keep logins or
+saved settings; `data-schematic` adds saved data and maps for qsv Data Schematics; `external`
+lifts the sandbox for third-party sites you trust. The last two need your site to have a
+separate domain for uploads, and run as `interactive` without one. If something in your page doesn't work,
+check what its preset allows. See [How the protection works](#how-the-protection-works).
+
+**Which preset should I pick?** `interactive`, the default, suits most charts and scripted
+pages. Use `strict` for plain HTML with no scripts, `data-schematic` for qsv Data Schematics,
+and `external` only for third-party sites you trust that need their own logins or saved
+settings. Pasting a link from a well-known service picks the preset for you. See
+[Adding a view](#adding-a-view).
+
+**Why does my view show "doesn't allow its pages to be shown inside other sites"?** That site
+refuses to be embedded, so a browser would show an empty box; the card offers Open in new tab
+instead. A link to the page, instead of a view, is the way to share it. An `http://` page on an
+`https://` site gets a card too: browsers block it. Use its `https://` address if it has one.
+
+**The form says the service needs a separate domain for uploads. What now?** That service only
+works under `external`, which needs your site to have a
+[separate domain for uploads](#a-separate-domain-for-uploads). Ask your site administrator, or
+link to the page instead of embedding it.
+
+**Why did my YouTube link change to youtube-nocookie.com?** It's YouTube's privacy-enhanced
+mode, in which YouTube says it stores nothing about visitors until they play the video. The
+video is the same. See
+[Well-known services: recognised links](#well-known-services-recognised-links).
+
+**Why are my qsv Data Schematic's maps blank?** Maps and saved data need the
+`data-schematic` preset and a separate domain for uploads. Without one, the schematic runs as
+`interactive`: its charts work, its maps don't. On CKAN 2.10 and 2.11 with cloud storage it
+runs that way too.
+
+**Can I upload a page that uses separate CSS, JavaScript or image files?** Not as separate
+files: a view shows one uploaded file, and a link from it to `style.css` or `chart.js` beside
+it gets the page itself back, not that file. Upload a single HTML file with its styles,
+scripts and images inside it (as data URLs), the way qsv Data Schematics are built. Files on
+other public sites, such as a library from a CDN, load as usual.
+
+**Can I embed a private Google Sheet, Power BI report, or a dashboard that needs a login?**
+Generally not: only public embeds work, as visitors would need their own login to that service
+inside your page. Publish it to the web first (Google's "Publish to web", Power BI's "Publish
+to web"), or link to it instead. See
+[Well-known services: recognised links](#well-known-services-recognised-links).
+
+**How tall will my view be?** You choose: a fixed height, a share of the browser window, an
+aspect ratio such as 16:9 for video, or Auto, where the page reports its own height (qsv Data
+Schematics do). See [Adding a view](#adding-a-view).
+
+**Can my own web page set its view's height?** Yes: with Auto height, have the page post
+`{type: "webpageviewplus:resize", height: <px>}` to its parent window when it loads and
+whenever its height changes. See [Auto height for your own pages](#auto-height-for-your-own-pages).
+
+**Why does my view look different on a phone?** It adapts to small screens. A tall view shows
+"Tap to interact" first, so visitors can still scroll past it; views sized to the window or to
+an aspect ratio get taller on narrow screens; Fullscreen becomes Expand on iPhones; and a
+phone saving data gets a Load button instead of loading the page at once. See
+[Accessibility, phones and tablets](#accessibility-phones-and-tablets).
+
+**How do I get a picture in the resource list?** Where your site has thumbnails on, pick an
+image uploaded to the same dataset under "Thumbnail in the resource list" in the view form.
+Without one, a well-known service shows its own thumbnail or logo, and where the site allows it
+the page's own preview image is used; tick "Don't use the page's own preview image" to leave
+that out. See [Thumbnails in the resource list](#thumbnails-in-the-resource-list).
+
+**Why do visitors see "This view loads content from …" first?** That's the consent card: the
+site, or you for this view, asked visitors to agree before a third-party page loads, since
+loading it tells that site who is looking. Visitors can choose to always load pages from that
+site. See [Privacy and telemetry](#privacy-and-telemetry).
+
+**Can I loosen a view's sandbox myself?** Not unless your site allows it: the advanced sandbox
+and browser-feature fields are for sysadmins, so the preset is the editor's choice.
+
+**Can I see how often my view is viewed?** Where your site has view counting on, tick "Count
+visits" on the view; its daily totals then show in the view form. Visitors see that the view
+counts visits, and nothing about them is kept. See [Opt-in view counting](#opt-in-view-counting).
+
+
 ## Advanced
 
 The details behind the sections above: how the protection works, browser versions, deployment,
