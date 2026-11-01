@@ -36,6 +36,9 @@ order now being built:
    (`resize_message.html`), clamping, malformed heights, the viewport re-sent on window resize,
    and the fallback height when a page never reports. `post_from_frame` and `record_heights`
    (`wvp_helpers.py`) post as the framed page and record every height the script sets.
+   `test_thumbnails.py` checks the dataset page's resource list: a picked upload, a service
+   logo (Vimeo), a name without a logo (Power BI), unchanged rows, the `:has()` gutter and axe.
+   Browser CI enables `webpage_view_plus_thumbnails` (`ci.ini`) and installs `.[thumbnails]`.
 6. Done: accessibility. Skip link, live region, focus, contrast and forced colours, axe-core in
    the suite, and reflow: at 320px wide (400% zoom) every frame gets a 600px floor, and a view
    that hides its bar still shows Open in new tab unless the site's `controls` drops `open`.
@@ -407,3 +410,5 @@ WVP_BROWSERS="chromium firefox" WVP_CHROMIUM_CHANNEL=chrome WVP_FIREFOX_CHANNEL=
   stock Firefox over WebDriver BiDi drops synthesized clicks into cross-origin frames.
 - To check a negative test isn't vacuous, break the check in `webpageviewplus.js` (the dev site
   serves edits live), run it, and restore the file. `git diff` on it must be empty before a commit.
+  CSS bundles (`thumbnails.css`, `style.css`) can stay stale after a restore: `touch` the file
+  and check the served bundle has the rule back before running anything else.

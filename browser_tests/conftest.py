@@ -43,6 +43,12 @@ def view_urls():
 
 
 @pytest.fixture(scope="session")
+def dataset_url():
+    """The seeded dataset's page, with its resource list."""
+    return "{}/dataset/{}".format(BASE_URL, DATASET)
+
+
+@pytest.fixture(scope="session")
 def playwright():
     with sync_playwright() as p:
         yield p
