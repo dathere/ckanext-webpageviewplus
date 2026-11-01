@@ -504,8 +504,14 @@
       status.appendChild(button);
       status.classList.add("alert", "alert-info");
     }
+    // With no page URL the view shows the resource itself, so suggest from
+    // its address (a link to an Office file, a YouTube page...).
+    var resourceUrl = (status.getAttribute("data-resource-url") || "").trim();
+    function target() {
+      return input.value.trim() || resourceUrl;
+    }
     function run() {
-      var url = input.value.trim();
+      var url = target();
       var request = ++current;
       if (!url) { show(null); return; }
       var query = "?resource_id=" + encodeURIComponent(status.getAttribute("data-resource-id")) +
@@ -513,7 +519,7 @@
       fetch(status.getAttribute("data-api") + query, {credentials: "same-origin"})
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (body) {
-          if (request !== current || input.value.trim() !== url || !body || !body.success) return;
+          if (request !== current || target() !== url || !body || !body.success) return;
           show(body.result);
         })
         .catch(function () {});

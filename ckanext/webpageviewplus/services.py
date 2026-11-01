@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import Callable, Optional
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 
 @dataclass(frozen=True)
@@ -590,6 +590,53 @@ def _jupyter(host: str, path: str, query: dict[str, list[str]]) -> Optional[Sugg
     return None
 
 
+OFFICE = "Microsoft Office"
+_OFFICE_VIEWER = "view.officeapps.live.com"
+# Formats Microsoft's viewer was seen rendering from a public link, in Chrome.
+# It can't open OpenDocument (.odt, .ods, .odp), and a .xlsb didn't open.
+OFFICE_EXTENSIONS = ("doc", "docx", "xls", "xlsx", "ppt", "pptx", "ppsx")
+_SLIDES = ("ppt", "pptx", "ppsx")
+
+
+def _extension(path: str) -> str:
+    name = path.rsplit("/", 1)[-1]
+    return name.rpartition(".")[2].lower() if "." in name else ""
+
+
+def _office_file(url: str) -> Optional[str]:
+    """``url`` rebuilt, if Microsoft's viewer could fetch it: a public http(s)
+    address with no credentials, on the default port, of a format it opens
+    (or with no extension, as some download links have)."""
+    try:
+        parts = urlsplit(url.strip())
+        port = parts.port
+    except ValueError:
+        return None
+    host = (parts.hostname or "").lower().rstrip(".")
+    if parts.scheme.lower() not in ("http", "https") or not host or ":" in host:
+        return None
+    if parts.username or parts.password or port not in (None, 80, 443) or host == _OFFICE_VIEWER:
+        return None
+    extension = _extension(parts.path)
+    if extension and extension not in OFFICE_EXTENSIONS:
+        return None
+    return urlunsplit((parts.scheme.lower(), host, parts.path or "/", parts.query, ""))
+
+
+def _office(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:
+    # Microsoft's viewer fetches the file from its own servers, so the file
+    # must be public. Only src is kept, rebuilt from the checked address.
+    if host != _OFFICE_VIEWER or path.rstrip("/") not in ("/op/view.aspx", "/op/embed.aspx"):
+        return None
+    src = query.get("src") or []
+    inner = _office_file(src[0]) if len(src) == 1 else None
+    if inner is None:
+        return None
+    height = ("aspect", "16/9") if _extension(urlsplit(inner).path) in _SLIDES else ("fixed", "800")
+    return Suggestion(OFFICE, "https://{}/op/embed.aspx?{}".format(
+        _OFFICE_VIEWER, urlencode({"src": inner})), "external", *height)
+
+
 SERVICES: tuple[Callable[[str, str, dict[str, list[str]]], Optional[Suggestion]], ...] = (
     _youtube, _vimeo, _datawrapper, _flourish, _observable, _tableau,
     _power_bi, _storymaps, _carto, _plotly_cloud, _google_forms, _typeform,
@@ -598,6 +645,8 @@ SERVICES: tuple[Callable[[str, str, dict[str, list[str]]], Optional[Suggestion]]
     _felt, _umap, _openstreetmap, _internet_archive, _sketchfab,
     # Last: _jupyter takes any public .ipynb URL.
     _colab, _jupyter,
+    # suggest() also routes a bare link to an Office file here.
+    _office,
 )
 
 # The names suggestions carry, in SERVICES order, for the view form's help.
@@ -607,7 +656,7 @@ NAMES: tuple[str, ...] = (
     "ArcGIS Online", "Looker Studio", "Google Sheets", "Google Docs", "Google Slides",
     "Our World in Data", "Streamlit", "Hugging Face Spaces", "shinyapps.io", "Infogram",
     "Felt", "uMap", "OpenStreetMap", "Internet Archive", "Sketchfab",
-    "Google Colab", "Jupyter",
+    "Google Colab", "Jupyter", OFFICE,
 )
 
 
@@ -644,8 +693,10 @@ LOGOS: dict[str, str] = {
 # shows the logo above, if any. Checked 2026-10-31 by fetching each
 # service's stored embed URL. The other services' embed pages show their
 # content (Google Sheets, Felt...) or have no preview image at all, except
-# Observable, which answered 429 (rate limited) and is unchecked.
-GENERIC_PREVIEWS: frozenset[str] = frozenset({"Power BI", "Looker Studio", "Typeform"})
+# Observable, which answered 429 (rate limited) and is unchecked. Microsoft
+# Office's viewer page has none, and fetching it would only send the file's
+# address to Microsoft once more, so it's skipped too.
+GENERIC_PREVIEWS: frozenset[str] = frozenset({"Power BI", "Looker Studio", "Typeform", OFFICE})
 
 
 def _parts(embed_url: str) -> list[str]:
@@ -693,4 +744,9 @@ def suggest(url: str) -> Optional[Suggestion]:
         found = service(host, parts.path, query)
         if found:
             return found
+    # A link to an Office file on any host: shown through Microsoft's viewer.
+    if _extension(parts.path) in OFFICE_EXTENSIONS:
+        inner = _office_file(url)
+        if inner:
+            return _office(_OFFICE_VIEWER, "/op/embed.aspx", {"src": [inner]})
     return None

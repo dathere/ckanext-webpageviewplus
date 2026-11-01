@@ -215,8 +215,9 @@ order now being built:
   Public, ArcGIS StoryMaps and Online, Looker Studio, Infogram, uMap, OpenStreetMap (its embed
   address only: a page's position is in the #fragment; sandboxed, its tiles carry no Referer
   and its tile servers block them), Internet Archive,
-  Sketchfab, Google Forms (renders without an origin but its inputs stay disabled) and
-  Typeform need `allow-same-origin`, hence `external`, and so do Plotly Cloud, Streamlit,
+  Sketchfab, Google Forms (renders without an origin but its inputs stay disabled),
+  Typeform and Microsoft's Office viewer (`services._office`; it renders, then fails on scroll
+  under `interactive`) need `allow-same-origin`, hence `external`, and so do Plotly Cloud, Streamlit,
   Hugging Face Spaces and shinyapps.io apps: some work in `interactive`, some don't. A query
   that picks content (Our World in Data, app state) is kept whole (`services._state`) or the
   suggestion is declined, never dropped. `interactive` and `data-schematic` include `allow-forms` so plain
@@ -229,7 +230,13 @@ order now being built:
   in one for that reason). Plotly Chart Studio closed in 2025; Superset and Dash are
   self-hosted, so the README explains them instead. A new service also goes in
   `services.NAMES` (the form's page URL help lists them; `test_names_cover_every_service`
-  fails otherwise) and in the README's table, linked.
+  fails otherwise) and in the README's table, linked. Microsoft Office is the one service
+  matched on any host: `suggest()` routes a link ending in `services.OFFICE_EXTENSIONS` to
+  `_office` as a `view.officeapps.live.com/op/embed.aspx?src=` address, rebuilt from the
+  checked file URL. Its viewer fetches the file itself, so `service_suggest` reports
+  `private_dataset`, and `for_resource`/`service_format` keep the file's own format.
+  OpenDocument isn't listed: neither Microsoft's viewer nor Google's opens it. With an empty
+  page URL, the form suggests from the resource's own URL (`data-resource-url`).
 - `health.py`: views whose page can't be shown. **Rendering never fetches**: with
   `frameability_check` on, `resource_view_create`/`_update` are chained (`actions.py`) to probe
   the page once after the save (`health.after_save`, `SAVE_SECONDS` overall via

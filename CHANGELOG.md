@@ -11,6 +11,14 @@
   (maps, saved data) instead of sandboxed on CKAN's address. The storage's hash is the ETag, so
   an unchanged page revalidates with a 304 without being read again. Picked thumbnails and
   `migrate`'s schematic check read them too.
+- A 30th well-known service: Word, Excel and PowerPoint files (`.doc`, `.docx`, `.xls`, `.xlsx`,
+  `.ppt`, `.pptx`, `.ppsx`) shown through Microsoft's online viewer, with `external` (checked in
+  Chrome: under `interactive` its pages fail as soon as you scroll). Paste a public file's
+  address, or Microsoft's `view.aspx` address, and the form suggests the viewer; with no page
+  URL it suggests from the resource's own address, for any service. The form says a file in a
+  private dataset can't be shown, as Microsoft fetches it. Sites offer the view on Office
+  resources by adding their formats to `ckanext.webpageviewplus.formats`. OpenDocument files
+  aren't supported: neither Microsoft's viewer nor Google's opens them.
 
 ### Changed
 

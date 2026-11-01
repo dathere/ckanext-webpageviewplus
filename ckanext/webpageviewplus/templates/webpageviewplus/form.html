@@ -37,6 +37,7 @@
      data-webpageviewplus-service
      data-api="{{ h.url_for('api.action', ver=3, logic_function='webpageviewplus_service_suggest') }}"
      data-resource-id="{{ resource.id }}"
+     data-resource-url="{{ resource.url }}"
      data-preset-names="{{ preset_names | tojson | forceescape }}"
      data-found="{{ _('This is a {service} page. Use its embed address and the settings its embed needs?') }}"
      {# TRANSLATORS: a button accepting the suggested embed address and settings. #}
@@ -44,7 +45,8 @@
      data-applied="{{ _('Using the embed address and settings for {service}. Save the view to keep them.') }}"
      data-needs-content-origin="{{ _('{service} only works with the {preset} preset, which this site runs as Interactive until it serves uploads from a separate content origin, so it won\'t play here yet.') }}"
      data-preset-not-allowed="{{ _('{service} only works with the {preset} preset, which this site doesn\'t allow.') }}"
-     data-host-not-allowed="{{ _('{service} embeds come from {host}, which isn\'t on this site\'s list of allowed hosts.') }}"></div>
+     data-host-not-allowed="{{ _('{service} embeds come from {host}, which isn\'t on this site\'s list of allowed hosts.') }}"
+     data-private-dataset="{{ _('{service}\'s viewer fetches the file from its own servers, so it can\'t show a file in a private dataset.') }}"></div>
 {% if frameability_check %}
   <div class="webpageviewplus-frameability" role="status" aria-live="polite"
        data-webpageviewplus-frameability

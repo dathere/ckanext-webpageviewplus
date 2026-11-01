@@ -46,6 +46,7 @@ RECOGNISED = [
     "https://archive.org/details/night_of_the_living_dead_dvd",
     "https://sketchfab.com/models/" + SKETCH,
     "https://colab.research.google.com/github/" + NB_PATH, "https://github.com/" + NB_PATH,
+    "https://files.example.org/reports/budget.docx",
 ]
 
 
@@ -321,6 +322,46 @@ def test_video_settings():
         assert services.suggest(url).preset == "external", url
 
 
+OFFICE_EMBED = "https://view.officeapps.live.com/op/embed.aspx?src="
+
+
+@pytest.mark.parametrize("url, src, height", [
+    ("https://files.example.org/r/budget.docx",
+     "https%3A%2F%2Ffiles.example.org%2Fr%2Fbudget.docx", ("fixed", "800")),
+    ("http://files.example.org/r/Deck.PPTX?dl=1#slide=2",
+     "http%3A%2F%2Ffiles.example.org%2Fr%2FDeck.PPTX%3Fdl%3D1", ("aspect", "16/9")),
+    # Microsoft's own addresses: view.aspx becomes embed.aspx, only src is kept.
+    ("https://view.officeapps.live.com/op/view.aspx?src=https%3A%2F%2Fx.org%2Fa.xlsx&wdStartOn=2",
+     "https%3A%2F%2Fx.org%2Fa.xlsx", ("fixed", "800")),
+    # A download link with no extension, through the viewer.
+    ("https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fx.org%2Fdownload%2F7",
+     "https%3A%2F%2Fx.org%2Fdownload%2F7", ("fixed", "800")),
+])
+def test_office_documents(url, src, height):
+    found = services.suggest(url)
+    assert found.service == "Microsoft Office"
+    assert found.embed_url == OFFICE_EMBED + src
+    assert found.preset == "external"
+    assert (found.height_mode, found.height_value) == height
+
+
+@pytest.mark.parametrize("url", [
+    # OpenDocument: the viewer can't open it.
+    "https://files.example.org/r/minutes.odt",
+    "https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fx.org%2Fa.ods",
+    # Not a public http(s) address it could fetch.
+    "https://view.officeapps.live.com/op/embed.aspx?src=javascript%3Aalert(1)",
+    "https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fu%3Ap%40x.org%2Fa.docx",
+    "https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fx.org%3A8080%2Fa.docx",
+    "https://view.officeapps.live.com/op/embed.aspx",
+    "https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fa.org%2Fa.docx&src=https%3A%2F%2Fb.org%2Fb.docx",
+    "ftp://files.example.org/r/budget.docx",
+    "https://view.officeapps.live.com/op/other.aspx?src=https%3A%2F%2Fx.org%2Fa.docx",
+])
+def test_office_refused(url):
+    assert services.suggest(url) is None
+
+
 def test_suggested_heights_are_valid():
     for url in RECOGNISED:
         found = services.suggest(url)
@@ -377,6 +418,21 @@ class TestAction:
         result = self._call(factories.Sysadmin(), resource_id=self._resource()["id"],
                             url="https://youtu.be/dQw4w9WgXcQ")
         assert result["problem"] == "preset_not_allowed"
+
+    def test_office_file_in_private_dataset(self):
+        org = factories.Organization()
+        private = factories.Dataset(owner_org=org["id"], private=True)
+        resource = factories.Resource(package_id=private["id"], url="https://x.example/a.docx")
+        result = self._call(factories.Sysadmin(), resource_id=resource["id"],
+                            url="https://x.example/a.docx")
+        assert result["service"] == "Microsoft Office"
+        assert result["problem"] == "private_dataset"
+
+    def test_office_file_in_public_dataset(self):
+        resource = factories.Resource(url="https://x.example/a.docx")
+        result = self._call(factories.Sysadmin(), resource_id=resource["id"],
+                            url="https://x.example/a.docx")
+        assert result["problem"] == "needs_content_origin"
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.allowed_hosts", "pages.example.com")
     def test_host_not_allowed(self):

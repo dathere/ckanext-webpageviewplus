@@ -77,8 +77,9 @@ def webpageviewplus_service_suggest(
     :returns: ``None``, or ``{"service", "embed_url", "preset",
         "height_mode", "height_value", "problem"}``, where ``problem`` is
         ``""`` or why the settings won't work on this site:
-        ``"preset_not_allowed"``, ``"needs_content_origin"`` or
-        ``"host_not_allowed"``.
+        ``"private_dataset"`` (Microsoft's Office viewer fetches the file
+        itself, so it can't show a private dataset's), ``"preset_not_allowed"``,
+        ``"needs_content_origin"`` or ``"host_not_allowed"``.
     """
     toolkit.check_access("webpageviewplus_service_suggest", context, data_dict)
     found = services.suggest(toolkit.get_or_bust(data_dict, "url"))
@@ -86,7 +87,11 @@ def webpageviewplus_service_suggest(
         return None
     problem = ""
     allowed = settings.allowed_hosts()
-    if found.preset not in settings.allowed_presets():
+    resource = model.Resource.get(data_dict.get("resource_id") or "")
+    if found.service == services.OFFICE and resource is not None \
+            and resource.package is not None and resource.package.private:
+        problem = "private_dataset"
+    elif found.preset not in settings.allowed_presets():
         problem = "preset_not_allowed"
     elif frame.PRESETS[found.preset].needs_content_origin \
             and not settings.isolating_content_origin():

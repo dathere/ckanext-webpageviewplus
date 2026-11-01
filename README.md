@@ -48,7 +48,7 @@ loading third-party pages, and opt in to anonymous view counts.
 | Controls | CKAN's Fullscreen and Embed links | the same, plus a bar under the view: Open in new tab, Fullscreen (Expand on iPhone), Reload, Share |
 | Accessibility | a generic "Webpage view" title | the view's title read out, a skip link, announcements, works at 400% zoom |
 | Pages that can't be shown | a blank frame | a card saying why, with Open in new tab |
-| Editor help | none | paste a link from one of 29 well-known services and the form fills in the embed settings; optional warning when a site refuses to be embedded |
+| Editor help | none | paste a link from one of 30 well-known services and the form fills in the embed settings; optional warning when a site refuses to be embedded |
 | Resource list | a format label | optionally a thumbnail: an image the editor picks, the page's own preview image, or the service's thumbnail or logo |
 | Finding broken views | none | one command lists views (core's too) whose page is gone or refuses to be embedded |
 | Telemetry | none | none by default; opt-in view counting |
@@ -128,7 +128,8 @@ the embed address, preset and height that service needs:
 - **Maps:** ArcGIS Online, ArcGIS StoryMaps, CARTO, Felt, uMap, OpenStreetMap
 - **Apps and notebooks:** Plotly Cloud, Streamlit, Hugging Face Spaces, shinyapps.io, Jupyter
   notebooks, Google Colab
-- **Documents and forms:** Google Sheets, Docs, Slides and Forms, Typeform
+- **Documents and forms:** Google Sheets, Docs, Slides and Forms, Typeform, and Word, Excel and
+  PowerPoint files through Microsoft's online viewer
 - **Video and collections:** YouTube, Vimeo, Internet Archive, Sketchfab
 
 Click "Use them" to accept; nothing changes until you do. Only public embeds work. More than half
@@ -422,6 +423,14 @@ inside your page. Publish it to the web first (Google's "Publish to web", Power 
 to web"), or link to it instead. See
 [Well-known services: recognised links](#well-known-services-recognised-links).
 
+**Can I show a Word, Excel or PowerPoint file?** Yes, if it's public and your site has a
+separate domain for uploads: paste the file's address as the page URL, or leave the page URL
+empty on the file's own resource, and the form suggests Microsoft's online viewer. Files in
+private datasets can't be shown that way, since Microsoft fetches the file itself, and
+OpenDocument files (`.odt`, `.ods`, `.odp`) aren't supported. Your site administrator decides
+whether Office resources offer the view. See
+[Well-known services: recognised links](#well-known-services-recognised-links).
+
 **How tall will my view be?** You choose: a fixed height, a share of the browser window, an
 aspect ratio such as 16:9 for video, or Auto, where the page reports its own height (qsv Data
 Schematics do). See [Adding a view](#adding-a-view).
@@ -592,13 +601,14 @@ checked in Chrome under each preset:
 | [Sketchfab](https://sketchfab.com/) | 3D models, `sketchfab.com/3d-models/<name>-<id>` or `sketchfab.com/models/<id>` | `external` | 16/9 |
 | [Google Colab](https://colab.research.google.com/) | notebooks Colab opens from GitHub, `colab.research.google.com/github/...`, shown read-only through [nbviewer](https://nbviewer.org/) (Colab itself refuses every frame; Drive notebooks can't be shown) | `interactive` | 800 px |
 | [Jupyter](https://jupyter.org/) | any public `.ipynb`: `github.com/.../blob/...`, `raw.githubusercontent.com/...`, `gist.github.com/<user>/<id>`, `nbviewer.org/...`, or any `https://` URL ending `.ipynb` (without a query), shown read-only through nbviewer | `interactive` | 800 px |
+| [Microsoft Office](https://www.microsoft.com/microsoft-365/free-office-online-for-the-web) | public Word, Excel and PowerPoint files (`.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`, `.ppsx`) on any site, CKAN's own uploads included, or Microsoft's own `view.officeapps.live.com/op/view.aspx?src=...` address, shown through Microsoft's viewer | `external` | 800 px; slides 16/9 |
 
 YouTube, Vimeo, Observable, Tableau Public, ArcGIS StoryMaps and ArcGIS Online, Looker
 Studio, Infogram, uMap, the Internet Archive and Sketchfab fail inside a sandbox without
 `allow-same-origin`, and so does OpenStreetMap (its map tiles then carry no Referer, which
 its tile servers block), as do Google Forms and Typeform (without it a Google Form shows but its
-inputs stay disabled), and Streamlit, shinyapps.io and some Plotly Cloud apps (it depends on
-the app). They need `external`, and so a content origin; Hugging Face Spaces get it too, as
+inputs stay disabled), Streamlit, shinyapps.io and some Plotly Cloud apps (it depends on
+the app), and Microsoft's Office viewer (its pages go blank or fail as soon as you scroll). They need `external`, and so a content origin; Hugging Face Spaces get it too, as
 apps that call their own server. On a site without one, the form says so instead of
 offering settings that won't play.
 
@@ -608,6 +618,17 @@ YouTube's player, though, so it's not consent: to load nothing from YouTube unti
 agrees, turn on `consent_gate`. Hosts in `allowed_hosts` must match exactly, so a site that
 lists only `www.youtube.com` must also list `www.youtube-nocookie.com`, or the form reports
 that the suggested address isn't allowed.
+
+**Microsoft Office files** are shown by Microsoft's online viewer, which fetches the file from
+Microsoft's own servers. So the file must be public: for a resource in a private dataset the
+form says it can't be shown. Each view sends the visitor to Microsoft and gives Microsoft the
+file's address, so consider `consent_gate`; with `allowed_hosts`, list
+`view.officeapps.live.com`. To offer the view on Office resources, add their formats to
+`ckanext.webpageviewplus.formats` (for example `html htm doc docx xls xlsx ppt pptx ppsx`);
+with no page URL, the form then suggests the viewer for the resource's own file. The resource
+list keeps the file's own format (DOCX, XLSX...). The viewer can't open OpenDocument files
+(`.odt`, `.ods`, `.odp`), and neither can Google's. [ckanext-officedocs](https://github.com/jqnatividad/ckanext-officedocs)
+shows Office files without a sandbox, so it also works on sites without a separate domain.
 
 Only public embeds are recognised. Power BI reports shared inside an organisation and private
 CARTO maps need the viewer's login or an access token (as do private Plotly Cloud apps), and

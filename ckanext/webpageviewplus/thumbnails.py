@@ -497,7 +497,8 @@ def service_format(context: dict[str, Any], view: dict[str, Any]) -> None:
         if views != 1:
             return
         found = services.suggest(view.get("page_url") or resource.url or "")
-        if found is None:
+        # An Office document keeps its own format (DOCX...), not the viewer's name.
+        if found is None or found.service == services.OFFICE:
             return
         # The editor may already change this resource (adding views needs
         # it); auth is skipped so a theme's stricter resource_update rules
@@ -525,7 +526,8 @@ def for_resource(pkg: dict[str, Any], res: dict[str, Any]) -> Optional[dict[str,
     service = None
     if len(views) == 1:
         found = services.suggest(config.get("page_url") or res.get("url") or "")
-        service = found.service if found else None
+        # An Office document keeps its own format label (DOCX...).
+        service = found.service if found and found.service != services.OFFICE else None
     src = None
     source = source_for(config, res.get("url") or "", res.get("url_type") or "")
     if source and plus["digest"] and plus["source"] == source \
