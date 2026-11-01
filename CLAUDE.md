@@ -247,7 +247,8 @@ order now being built:
   page URL, the form suggests from the resource's own URL (`data-resource-url`).
 - `pdf.py` + `PdfViewPlusPlugin` (`plugin.py`): the `pdf_view_plus` view type (a plugin of its
   own, needing `webpage_view_plus`; `can_view` only with an isolating content origin). PDF.js
-  is vendored in `pdfjs/<PDFJS_VERSION>/` by `scripts/vendor_pdfjs.py` (pinned SHA-256; no maps,
+  is vendored in `pdfjs/<PDFJS_VERSION>/` by `scripts/vendor_pdfjs.py` (the legacy build: the
+  modern one skips Babel/core-js and needs the newest browsers; pinned SHA-256; no maps,
   debugger, scripting sandbox; English + 10 languages from the datashades.info census), which
   also copies `scripts/pdfjs/wvp-viewer.{js,css}` in: options set on `webviewerloaded`
   (scripting off, read-only, no ranges, the page's language as `wvp_lang`) and the hidden

@@ -5,8 +5,8 @@
 ### Added
 
 - A second view type, **PDF (Plus)** (plugin `pdf_view_plus`, after `webpage_view_plus`), on
-  sites with a content origin. It shows PDFs with PDF.js 6.5.438, which ships with the
-  extension and is served from the content origin only, in the `data-schematic` sandbox. The
+  sites with a content origin. It shows PDFs with PDF.js 6.5.438 (its legacy build, for
+  Chrome and Edge 125+, Firefox ESR and Safari 18+), which ships with the extension and is served from the content origin only, in the `data-schematic` sandbox. The
   same viewer runs in every browser, phones included, where ckanext-pdfview's browser viewer
   shows nothing; Chrome refuses its own viewer in any sandbox. Uploaded PDFs come from CKAN's
   storage, with signed URLs for private datasets. PDFs on other sites (the view's PDF url, or

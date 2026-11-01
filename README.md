@@ -639,7 +639,7 @@ For reference, the current versions as of October 2026 are Chrome 156, Edge 156,
 and Safari 27 (macOS and iOS). Minimum versions and dates are from MDN's
 [browser-compat-data](https://github.com/mdn/browser-compat-data).
 
-**The PDF (Plus) view needs newer browsers:** the bundled PDF.js 6.5.438 targets Chrome and
+**The PDF (Plus) view needs newer browsers:** the bundled PDF.js 6.5.438 (its legacy build) targets Chrome and
 Edge 125+ (May 2024), Firefox's current Extended Support Release (153, Jul 2026) or newer, and
 Safari 18+ (Sep 2024). Older browsers may show a blank
 viewer; Open in new tab still reaches the file. It needs JavaScript.

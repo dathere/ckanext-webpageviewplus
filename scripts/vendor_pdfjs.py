@@ -9,7 +9,7 @@ only the languages in LOCALES. viewer.html also loads wvp-viewer.js and
 wvp-viewer.css, copied from scripts/pdfjs/: they set the viewer's options
 and hide its editing, download and print buttons.
 
-To update: change VERSION and SHA256 (from the release's dist zip), run it,
+To update: change VERSION and SHA256 (from the release's legacy dist zip), run it,
 delete the old version's folder, and change pdf.PDFJS_VERSION.
 """
 from __future__ import annotations
@@ -24,8 +24,12 @@ import urllib.request
 import zipfile
 
 VERSION = "6.5.438"
-SHA256 = "fcbe9ba21d9911843e3502adc178a7f549a524a4055f887bedc942e5490c6ba1"
-URL = "https://github.com/mozilla/pdf.js/releases/download/v{0}/pdfjs-{0}-dist.zip"
+SHA256 = "55138aa33b5f1f6f68809895338b947f395f344eb6381d424b2420d6daa6a844"
+# The legacy build: compiled with Babel and core-js for PDF.js's stated
+# targets (Chrome 125+, Firefox ESR, Safari 18+). The modern build skips that
+# and needs whatever the newest browsers have (Map.getOrInsertComputed:
+# Chrome 145, Safari 26.2).
+URL = "https://github.com/mozilla/pdf.js/releases/download/v{0}/pdfjs-{0}-legacy-dist.zip"
 # English and the ten languages CKAN portals most often default to
 # (datashades.info census, 2026): Spanish, Brazilian Portuguese, Thai,
 # German, Italian, French, Japanese, Indonesian, Ukrainian, Turkish.
