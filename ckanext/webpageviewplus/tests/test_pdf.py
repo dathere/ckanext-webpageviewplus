@@ -1,5 +1,6 @@
 import io
 import os
+from types import SimpleNamespace
 from urllib.parse import parse_qs, unquote, urlsplit
 
 import pytest
@@ -349,6 +350,10 @@ def test_offered_for_pdfs():
 
 
 def test_needs_main_plugin(monkeypatch):
-    monkeypatch.setattr(plugin.plugins, "plugin_loaded", lambda name: False)
+    # Patches plugin.py's own name only: patching ckan.plugins.plugin_loaded
+    # would also fool with_plugins' teardown, which then unloads nothing
+    # and leaves this module's plugins loaded for later tests (CKAN 2.10).
+    monkeypatch.setattr(plugin, "plugins", SimpleNamespace(
+        plugin_loaded=lambda name: False, SingletonPlugin=plugin.plugins.SingletonPlugin))
     with pytest.raises(CkanConfigurationException):
         plugin.PdfViewPlusPlugin().configure({})
