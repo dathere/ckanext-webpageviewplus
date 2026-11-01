@@ -620,7 +620,10 @@ def _office_file(url: str) -> Optional[str]:
     extension = _extension(parts.path)
     if extension and extension not in OFFICE_EXTENSIONS:
         return None
-    return urlunsplit((parts.scheme.lower(), host, parts.path or "/", parts.query, ""))
+    scheme = parts.scheme.lower()
+    # A port only goes if it's the scheme's default: https://host:80/ isn't https://host/.
+    netloc = host if port in (None, {"http": 80, "https": 443}[scheme]) else "{}:{}".format(host, port)
+    return urlunsplit((scheme, netloc, parts.path or "/", parts.query, ""))
 
 
 def _office(host: str, path: str, query: dict[str, list[str]]) -> Optional[Suggestion]:

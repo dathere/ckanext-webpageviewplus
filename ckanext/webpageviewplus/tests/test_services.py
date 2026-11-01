@@ -333,6 +333,13 @@ OFFICE_EMBED = "https://view.officeapps.live.com/op/embed.aspx?src="
     # Microsoft's own addresses: view.aspx becomes embed.aspx, only src is kept.
     ("https://view.officeapps.live.com/op/view.aspx?src=https%3A%2F%2Fx.org%2Fa.xlsx&wdStartOn=2",
      "https%3A%2F%2Fx.org%2Fa.xlsx", ("fixed", "800")),
+    # A default port goes; any other one stays, or Microsoft would fetch elsewhere.
+    ("https://files.example.org:443/r/a.docx",
+     "https%3A%2F%2Ffiles.example.org%2Fr%2Fa.docx", ("fixed", "800")),
+    ("https://files.example.org:80/r/a.docx",
+     "https%3A%2F%2Ffiles.example.org%3A80%2Fr%2Fa.docx", ("fixed", "800")),
+    ("http://files.example.org:443/r/a.docx",
+     "http%3A%2F%2Ffiles.example.org%3A443%2Fr%2Fa.docx", ("fixed", "800")),
     # A download link with no extension, through the viewer.
     ("https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fx.org%2Fdownload%2F7",
      "https%3A%2F%2Fx.org%2Fdownload%2F7", ("fixed", "800")),
