@@ -55,6 +55,14 @@ def test_external_never_applies_to_uploads():
     assert "external_not_for_uploads" in f.notices
 
 
+def test_pasted_content_origin_url_counts_as_an_upload():
+    # A page_url pointing at an upload's content URL: still user content.
+    f = build(content_origin=CO, url=CO + "/webpageviewplus/content/r/a.html",
+              preset="external")
+    assert f.preset == "interactive"
+    assert "external_not_for_uploads" in f.notices
+
+
 def test_upload_not_on_content_origin_counts_as_ckan():
     # e.g. the CKAN-origin download URL: scripts may not keep their origin.
     f = build(

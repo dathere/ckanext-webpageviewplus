@@ -30,7 +30,8 @@ def frameability_auth(context: Context, data_dict: dict[str, Any]) -> dict[str, 
             context,
             {"resource_id": data_dict.get("resource_id")},
         )
-    except toolkit.NotAuthorized:
+    except (toolkit.NotAuthorized, toolkit.ObjectNotFound):
+        # A missing or unknown resource_id is a refusal (403), not a 404.
         return {"success": False}
     return {"success": True}
 
@@ -249,7 +250,9 @@ def webpageviewplus_view_stats_show(
     except (TypeError, ValueError):
         raise toolkit.ValidationError({"days": [toolkit._("Must be a whole number")]})
     days = max(1, min(days, settings.view_counting_retention_days()))
-    result = stats.totals(view.id, days)
+    # Before ckan db upgrade -p webpage_view_plus there's no table: no counts.
+    result = stats.totals_or_none(view.id, days) or {
+        "days": [], "totals": {k: 0 for k in stats.COUNTS}}
     result["counting"] = stats.countable(view.config or {})
     return result
 

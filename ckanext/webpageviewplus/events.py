@@ -13,9 +13,15 @@ from typing import Any
 log = logging.getLogger("ckanext.webpageviewplus.events")
 
 
+# Logged at DEBUG: one per view rendered, which CKAN's default logging
+# config (ckanext at DEBUG) would otherwise turn into a line per page view.
+QUIET = frozenset(["view_rendered"])
+
+
 def emit(event: str, **fields: Any) -> None:
     data = dict(fields, event=event)
-    log.info(
+    log.log(
+        logging.DEBUG if event in QUIET else logging.INFO,
         "%s %s",
         event,
         " ".join("{}={}".format(k, v) for k, v in sorted(fields.items())),

@@ -346,13 +346,11 @@ class ContentHostMiddleware:
 
     def __call__(self, environ: dict[str, Any], start_response: Any):
         origin = settings.content_origin()
-        if not origin:
-            return self.app(environ, start_response)
         host = frame.canonical_config_host(
             environ.get("HTTP_HOST") or environ.get("SERVER_NAME") or ""
         )
-        if host != frame.url_host(origin):
-            return self.app(environ, start_response)
+        if not origin or host != frame.url_host(origin):
+            return self.app(environ, _immutable_if_asked(environ, start_response))
         if not (environ.get("PATH_INFO") or "").startswith(
             (self.PREFIX, connections.PREFIX) + self.PDF_PREFIXES
         ):
@@ -374,6 +372,23 @@ class ContentHostMiddleware:
             return start_response(status, headers, exc_info)
 
         return self.app(environ, finish)
+
+
+IMMUTABLE_ENVIRON_KEY = "webpageviewplus.immutable"
+IMMUTABLE = "public, max-age=31536000, immutable"
+
+
+def _immutable_if_asked(environ: dict[str, Any], start_response: Any) -> Any:
+    """On CKAN's host: a view that set IMMUTABLE_ENVIRON_KEY (a public
+    response whose URL names its content, like a thumbnail's ?v=<digest>)
+    gets a year's Cache-Control. CKAN's own response hook runs after the
+    view and would set max-age=ckan.cache_expires, so it's replaced here."""
+    def finish(status: str, headers: list, exc_info: Any = None):
+        if environ.get(IMMUTABLE_ENVIRON_KEY) and status[:3] in ("200", "304"):
+            headers = [(k, v) for k, v in headers if k.lower() != "cache-control"]
+            headers.append(("Cache-Control", IMMUTABLE))
+        return start_response(status, headers, exc_info)
+    return finish
 
 
 def cache_control(status: str, visibility: Optional[str]) -> str:

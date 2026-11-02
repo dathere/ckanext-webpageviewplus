@@ -65,7 +65,9 @@ def choose_preset(
     else:
         preset, reason = settings.default_preset(), "default"
 
-    is_upload = not page_url and resource is not None and resource.url_type == "upload"
+    is_upload = (
+        not page_url and resource is not None and resource.url_type == "upload"
+    ) or frame.on_content_origin(page_url, settings.content_origin())
     if page_url:
         url = page_url
     elif (

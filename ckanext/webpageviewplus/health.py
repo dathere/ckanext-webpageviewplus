@@ -110,7 +110,9 @@ def stored(view_id: str, url: str) -> Optional[dict[str, Any]]:
     try:
         with model.meta.engine.connect() as connection:
             row = connection.execute(query).first()
-    except sa.exc.ProgrammingError:
+    except sa.exc.SQLAlchemyError:
+        # No table yet, or the database is read-only or busy: the page
+        # still renders, just without the stored check.
         return None
     return dict(row._mapping) if row else None
 

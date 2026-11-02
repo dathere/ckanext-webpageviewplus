@@ -140,11 +140,15 @@ class TestThumbnails:
         response = app.get(src)
         assert response.headers["Content-Type"] == "image/jpeg"
         assert response.headers["X-Content-Type-Options"] == "nosniff"
-        assert "public" in response.headers["Cache-Control"]
+        # The URL names the copy (v=), so browsers needn't ask again.
+        assert response.headers["Cache-Control"] == "public, max-age=31536000, immutable"
         assert response.data == row["image"]
         etag = response.headers["ETag"]
         again = app.get(src, headers={"If-None-Match": etag})
         assert again.status_code == 304
+        # Without the copy's name in the URL, CKAN's own caching applies.
+        plain = app.get(url_for("webpageviewplus_thumbnails.serve", view_id=view["id"]))
+        assert "immutable" not in plain.headers["Cache-Control"]
 
     def test_picked_image_streamed_from_storage(self, request):
         # A storage that isn't on disk (memory here; S3 and the like on real
@@ -239,6 +243,9 @@ class TestThumbnails:
         assert response.status_code == 200
         assert "private" in response.headers["Cache-Control"]
         assert "public" not in response.headers["Cache-Control"]
+        named = app.get(src + "?v=" + thumbnails.stored(view["id"])["digest"][:16],
+                        headers={"Authorization": sysadmin["token"]})
+        assert "immutable" not in named.headers["Cache-Control"]
 
     def test_unknown_view_404(self, app):
         app.get(url_for("webpageviewplus_thumbnails.serve", view_id="nope"), status=404)

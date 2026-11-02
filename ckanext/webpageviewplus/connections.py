@@ -144,7 +144,7 @@ def hosts_for(resource_id: str) -> list[dict[str, Any]]:
                 dict(r._mapping, last_seen=r.last_seen.isoformat())
                 for r in connection.execute(query)
             ]
-    except sa.exc.ProgrammingError:
+    except sa.exc.SQLAlchemyError:
         return []
 
 

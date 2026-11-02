@@ -295,6 +295,14 @@ def frame_on_ckan_host(
     return is_ckan_host(url, ckan_hosts)
 
 
+def on_content_origin(url: str, content_origin: Optional[str]) -> bool:
+    """Whether a URL is on the content origin's host: user content however
+    it got there (a pasted content URL included), so it's treated as an
+    upload and always gets a sandbox."""
+    return bool(content_origin) and bool(url_host(url)) and url_host(url) == url_host(
+        content_origin or "")
+
+
 def preset_for_upload(name: str) -> str:
     """Uploaded HTML is user content: it always gets a sandbox, so external
     (no sandbox) becomes interactive. data-schematic is the upload preset."""
@@ -398,6 +406,7 @@ def build_frame(
     same-origin rule, falling back to ``strict`` if it fails.
     """
     notices: list[str] = []
+    is_upload = is_upload or on_content_origin(url, content_origin)
     name = effective_preset_name(preset_name, content_origin)
     if name != preset_name and preset_name in PRESETS:
         notices.append("degraded")

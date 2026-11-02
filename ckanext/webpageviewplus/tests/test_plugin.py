@@ -395,6 +395,15 @@ class TestViewValidation:
             _view(factories.Sysadmin(), resource["id"], preset="external")
         assert "preset" in e.value.error_dict
 
+    def test_external_refused_for_pasted_content_url(self, content_origin):
+        from ckanext.webpageviewplus import settings
+
+        resource = factories.Resource(url="https://pages.example.com/a")
+        page = settings.content_origin() + "/webpageviewplus/content/x/report.html"
+        with pytest.raises(ValidationError) as e:
+            _view(factories.Sysadmin(), resource["id"], page_url=page, preset="external")
+        assert "preset" in e.value.error_dict
+
     def test_external_refused_for_page_on_site_url(self, ckan_config, content_origin):
         resource = factories.Resource(url="https://pages.example.com/a.html")
         with pytest.raises(ValidationError) as e:
@@ -964,6 +973,23 @@ def test_render_event_has_no_viewer_details(app, events_log, caplog):
     assert records and records[-1]["preset"] == "strict"
     assert set(records[-1]) == {"event", "preset", "requested_preset", "notices", "endpoint"}
     assert "probe-agent" not in caplog.text and "127.0.0.1" not in caplog.text
+
+
+def test_render_event_logged_at_debug(events_log):
+    # One per page view: at INFO, CKAN's default logging would log them all.
+    import logging
+    from ckanext.webpageviewplus import events
+
+    levels = []
+    handler = logging.Handler()
+    handler.emit = lambda record: levels.append((record.getMessage().split()[0], record.levelno))
+    events.log.addHandler(handler)
+    try:
+        events.emit("view_rendered", preset="strict")
+        events.emit("frame_refused", reason="x")
+    finally:
+        events.log.removeHandler(handler)
+    assert levels == [("view_rendered", logging.DEBUG), ("frame_refused", logging.INFO)]
 
 
 def test_unknown_privacy_profile_stops_startup(monkeypatch):

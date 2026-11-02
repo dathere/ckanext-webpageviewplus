@@ -513,7 +513,7 @@ def stored(view_id: str) -> Optional[dict[str, Any]]:
         with model.meta.engine.connect() as connection:
             row = connection.execute(
                 sa.select(table).where(table.c.view_id == view_id)).first()
-    except sa.exc.ProgrammingError:
+    except sa.exc.SQLAlchemyError:
         return None
     return dict(row._mapping) if row else None
 
@@ -828,6 +828,9 @@ def serve(view_id: str):
     # same for everyone who may see it).
     if content.is_public(resource.package_id):
         request.environ.pop("__no_cache__", None)
+        if request.args.get("v") == row["digest"][:16]:
+            # The URL names this copy: a new copy gets a new URL.
+            request.environ[content.IMMUTABLE_ENVIRON_KEY] = True
     else:
         request.environ["__no_cache__"] = True
     response = Response(row["image"], mimetype=MIMETYPE)

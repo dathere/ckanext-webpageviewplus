@@ -77,6 +77,10 @@ def add(view_id: str, **counts: int) -> None:
         # never break the page for it.
         log.warning("webpageviewplus: no view counts table; run "
                     "ckan db upgrade -p webpage_view_plus")
+    except sa.exc.IntegrityError:
+        pass  # the view was deleted meanwhile
+    except sa.exc.SQLAlchemyError:
+        log.warning("webpageviewplus: couldn't count a view", exc_info=True)
 
 
 def totals(view_id: str, days: int) -> dict[str, Any]:
@@ -98,7 +102,7 @@ def totals_or_none(view_id: str, days: int) -> Optional[dict[str, Any]]:
     """totals, or None before the plugin's migration has run."""
     try:
         return totals(view_id, days)
-    except sa.exc.ProgrammingError:
+    except sa.exc.SQLAlchemyError:
         return None
 
 

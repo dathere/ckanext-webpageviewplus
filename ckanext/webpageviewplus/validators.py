@@ -136,7 +136,8 @@ def view_after_validator(
     resource = _resource(data)
     page_url = _get(data, "page_url")
     if page_url:
-        url, is_upload = page_url, False
+        # A pasted content-origin URL is an upload too: never unsandboxed.
+        url, is_upload = page_url, frame.on_content_origin(page_url, settings.content_origin())
     elif resource is not None:
         url, is_upload = resource.url or "", resource.url_type == "upload"
     else:

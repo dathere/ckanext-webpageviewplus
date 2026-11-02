@@ -192,12 +192,8 @@ def _address_kind(url: str, deadline: Optional[float] = None) -> str:
         return "unresolved"
     if not addresses:
         return "unresolved"
-    for address in addresses:
-        try:
-            if not ipaddress.ip_address(address.split("%")[0]).is_global:
-                return "private"
-        except ValueError:
-            return "private"
+    if not all(_is_public_address(a) for a in addresses):
+        return "private"
     return "public"
 
 
@@ -206,11 +202,20 @@ def _public(url: str) -> bool:
     return _address_kind(url) == "public"
 
 
+# DNS64/NAT64 networks answer with these for IPv4-only hosts, and Python
+# counts them as global whatever IPv4 address they carry (169.254.169.254
+# included).
+_NAT64 = ipaddress.ip_network("64:ff9b::/96")
+
+
 def _is_public_address(address: str) -> bool:
     try:
-        return ipaddress.ip_address(address.split("%")[0]).is_global
+        ip = ipaddress.ip_address(address.split("%")[0])
     except ValueError:
         return False
+    if ip.version == 6 and ip in _NAT64:
+        return ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF).is_global
+    return ip.is_global
 
 
 def _check_peer(sock: socket.socket) -> None:

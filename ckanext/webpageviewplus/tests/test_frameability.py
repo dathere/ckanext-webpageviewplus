@@ -105,6 +105,9 @@ def test_form_check_has_a_deadline(monkeypatch):
         (["169.254.169.254"], False),  # cloud metadata
         (["93.184.216.34", "192.168.1.1"], False),  # any private address fails
         (["::1"], False),
+        (["64:ff9b::a9fe:a9fe"], False),  # NAT64 for 169.254.169.254
+        (["64:ff9b::a00:5"], False),  # NAT64 for 10.0.0.5
+        (["64:ff9b::5db8:d822"], True),  # NAT64 for 93.184.216.34
         ([], False),
     ],
 )

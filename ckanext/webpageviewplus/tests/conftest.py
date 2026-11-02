@@ -6,7 +6,7 @@ import pytest
 
 class _Collect(logging.Handler):
     def __init__(self):
-        super().__init__(logging.INFO)
+        super().__init__(logging.DEBUG)
         self.events = []
 
     def emit(self, record):
@@ -23,7 +23,7 @@ def events_log():
     logger = logging.getLogger("ckanext.webpageviewplus.events")
     handler = _Collect()
     old = logger.level, logger.disabled
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     logger.disabled = False
     logger.addHandler(handler)
     yield lambda: list(handler.events)
