@@ -417,7 +417,10 @@ CKAN 2.11.5, http://localhost:5001.
 CKAN reads `CKAN_*` env vars and they **override the ini file**. In the dev container:
 - `CKAN_SQLALCHEMY_URL` points at the **dev** DB (`ckandb`), and `CKAN_SITE_ID=default`.
 - `CKAN__PLUGINS` replaces `ckan.plugins` from `test.ini`, and `CKAN_SITE_URL` replaces its
-  `ckan.site_url` (tests assume `test.ckan.net`, as in CI).
+  `ckan.site_url`, even over a `ckan_config` marker. CI's `ckan/ckan-dev` image sets
+  `CKAN_SITE_URL=http://localhost:5000`, so a test needing a particular host can't pin
+  `ckan.site_url`: use `site_aliases` (as `TestOfficeAndPdfViews` does). To reproduce CI, run
+  with `CKAN_SITE_URL=http://localhost:5000` and the `CKANEXT__*` vars unset.
 - The provided `TEST_CKAN_SQLALCHEMY_URL` is unusable: it has a `postgres://` scheme (SQLAlchemy 2
   rejects it) and the wrong user. The `ckan_test` DB exists and is owned by the dev DB user.
 - Solr has only the `ckan` core. Test data is kept apart from dev data only by `ckan.site_id`.

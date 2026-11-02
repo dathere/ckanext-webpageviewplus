@@ -667,6 +667,9 @@ def _office_file(preview_name="Thumbnails/thumbnail.png", preview=None, mimetype
     return out.getvalue()
 
 
+SITE = "http://test.ckan.net"
+
+
 def _office_upload(dataset, body, filename):
     return factories.Resource(
         package_id=dataset["id"], url=filename, url_type="upload",
@@ -713,6 +716,10 @@ class TestOfficePreview:
                          "webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus")
 @pytest.mark.ckan_config("ckan.views.default_views", "")
 @pytest.mark.usefixtures("non_clean_db", "with_plugins", "counts_table", "local_storage")
+# Microsoft's viewer can't fetch from a non-default port, so an upload on
+# ckan-dev's CKAN_SITE_URL (localhost:5000, as in CI, which overrides any
+# ckan.site_url) is never offered: these uploads use a site alias instead.
+@pytest.mark.ckan_config("ckanext.webpageviewplus.site_aliases", "test.ckan.net")
 class TestOfficeAndPdfViews:
     def test_uploaded_office_file_without_fetching(self, app, monkeypatch, ckan_config):
         # CKAN's own upload is read from storage: no fetch, so no setting needed.
@@ -720,7 +727,7 @@ class TestOfficeAndPdfViews:
         dataset = factories.Dataset()
         doc = _office_upload(dataset, _office_file(), "minutes.odt")
         download = "{}/dataset/{}/resource/{}/download/minutes.odt".format(
-            ckan_config["ckan.site_url"].rstrip("/"), dataset["id"], doc["id"])
+            SITE, dataset["id"], doc["id"])
         view = _view(doc["id"], page_url=_embed(download), preset="interactive")
         row = thumbnails.stored(view["id"])
         assert row["source"] == "office:" + download
@@ -760,7 +767,7 @@ class TestOfficeAndPdfViews:
         dataset = factories.Dataset()
         doc = _office_upload(dataset, _office_file(), "minutes.odt")
         download = "{}/dataset/{}/resource/{}/download/minutes.odt".format(
-            ckan_config["ckan.site_url"].rstrip("/"), dataset["id"], doc["id"])
+            SITE, dataset["id"], doc["id"])
         view = _view(doc["id"], page_url=_embed(download), preset="interactive",
                      no_auto_thumbnail=True)
         assert thumbnails.stored(view["id"]) is None
@@ -788,7 +795,7 @@ class TestOfficeAndPdfViews:
         private = factories.Dataset(private=True, owner_org=factories.Organization()["id"])
         doc = _office_upload(private, _office_file(), "minutes.odt")
         download = "{}/dataset/{}/resource/{}/download/minutes.odt".format(
-            ckan_config["ckan.site_url"].rstrip("/"), private["id"], doc["id"])
+            SITE, private["id"], doc["id"])
         own = _view(doc["id"], page_url=_embed(download), preset="interactive")
         public = factories.Dataset()
         page = factories.Resource(package_id=public["id"], url=PAGE, format="HTML")
@@ -804,7 +811,7 @@ class TestOfficeAndPdfViews:
         dataset = factories.Dataset()
         doc = _office_upload(dataset, _office_file(), "minutes.odt")
         download = "{}/dataset/{}/resource/{}/download/minutes.odt".format(
-            ckan_config["ckan.site_url"].rstrip("/"), dataset["id"], doc["id"])
+            SITE, dataset["id"], doc["id"])
         page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
         view = _view(page["id"], page_url=_embed(download), preset="interactive")
         assert thumbnails.stored(view["id"])
