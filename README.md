@@ -20,14 +20,35 @@ PDF.js viewer, the same in every browser and on phones.
 
 ## Why use it
 
-**It stops uploaded HTML from acting as your CKAN.** Out of the box, CKAN shows an uploaded HTML
-file on its own web address, so anyone who opens it runs its scripts as CKAN, logged in as
-themselves. Stock `webpage_view` shows it the same way. This extension:
+**It keeps your login and your private data safe.** When you're signed in to CKAN, your browser
+lets CKAN's pages see your private datasets and make changes in your name. Out of the box, CKAN
+shows an uploaded web page (a chart, a report, a dashboard) on CKAN's own address, so your
+browser trusts that page just as much. If the page has harmful code in it, uploaded by mistake
+or from a hijacked account, then simply opening it lets that code, without you noticing:
 
-- always sandboxes uploads and CKAN's own pages, so no embedded page can run scripts as CKAN;
-- sandboxes uploaded HTML, SVG and XML when they're downloaded, too;
-- with a [separate domain for uploads](#a-separate-domain-for-uploads), moves uploaded HTML off
-  CKAN's address entirely, so it can run in full.
+- read every private dataset and file you can see, and your profile, email included;
+- change or delete the datasets you can edit;
+- add or remove people in organizations you manage, or change their roles;
+- create an API key in your name and send it to someone else;
+- if you're a sysadmin, do anything on the site, including reading every user's email.
+
+Visitors who aren't signed in are at risk too: the page can show a fake sign-in form on your
+site's real address and send the password to someone else. The file needn't end in `.html`:
+CKAN serves it as whatever type its resource says, which editors can set. Uploaded SVG images
+opened on their own carry the same risk.
+
+Stock `webpage_view` shows uploaded pages the same way. A site it embeds can't see your login by
+itself, but nothing stops that site from sending its frame to a harmful upload. And anyone who
+can edit a dataset can type a `javascript:` address as its page, which runs code with your login
+for everyone who opens the view, no upload needed. This extension:
+
+- always shows uploaded pages and CKAN's own pages in a sandbox, a locked box whose code can't
+  use your login;
+- does the same when someone downloads an uploaded HTML, SVG or XML file and opens it;
+- accepts only web addresses as pages to embed, never `javascript:`;
+- with a [separate domain for uploads](#a-separate-domain-for-uploads), moves uploaded pages off
+  your site's address altogether. They still run in a sandbox, but on an address your browser
+  doesn't trust with your login, and a fake sign-in form there no longer looks like your site.
 
 **It makes embedded pages look and work better.** Heights that fit the page, a control bar,
 help for editors pasting links from well-known services, and a card explaining why a page
@@ -47,8 +68,8 @@ loading third-party pages, and opt in to anonymous view counts.
 
 | | `webpage_view` (CKAN core) | Website (Plus) (`webpage_view_plus`) |
 | --- | --- | --- |
-| Security | none: embedded pages run unrestricted, uploads run as CKAN | a security preset per view, checked when it's saved and when it's shown |
-| Uploaded HTML | runs as CKAN, in the view and from its download link | sandboxed, or served from a separate domain |
+| Security | none: embedded pages run unrestricted, and uploaded pages can use the visitor's login | a security preset per view, checked when it's saved and when it's shown |
+| Uploaded HTML | can use the visitor's login, in the view and from its download link | sandboxed, or served from a separate domain |
 | Page address | any text, unchecked | web addresses only, optionally limited to sites you list |
 | Height | 600 px for other sites | fixed, a share of the window, an aspect ratio such as 16:9, or automatic (the page says how tall it is; qsv Data Schematics do it themselves) |
 | Loading | right away | when scrolled into view; on request for visitors saving data; optionally only after the visitor agrees |
@@ -342,21 +363,26 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 ### For site administrators
 
 - **Q: What exactly does the sandbox stop, and what doesn't it?**<br>
-  A: It stops an embedded page from acting as CKAN: it can't read CKAN's pages, cookies or
-  storage, or use a visitor's login to change anything, whether it's a third-party page or HTML
-  someone uploaded. Without a separate domain for uploads, no frame is ever allowed to run
-  scripts with a real origin, as that's the one combination that could reach an upload and run
-  it as CKAN. It doesn't vouch for what a page says or loads: a page can still be misleading,
-  and loading a third-party page still sends that site the visitor's own cookies for it, which
-  is what the consent card is for. See [How the protection works](#how-the-protection-works) and
+  A: It stops an embedded page from using your visitors' logins. Whether it's another site's page
+  or HTML someone uploaded, the page can't read your site's pages, cookies or saved data, can't
+  see private datasets, and can't change anything in a visitor's name. Without a separate domain
+  for uploads, no frame is ever allowed to run scripts with a real origin, as that's the one
+  combination that could open an upload on your site's address and give it the visitor's login.
+  It doesn't vouch for what a page says or loads. A page can still be misleading, including a
+  fake sign-in form (only a separate domain for uploads takes that off your site's address). And
+  loading another site's page still sends that site the visitor's own cookies for it, which is
+  what the consent card is for. See [How the protection works](#how-the-protection-works) and
   [Keeping your site safe](#keeping-your-site-safe).
 
 - **Q: Do I need a separate domain for uploads?**<br>
-  A: Not to install it: without one, every view and upload is sandboxed so it can't act as CKAN,
-  and that's already safer than `webpage_view`. What you lose is full strength: `external` and
-  `data-schematic` run as `interactive`, so third-party apps lose their logins and saved
-  settings, and qsv Data Schematics lose their maps. See [A separate domain for
-  uploads](#a-separate-domain-for-uploads).
+  A: Not to install it. Without one, every view and upload is sandboxed so it can't use your
+  visitors' logins, and that's already safer than `webpage_view`. What you lose:
+  - An uploaded page still opens on your site's own address, so it can show a convincing fake
+    sign-in form there.
+  - `external` and `data-schematic` run as `interactive`, so third-party apps lose their logins
+    and saved settings, and qsv Data Schematics lose their maps.
+
+  See [A separate domain for uploads](#a-separate-domain-for-uploads).
 
 - **Q: Why won't YouTube videos play on my site?**<br>
   A: Your site probably has no separate domain for uploads (`content_origin`). YouTube's player
@@ -364,7 +390,8 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   Public, ArcGIS, Looker Studio, Microsoft Office and others (see [Well-known services:
   recognised links](#well-known-services-recognised-links)). Until uploads have their own domain,
   `external` runs as `interactive`: a frame whose scripts keep a real origin could open an
-  uploaded HTML file on CKAN's own address and run it as CKAN, with the visitor's login. So the
+  uploaded HTML file on your site's own address, and that file's code would then have the
+  visitor's login, able to read their private datasets and change data in their name. So the
   view form warns that the video won't play, and [views made
   automatically](#views-made-automatically) skip these links. Set `content_origin` and
   `signing_secret` (see [Deploying a content origin](#deploying-a-content-origin)) and restart:
