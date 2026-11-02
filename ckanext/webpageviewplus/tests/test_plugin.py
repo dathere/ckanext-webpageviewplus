@@ -294,6 +294,18 @@ class TestDefaultViews:
             view_type="webpage_view_plus", title="Plain", preset="interactive")
         assert "page_url" not in view or not view["page_url"]
 
+    def test_explicit_height_is_kept(self):
+        sysadmin = factories.Sysadmin()
+        resource = factories.Resource(
+            package_id=factories.Dataset()["id"],
+            url="https://datawrapper.dwcdn.net/abc12/1/")
+        view = helpers.call_action(
+            "resource_view_create", {"user": sysadmin["name"]},
+            resource_id=resource["id"], view_type="webpage_view_plus",
+            title="Tall", height_mode="fixed", height_value="900")
+        assert view["page_url"] == "https://datawrapper.dwcdn.net/abc12/"
+        assert (view["height_mode"], view["height_value"]) == ("fixed", "900")
+
     @pytest.mark.parametrize("url,expected", [
         (WATCH, True),
         ("https://example.com/data.csv", False),

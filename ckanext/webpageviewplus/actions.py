@@ -149,8 +149,9 @@ def _with_service_settings(data_dict: dict[str, Any]) -> dict[str, Any]:
         bool(resource.package.private))
     if found is None:
         return data_dict
-    filled = dict(data_dict, page_url=found.embed_url, preset=found.preset,
-                  height_mode=found.height_mode, height_value=found.height_value)
+    filled = dict(data_dict, page_url=found.embed_url, preset=found.preset)
+    if not data_dict.get("height_mode") and not data_dict.get("height_value"):
+        filled.update(height_mode=found.height_mode, height_value=found.height_value)
     if not data_dict.get("title") or data_dict["title"] == toolkit._("Website"):
         filled["title"] = found.service
     return filled
