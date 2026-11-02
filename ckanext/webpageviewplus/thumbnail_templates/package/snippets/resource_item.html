@@ -10,7 +10,7 @@
   {%- if thumb -%}
     {%- set label -%}
       {%- if thumb.src -%}
-        <span class="webpageviewplus-thumbnail"><img src="{{ thumb.src }}" alt="" width="80" height="45" loading="lazy" decoding="async"></span>
+        <span class="webpageviewplus-thumbnail{{ '' if thumb.logo else ' webpageviewplus-copy' }}"><img src="{{ thumb.src }}" alt="" width="80" height="45" loading="lazy" decoding="async"></span>
         {%- if thumb.service -%}
           <span class="webpageviewplus-format">{{ thumb.service }}</span>
         {%- else -%}

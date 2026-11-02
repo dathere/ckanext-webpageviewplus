@@ -775,6 +775,7 @@ def for_resource(pkg: dict[str, Any], res: dict[str, Any]) -> Optional[dict[str,
         # An Office document keeps its own format label (DOCX...).
         service = found.service if found and found.service != services.OFFICE else None
     src = None
+    logo = False
     source = source_for(config, res.get("url") or "", res.get("url_type") or "",
                         plus["view_type"], res.get("last_modified"))
     if source and plus["digest"] and plus["source"] == source \
@@ -784,9 +785,10 @@ def for_resource(pkg: dict[str, Any], res: dict[str, Any]) -> Optional[dict[str,
     elif service in services.LOGOS:
         src = toolkit.h.url_for_static(
             "/webpageviewplus/logos/{}.svg".format(services.LOGOS[service]))
+        logo = True
     if not src and not service:
         return None
-    return {"src": src, "service": service}
+    return {"src": src, "service": service, "logo": logo}
 
 
 # CKAN's own format label, the same in 2.10 to 2.12. Themes that change it

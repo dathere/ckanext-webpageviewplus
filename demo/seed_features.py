@@ -313,23 +313,37 @@ LINKED_PDF = (
 
 
 def report_pdf():
-    """A two-page report with the same bar chart, drawn with Pillow, or None
-    without Pillow."""
+    """A two-page report with a bar chart, drawn with Pillow, or None without
+    Pillow. It has a page edge, a title band and grey text lines so that its
+    first page, shrunk to a thumbnail, still reads as a page."""
     try:
-        from PIL import Image, ImageDraw
+        from PIL import Image, ImageDraw, ImageFont
     except ImportError:
         return None
+    try:
+        font = ImageFont.load_default(size=40)
+    except TypeError:  # Pillow before 10.1
+        font = ImageFont.load_default()
+
+    def text_lines(draw, top, count):
+        for n in range(count):
+            right = 770 if n % 4 != 3 else 520
+            draw.rectangle([80, top + n * 34, right, top + n * 34 + 14], fill="#c8ccd2")
 
     pages = []
     for title, heights in (("Quarterly totals", (120, 200, 160, 260, 230, 290)),
                            ("By region", (260, 90, 180, 140, 210, 70))):
         im = Image.new("RGB", (850, 1100), "white")
         draw = ImageDraw.Draw(im)
-        draw.text((80, 80), "webpageviewplus demo report: " + title, fill="#222222")
-        draw.line([(80, 700), (770, 700)], fill="#444444", width=3)
+        draw.rectangle([0, 0, 849, 1099], outline="#9aa0a6", width=6)
+        draw.rectangle([6, 6, 843, 170], fill="#1f4e79")
+        draw.text((80, 70), "Demo report: " + title, fill="white", font=font)
+        text_lines(draw, 220, 4)
+        draw.line([(80, 760), (770, 760)], fill="#444444", width=3)
         for i, height in enumerate(heights):
             x = 110 + i * 110
-            draw.rectangle([x, 700 - height * 2, x + 70, 699], fill="#1f77b4")
+            draw.rectangle([x, 760 - height * 1.3, x + 70, 759], fill="#1f77b4")
+        text_lines(draw, 820, 8)
         pages.append(im)
     out = io.BytesIO()
     pages[0].save(out, "PDF", save_all=True, append_images=pages[1:], resolution=100)

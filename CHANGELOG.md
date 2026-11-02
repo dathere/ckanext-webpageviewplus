@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Thumbnails in the resource list (not service logos) get a thin border on a light grey
+  backing, so a white page, such as a PDF's first page, shows where it ends.
+
 ## 0.8.0 (2026-11-01)
 
 ### Added

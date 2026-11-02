@@ -250,6 +250,7 @@ class TestThumbnails:
         body = _page(app, dataset)
         assert "/webpageviewplus/logos/youtube.svg" in body
         assert '<span class="webpageviewplus-format">YouTube</span>' in body
+        assert '<span class="webpageviewplus-thumbnail"><img' in body  # no copy frame
         # The service's name isn't the dataset's format.
         assert 'property="dc:format">YouTube' not in body
 
@@ -468,6 +469,7 @@ class TestFetch:
         body = _page(app, dataset)
         assert 'src="{}"'.format(src.replace("&", "&amp;")) in body
         assert "logos/youtube.svg" not in body  # beats the logo
+        assert '<span class="webpageviewplus-thumbnail webpageviewplus-copy"><img' in body
         assert app.get(src).data == row["image"]
 
     def test_opting_out_drops_the_copy(self, app, web):

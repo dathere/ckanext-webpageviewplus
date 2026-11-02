@@ -33,6 +33,18 @@
   object-fit: contain;
   border-radius: 3px;
 }
+/* A copy (not a logo) may be a white page on the white list: the backing
+   shows where a portrait page ends inside its 16:9 box. */
+.resource-item .webpageviewplus-copy img {
+  box-sizing: border-box;
+  border: 1px solid #d0d4d9;
+  background: #eef0f3;
+}
+@media (forced-colors: active) {
+  .resource-item .webpageviewplus-copy img {
+    border-color: CanvasText;
+  }
+}
 /* Read by screen readers, like CKAN's own format label. */
 .resource-item .webpageviewplus-format {
   position: absolute;

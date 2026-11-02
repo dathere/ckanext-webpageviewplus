@@ -99,6 +99,16 @@ CAPTION_JS = """text => {
 }"""
 
 
+ENLARGE_JS = """li => {
+  const span = li.querySelector('.webpageviewplus-thumbnail');
+  for (const el of [span, span.querySelector('img')]) {
+    el.style.width = '240px'; el.style.height = '135px';
+  }
+  li.style.minHeight = '155px'; li.style.paddingLeft = '266px';
+  li.scrollIntoView({block: 'center', behavior: 'smooth'});
+}"""
+
+
 TO_VIEW_JS = """() => {
   const v = document.querySelector('.webpageviewplus');
   window.scrollTo(0, v.getBoundingClientRect().top + window.scrollY - 70);
@@ -265,6 +275,13 @@ def main():
         page.wait_for_timeout(2200)
         scroll(page, 1500, steps=60, pause=70)
         page.wait_for_timeout(1500)
+        if "Uploaded PDF" in present:
+            # A portrait page is too small to see in an 80 x 45 thumbnail: show
+            # this one row's at three times the size.
+            page.locator(".resource-item", has_text="Uploaded PDF").evaluate(ENLARGE_JS)
+            caption(page, "An uploaded PDF's first page, drawn by PDF.js in the editor's "
+                          "browser when they pick it in the view form")
+            page.wait_for_timeout(3500)
         page.goto(B + "/dataset/wvp-schematics")
         page.wait_for_timeout(800)
         caption(page, "qsv Data Schematics with their static previews "
