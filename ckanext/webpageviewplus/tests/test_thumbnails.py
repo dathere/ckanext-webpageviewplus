@@ -653,6 +653,23 @@ def test_service_format_off_by_default():
     assert _format(page) == "HTML"
 
 
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus webpage_view_plus_thumbnails")
+@pytest.mark.ckan_config("ckan.views.default_views", "webpage_view_plus")
+@pytest.mark.ckan_config("ckanext.webpageviewplus.service_format", "true")
+@pytest.mark.ckan_config("ckanext.webpageviewplus.content_origin", "http://127.0.0.1")
+@pytest.mark.ckan_config("ckanext.webpageviewplus.signing_secret", "k" * 40)
+@pytest.mark.usefixtures("non_clean_db", "with_plugins", "counts_table", "local_storage")
+def test_default_view_names_the_service_once():
+    # The default view's save patches the format, and resource_update then
+    # asks for default views again, inside resource_create's own request.
+    dataset = factories.Dataset()
+    page = factories.Resource(package_id=dataset["id"],
+                              url="https://www.youtube.com/watch?v=dQw4w9WgXcQ", format="")
+    [view] = helpers.call_action("resource_view_list", id=page["id"])
+    assert (view["page_url"], view["preset"]) == (YOUTUBE, "external")
+    assert _format(page) == "YouTube"
+
+
 # --- PDF (Plus) views and Office files' own previews ------------------------
 
 def _office_file(preview_name="Thumbnails/thumbnail.png", preview=None, mimetype=True):

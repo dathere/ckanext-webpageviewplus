@@ -2,8 +2,22 @@
 
 ## Unreleased
 
+### Added
+
+- Views made automatically for recognised services' links. With `webpage_view_plus` in CKAN's
+  `ckan.views.default_views`, a resource whose link is a recognised service's page (a YouTube
+  watch link, say) gets a Website (Plus) view with the settings the form would suggest, and the
+  service's name as its title. Only where those settings work on the site: services needing
+  `external` wait for a content origin, `allowed_hosts` applies, Office files need a public
+  dataset, and uploads never get one. `ckan views create webpage_view_plus` adds them to
+  existing resources.
+
 ### Changed
 
+- `ckanext.webpageviewplus.formats` now defaults to empty, so default views go only to
+  recognised services' links. Its formats only ever decided which resources CKAN's default
+  views reach (the view is offered on every resource). Sites that list `webpage_view_plus` in
+  `ckan.views.default_views` and want plain web pages to get one too: set it to `html htm`.
 - Thumbnails in the resource list (not service logos) get a thin border on a light grey
   backing, so a white page, such as a PDF's first page, shows where it ends.
 

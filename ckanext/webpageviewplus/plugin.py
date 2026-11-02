@@ -165,7 +165,15 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
         }
 
     def can_view(self, data_dict: dict[str, Any]) -> bool:
+        # The view is always offered (always_available), so this only picks
+        # the resources ckan.views.default_views and `ckan views create` give
+        # one: a well-known service's link whose settings work on this site
+        # (filled in by actions.resource_view_create), plus any formats the
+        # site lists.
         resource = data_dict["resource"]
+        private = bool((data_dict.get("package") or {}).get("private"))
+        if actions.default_view_suggestion(resource, private) is not None:
+            return True
         formats = settings.formats()
         if (resource.get("format") or "").lower() in formats:
             return True

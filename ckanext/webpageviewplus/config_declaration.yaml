@@ -237,10 +237,13 @@ groups:
           (qsv's qsv-viz-theme) still wins.
 
       - key: ckanext.webpageviewplus.formats
-        default: html htm
+        default: ""
         type: list
         description: |
-          Resource formats (and URL extensions) the view is offered for.
+          Resource formats (and URL extensions), e.g. "html htm", that also
+          get a view where ckan.views.default_views lists webpage_view_plus.
+          Links to well-known services get one without being listed. The
+          view is offered on every resource either way.
 
       - key: ckanext.webpageviewplus.pdf_max_size
         default: 25

@@ -86,20 +86,39 @@ def webpageviewplus_service_suggest(
     found = services.suggest(toolkit.get_or_bust(data_dict, "url"))
     if found is None:
         return None
-    problem = ""
-    allowed = settings.allowed_hosts()
     resource = model.Resource.get(data_dict.get("resource_id") or "")
-    if found.service == services.OFFICE and resource is not None \
-            and resource.package is not None and resource.package.private:
-        problem = "private_dataset"
-    elif found.preset not in settings.allowed_presets():
-        problem = "preset_not_allowed"
-    elif frame.PRESETS[found.preset].needs_content_origin \
+    private = bool(resource is not None and resource.package is not None
+                   and resource.package.private)
+    return dict(dataclasses.asdict(found), problem=suggestion_problem(found, private))
+
+
+def suggestion_problem(found: services.Suggestion, private: bool) -> str:
+    """Why a service's settings won't work on this site, or ``""``."""
+    allowed = settings.allowed_hosts()
+    if found.service == services.OFFICE and private:
+        return "private_dataset"
+    if found.preset not in settings.allowed_presets():
+        return "preset_not_allowed"
+    if frame.PRESETS[found.preset].needs_content_origin \
             and not settings.isolating_content_origin():
-        problem = "needs_content_origin"
-    elif allowed and frame.url_host(found.embed_url) not in allowed:
-        problem = "host_not_allowed"
-    return dict(dataclasses.asdict(found), problem=problem)
+        return "needs_content_origin"
+    if allowed and frame.url_host(found.embed_url) not in allowed:
+        return "host_not_allowed"
+    return ""
+
+
+def default_view_suggestion(
+    resource: dict[str, Any], private: bool
+) -> Optional[services.Suggestion]:
+    """The settings a view CKAN creates by default gets for a well-known
+    service's link, if they work on this site. Never an upload: an editor
+    chooses whether Microsoft's viewer may fetch the site's own file."""
+    if resource.get("url_type") == "upload":
+        return None
+    found = services.suggest(resource.get("url") or "")
+    if found is None or suggestion_problem(found, private):
+        return None
+    return found
 
 
 # Saving a view checks its page (with frameability_check on), so rendering
@@ -110,9 +129,31 @@ def webpageviewplus_service_suggest(
 def resource_view_create(
     original: Any, context: Context, data_dict: dict[str, Any]
 ) -> dict[str, Any]:
-    view = original(context, data_dict)
+    view = original(context, _with_service_settings(data_dict))
     health.after_save(view)
     return view
+
+
+def _with_service_settings(data_dict: dict[str, Any]) -> dict[str, Any]:
+    """A Website (Plus) view created with neither a page URL nor a preset,
+    as CKAN creates its default views, gets a well-known service's settings
+    for the resource's link."""
+    if data_dict.get("view_type") != "webpage_view_plus" \
+            or data_dict.get("page_url") or data_dict.get("preset"):
+        return data_dict
+    resource = model.Resource.get(data_dict.get("resource_id") or "")
+    if resource is None or resource.package is None:
+        return data_dict
+    found = default_view_suggestion(
+        {"url": resource.url, "url_type": resource.url_type},
+        bool(resource.package.private))
+    if found is None:
+        return data_dict
+    filled = dict(data_dict, page_url=found.embed_url, preset=found.preset,
+                  height_mode=found.height_mode, height_value=found.height_value)
+    if not data_dict.get("title") or data_dict["title"] == toolkit._("Website"):
+        filled["title"] = found.service
+    return filled
 
 
 @toolkit.chained_action

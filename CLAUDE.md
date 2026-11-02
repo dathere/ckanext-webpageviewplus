@@ -245,6 +245,16 @@ order now being built:
   OpenDocument (`.odt`, `.ods`, `.odp`) is listed too: the viewer opens it, but refuses some
   files (filesamples.com's `sample1.*` all fail), so test with more than one file. With an empty
   page URL, the form suggests from the resource's own URL (`data-resource-url`).
+- Automatic views: with `webpage_view_plus` in CKAN's `ckan.views.default_views`, CKAN makes a
+  view (title and description only) wherever `can_view` passes. Being `always_available`, the
+  view is offered everywhere, so `can_view` only picks default views: a link
+  `actions.default_view_suggestion` accepts (a suggestion with no `suggestion_problem`, never an
+  upload), plus the site's `formats` (default empty). The main plugin's chained
+  `resource_view_create` (`_with_service_settings`) fills page_url, preset, height and the
+  service's name as title into a Website (Plus) view created with neither page_url nor preset.
+  With `service_format`, that save's `resource_patch` makes `resource_update` ask for default
+  views again inside `resource_create`; CKAN skips the type already there
+  (`test_default_view_names_the_service_once`). Backfill: `ckan views create webpage_view_plus`.
 - `pdf.py` + `PdfViewPlusPlugin` (`plugin.py`): the `pdf_view_plus` view type (a plugin of its
   own, needing `webpage_view_plus`; `can_view` only with an isolating content origin). PDF.js
   is vendored in `pdfjs/<PDFJS_VERSION>/` by `scripts/vendor_pdfjs.py` (the legacy build: the

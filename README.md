@@ -709,9 +709,9 @@ that the suggested address isn't allowed.
 Microsoft's own servers. So the file must be public: for a resource in a private dataset the
 form says it can't be shown. Each view sends the visitor to Microsoft and gives Microsoft the
 file's address, so consider `consent_gate`; with `allowed_hosts`, list
-`view.officeapps.live.com`. To offer the view on Office resources, add their formats to
-`ckanext.webpageviewplus.formats` (for example `html htm doc docx xls xlsx ppt pptx ppsx odt ods odp`);
-with no page URL, the form then suggests the viewer for the resource's own file. The resource
+`view.officeapps.live.com`. With no page URL, the form suggests the viewer for the resource's
+own file, and a linked file in a public dataset can get its view
+[automatically](#views-made-automatically) (an uploaded one never does). The resource
 list keeps the file's own format (DOCX, XLSX...). OpenDocument files (`.odt`, `.ods`, `.odp`) render too,
 though the viewer refuses some files it can't read: check yours. [ckanext-officedocs](https://github.com/jqnatividad/ckanext-officedocs)
 shows Office files without a sandbox, so it also works on sites without a separate domain.
@@ -720,6 +720,35 @@ Only public embeds are recognised. Power BI reports shared inside an organisatio
 CARTO maps need the viewer's login or an access token (as do private Plotly Cloud apps), and
 Plotly's Chart Studio closed on 31 October 2025. A Plotly chart saved as HTML (`fig.write_html`)
 can be uploaded and shown with `interactive` or `data-schematic`, like a qsv Data Schematic.
+
+#### Views made automatically
+
+CKAN can make a Website (Plus) view by itself for a resource whose link is a recognised service's
+page, with the settings the form would suggest (YouTube gets the `external` preset, 16:9 and the
+service's name as its title). Add `webpage_view_plus` to CKAN's own list of default views:
+
+```ini
+ckan.views.default_views = image_view datatables_view webpage_view_plus
+```
+
+CKAN then makes the view when such a resource is created, or when its format changes (not
+for resources added by editing the whole dataset, e.g. `package_update` from a harvester). Only
+settings that work on your site are used: without a [separate domain for uploads](#a-separate-domain-for-uploads),
+services that need `external` (YouTube, Vimeo, Tableau Public...) get no view, and nor does a
+link to a host outside `allowed_hosts`, or an Office file in a private dataset. Uploaded files
+never get one: an editor decides whether Microsoft's viewer may fetch them. Other pages get no
+view unless you list their formats in `ckanext.webpageviewplus.formats` (e.g. `html htm`); those
+views frame the resource's own link with the default preset.
+
+For resources that already exist, run CKAN's own command, on one dataset first:
+
+```sh
+ckan views create -d DATASET webpage_view_plus
+ckan views create -y webpage_view_plus   # every dataset
+```
+
+It skips resources that already have a Website (Plus) view, but not those with core's
+`webpage_view`: [migrate](#migrating-from-webpage_view) those first.
 
 **Self-hosted dashboards (Apache Superset, Plotly Dash).** These have no fixed address to
 recognise, and whether they can be embedded is up to their own server:
@@ -745,7 +774,7 @@ unsandboxed, which this extension allows only once uploads can't run as CKAN.
 | --- | --- | --- |
 | Needs | nothing | a separate domain for uploads |
 | Formats | DOC, DOCX, XLS, XLSX, XLSB, PPT, PPTX, PPS, PPSX, ODT, ODS, ODP (configurable) | DOC, DOCX, XLS, XLSX, PPT, PPTX, PPSX, ODT, ODS, ODP (XLSB didn't open in tests) |
-| How a view is made | offered for those formats automatically | the site adds the formats to `formats`; the form suggests the viewer for the file, or for a link to one pasted as the page URL |
+| How a view is made | made for those formats automatically | the form suggests the viewer for the file, or for a link to one pasted as the page URL; with `webpage_view_plus` in `ckan.views.default_views`, linked files in public datasets get one automatically |
 | Frame | Microsoft's viewer, no sandbox | the same viewer under the `external` preset, with the site's host list and Permissions Policy |
 | Height | one height for the site (400 px by default) | per view: 800 px, or 16:9 for slides |
 | Private datasets | no view, or with a setting a card suggesting a Chrome extension | the form says the file can't be shown, as Microsoft can't fetch it |
@@ -1174,7 +1203,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.min_height` / `max_height` | `400` / `4000` | Clamp for viewport and auto heights, in px |
 | `ckanext.webpageviewplus.site_aliases` | empty | Other hosts this CKAN is reachable under; treated as CKAN's own |
 | `ckanext.webpageviewplus.allowed_hosts` | empty (any) | Allow-list of hosts a view's page URL may point to (not checked when a view frames its resource's URL) |
-| `ckanext.webpageviewplus.formats` | `html htm` | Resource formats the view is offered for |
+| `ckanext.webpageviewplus.formats` | empty | Resource formats (e.g. `html htm`) that also get a view where `ckan.views.default_views` lists `webpage_view_plus`; recognised services' links get one regardless. See [Views made automatically](#views-made-automatically) |
 | `ckanext.webpageviewplus.controls` | `open fullscreen reload share` | Buttons in the control bar; empty hides it |
 | `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing, check pages when views are saved, and show a card for those that refuse. Makes CKAN request editor-typed URLs, see [Frameability check](#frameability-check) |
 | `ckanext.webpageviewplus.thumbnail_fetch` | `false` | With the `webpage_view_plus_thumbnails` plugin, fetch thumbnails when views are saved: the page's own preview image, and linked images editors pick. Makes CKAN request page and image URLs, see [Thumbnails in the resource list](#thumbnails-in-the-resource-list) |

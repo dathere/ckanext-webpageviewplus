@@ -53,6 +53,7 @@ class TestWebpageViewPlus:
             (None, "http://example.com/page.htm", True),
         ],
     )
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.formats", "html htm")
     def test_can_view(self, fmt, url, expected):
         plugin = WebpageviewplusPlugin()
         assert plugin.can_view({"resource": {"format": fmt, "url": url}}) is expected
@@ -207,6 +208,106 @@ def content_origin(monkeypatch):
         settings, "content_origin", lambda: "https://usercontent.example.net"
     )
     monkeypatch.setattr(settings, "signing_secret", lambda: "s" * 32)
+
+
+WATCH = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+EMBED = "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"
+
+
+def _views(resource):
+    return helpers.call_action("resource_view_list", id=resource["id"])
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestDefaultViews:
+    def test_service_link_gets_its_settings(self, content_origin):
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=WATCH, format="")
+        [view] = _views(resource)
+        assert view["view_type"] == "webpage_view_plus"
+        assert (view["page_url"], view["preset"]) == (EMBED, "external")
+        assert (view["height_mode"], view["height_value"]) == ("aspect", "16/9")
+        assert view["title"] == "YouTube"
+
+    def test_none_where_the_settings_would_not_play(self):
+        # No content origin: external would run as interactive, and YouTube
+        # needs allow-same-origin.
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=WATCH, format="")
+        assert _views(resource) == []
+
+    def test_interactive_service_needs_no_content_origin(self):
+        dataset = factories.Dataset()
+        resource = factories.Resource(
+            package_id=dataset["id"], url="https://datawrapper.dwcdn.net/abc12/1/")
+        [view] = _views(resource)
+        assert view["preset"] == "interactive"
+        assert view["page_url"] == "https://datawrapper.dwcdn.net/abc12/"
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.allowed_hosts", "example.com")
+    def test_none_for_a_host_the_site_does_not_allow(self, content_origin):
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=WATCH, format="")
+        assert _views(resource) == []
+
+    def test_office_link_only_in_a_public_dataset(self, content_origin):
+        url = "https://files.example.org/report.docx"
+        public = factories.Resource(
+            package_id=factories.Dataset()["id"], url=url, format="DOCX")
+        assert [v["title"] for v in _views(public)] == ["Microsoft Office"]
+        org = factories.Organization()
+        private = factories.Resource(
+            package_id=factories.Dataset(owner_org=org["id"], private=True)["id"],
+            url=url, format="DOCX")
+        assert _views(private) == []
+
+    def test_none_for_html_pages_by_default(self, content_origin):
+        resource = factories.Resource(
+            package_id=factories.Dataset()["id"], url="https://example.com/page.html",
+            format="HTML")
+        assert _views(resource) == []
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.formats", "html htm")
+    def test_listed_formats_get_a_plain_view(self, content_origin):
+        resource = factories.Resource(
+            package_id=factories.Dataset()["id"], url="https://example.com/page.html",
+            format="HTML")
+        [view] = _views(resource)
+        assert (view["title"], view.get("page_url") or "") == ("Website", "")
+
+    def test_explicit_settings_are_kept(self, content_origin):
+        sysadmin = factories.Sysadmin()
+        resource = factories.Resource(
+            package_id=factories.Dataset()["id"], url="https://example.com/page")
+        view = helpers.call_action(
+            "resource_view_create", {"user": sysadmin["name"]},
+            resource_id=resource["id"], view_type="webpage_view_plus",
+            title="Mine", page_url=WATCH.replace("watch", "other"), preset="strict")
+        assert (view["preset"], view["title"]) == ("strict", "Mine")
+        # A preset alone also means the editor chose: no page URL is filled in.
+        view = helpers.call_action(
+            "resource_view_create", {"user": sysadmin["name"]},
+            resource_id=helpers.call_action(
+                "resource_create", package_id=resource["package_id"], url=WATCH)["id"],
+            view_type="webpage_view_plus", title="Plain", preset="interactive")
+        assert "page_url" not in view or not view["page_url"]
+
+    @pytest.mark.parametrize("url,expected", [
+        (WATCH, True),
+        ("https://example.com/data.csv", False),
+    ])
+    def test_can_view_service_links(self, content_origin, url, expected):
+        plugin = WebpageviewplusPlugin()
+        assert plugin.can_view(
+            {"resource": {"format": "", "url": url}, "package": {}}) is expected
+
+    def test_can_view_skips_uploads(self, content_origin):
+        plugin = WebpageviewplusPlugin()
+        assert not plugin.can_view({"resource": {
+            "format": "DOCX", "url": "http://x/download/report.docx",
+            "url_type": "upload"}, "package": {}})
 
 
 def _view(user, resource_id, **fields):
