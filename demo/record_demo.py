@@ -65,7 +65,7 @@ SERVICE_VIEWS = [
     ("Internet Archive", "Internet Archive (external)", None),
     ("Sketchfab", "Sketchfab (external)", None),
     ("Microsoft Office", "Microsoft Office (external)",
-     "Microsoft Office: a PowerPoint file (external)"),
+     "Microsoft Office: an OpenDocument presentation (external)"),
 ]
 ENV = dict(l.strip().split("=", 1) for l in open(os.path.expanduser(
     os.environ.get("CKAN_DOCKER_ENV", "~/GitHub/ckan-docker/.env")))
@@ -141,6 +141,16 @@ def main():
         page.fill("#field-password", ENV["CKAN_SYSADMIN_PASSWORD"])
         page.press("#field-password", "Enter")
         page.wait_for_load_state()
+        # Off the recording: pick the uploaded PDF's first page as its thumbnail,
+        # drawn by PDF.js in this browser, for the resource list below.
+        if "Uploaded PDF" in present:
+            page.goto(view_url("wvp-features", "Uploaded PDF", "Uploaded PDF", edit=True))
+            page.select_option("#field-thumbnail_resource", "pdf:first-page")
+            page.wait_for_function(
+                "document.querySelector('[data-webpageviewplus-first-page]')"
+                ".textContent.includes('The first page is ready')", timeout=60000)
+            page.click("button[name=save]")
+            page.wait_for_load_state()
         state = login.storage_state()
         login.close()
 

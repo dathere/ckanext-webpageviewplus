@@ -266,11 +266,11 @@ SERVICE_PAGES = [
     ("Sketchfab", "https://sketchfab.com/3d-models/batmobile-hJ91ZS1d5kqX9N8HLqwfcHVKC9h",
      "A 3D model on Sketchfab. Its viewer refuses to run without its own origin, so "
      "`external`; press play, then drag to turn the model."),
-    ("Microsoft Office", "https://filesamples.com/samples/document/ppt/sample1.ppt",
-     "A PowerPoint file, the resource itself, shown through Microsoft's online viewer: step "
+    ("Microsoft Office", "https://cdn.jsdelivr.net/gh/eea/odfpy@release-1.4.2/tests/examples/cols.odp",
+     "An OpenDocument presentation, the resource itself, shown through Microsoft's online viewer: step "
      "through the slides. Microsoft's servers fetch the file, so it must be public (the form "
      "says so for a private dataset). The viewer fails as soon as you scroll without its "
-     "own origin, so `external`. Word and Excel files work the same way."),
+     "own origin, so `external`. Word, Excel and PowerPoint files work the same way."),
 ]
 
 
