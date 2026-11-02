@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-01 23:10+0000\n"
+"POT-Creation-Date: 2026-11-02 01:29+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -20,20 +20,20 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.15.0\n"
 
-#: ckanext/webpageviewplus/actions.py:204
+#: ckanext/webpageviewplus/actions.py:205
 msgid "Must be a whole number"
 msgstr "Debe ser un número entero"
 
-#: ckanext/webpageviewplus/actions.py:238
+#: ckanext/webpageviewplus/actions.py:239
 msgid "PDF view not found"
 msgstr "No se encontró la vista PDF"
 
-#: ckanext/webpageviewplus/actions.py:267
+#: ckanext/webpageviewplus/actions.py:268
 msgid "Thumbnails aren't enabled on this site"
 msgstr "Las miniaturas no están activadas en este sitio"
 
-#: ckanext/webpageviewplus/actions.py:277
-#: ckanext/webpageviewplus/actions.py:280
+#: ckanext/webpageviewplus/actions.py:278
+#: ckanext/webpageviewplus/actions.py:281
 msgid "Not a usable image"
 msgstr "No es una imagen utilizable"
 
