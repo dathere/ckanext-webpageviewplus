@@ -358,6 +358,19 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   settings, and qsv Data Schematics lose their maps. See [A separate domain for
   uploads](#a-separate-domain-for-uploads).
 
+- **Q: Why won't YouTube videos play on my site?**<br>
+  A: Your site probably has no separate domain for uploads (`content_origin`). YouTube's player
+  only works with `allow-same-origin`, i.e. the `external` preset, and so do Vimeo, Tableau
+  Public, ArcGIS, Looker Studio, Microsoft Office and others (see [Well-known services:
+  recognised links](#well-known-services-recognised-links)). Until uploads have their own domain,
+  `external` runs as `interactive`: a frame whose scripts keep a real origin could open an
+  uploaded HTML file on CKAN's own address and run it as CKAN, with the visitor's login. So the
+  view form warns that the video won't play, and [views made
+  automatically](#views-made-automatically) skip these links. Set `content_origin` and
+  `signing_secret` (see [Deploying a content origin](#deploying-a-content-origin)) and restart:
+  views already saved with `external` then play with no edits, and `ckan views create
+  webpage_view_plus` adds views for links that had none.
+
 - **Q: Is it safe to switch on a live site?**<br>
   A: Yes. It runs beside `webpage_view`, and nothing changes until editors add "Website (Plus)"
   views or you run `migrate` (start with `--dry-run`). One thing changes at once: uploaded HTML,
@@ -467,10 +480,11 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   `http://` page on an `https://` site gets a card too: browsers block it. Use its `https://`
   address if it has one.
 
-- **Q: The form says the service needs a separate domain for uploads. What now?**<br>
-  A: That service only works under `external`, which needs your site to have a [separate domain
-  for uploads](#a-separate-domain-for-uploads). Ask your site administrator, or link to the page
-  instead of embedding it.
+- **Q: Why won't my YouTube video play, and why does the form say it needs a separate domain for uploads?**<br>
+  A: YouTube, like Vimeo, Tableau Public and some other services, only works under `external`,
+  which needs your site to have a [separate domain for uploads](#a-separate-domain-for-uploads).
+  Ask your site administrator (point them to [Why won't YouTube videos play on my
+  site?](#for-site-administrators)), or link to the page instead of embedding it.
 
 - **Q: Why did my YouTube link change to youtube-nocookie.com?**<br>
   A: It's YouTube's privacy-enhanced mode, in which YouTube says it stores nothing about
