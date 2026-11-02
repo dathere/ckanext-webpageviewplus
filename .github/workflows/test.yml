@@ -7,7 +7,7 @@ jobs:
       matrix:
         ckan-version: ["2.10", "2.11", "2.12"]
     name: CKAN ${{ matrix.ckan-version }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     container:
       # The CKAN version tag of the Solr and Postgres containers should match
       # the one of the container the tests run on.
@@ -64,7 +64,7 @@ jobs:
     # no curl, which the reporter needs. Skipped without the secret (forks).
     name: Coverage to Codacy
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
     steps:
@@ -86,7 +86,7 @@ jobs:
       matrix:
         ckan-version: ["2.11", "2.12"]
     name: Browsers (CKAN ${{ matrix.ckan-version }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     container:
       image: ckan/ckan-dev:${{ matrix.ckan-version }}
       options: --user root

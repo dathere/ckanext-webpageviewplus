@@ -344,7 +344,9 @@ order now being built:
 - Template strings go through CKAN's `_()`, which %-formats, so a literal `%` in a label breaks
   rendering.
 - Packaging follows the 2.11 cookiecutter: metadata and entry points in `pyproject.toml`,
-  setuptools and Babel options in `setup.cfg`, and `setup.py` only for message extractors.
+  setuptools and Babel options in `setup.cfg`, and `setup.py` only for message extractors
+  (named as `module:function`: Babel 2.15 resolves bare names like `ckan` through
+  `pkg_resources`, which setuptools is removing).
   `ckanext/` is a namespace package. Keep `*.yaml` in `MANIFEST.in` (for
   `config_declaration.yaml`), and `*.pot`/`*.po` and the `migration/` files (`alembic.ini`,
   `env.py`, `script.py.mako`, `versions/`): `ckan db upgrade -p` reads them from the installed
