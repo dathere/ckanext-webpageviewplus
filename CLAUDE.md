@@ -354,6 +354,11 @@ order now being built:
   app's view sandboxes it and breaks its logins and storage.
 - Plugin name and view type are both `webpage_view_plus` (per the spec). Stored views reference
   the view type, so don't rename it. Templates are namespaced under `templates/webpageviewplus/`.
+- View forms (`form.html`, `pdf_form.html`): everything sits in `<div class="webpageviewplus-form">`,
+  which `style.css` scopes its form rules to (checkbox size, the select arrow) so site themes
+  restyling CKAN's form classes can't break them. Never put checkboxes in a `control-medium`
+  group: themes size every input there (`test_form_controls_are_out_of_themes_reach` in
+  `test_thumbnails.py` and `test_pdf.py`).
 - Template strings go through CKAN's `_()`, which %-formats, so a literal `%` in a label breaks
   rendering.
 - Packaging follows the 2.11 cookiecutter: metadata and entry points in `pyproject.toml`,

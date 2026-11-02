@@ -24,6 +24,12 @@
 - Thumbnails in the resource list (not service logos) get a thin border on a light grey
   backing, so a white page, such as a PDF's first page, shows where it ends.
 
+### Fixed
+
+- The view forms hold up under site themes that restyle CKAN's form classes: checkboxes no
+  longer stretch into wide empty bars (a theme sizing every input in `.control-medium`), and
+  selects keep their arrow when a theme resets `.form-control`'s background.
+
 ## 0.8.0 (2026-11-01)
 
 ### Added

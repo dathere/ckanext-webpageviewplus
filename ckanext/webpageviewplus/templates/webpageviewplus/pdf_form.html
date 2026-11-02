@@ -1,6 +1,7 @@
 {% import 'macros/form.html' as form %}
 {% asset 'webpageviewplus/webpageviewplus-css' %}
 {% asset 'webpageviewplus/webpageviewplus-js' %}
+<div class="webpageviewplus-form">
 
 {% set height_labels = {
   'fixed': _('Fixed (px)'),
@@ -63,10 +64,11 @@
   </div>
 {% endif %}
 
-<div class="form-group control-medium">
+<div class="form-group">
   <div class="form-check">
     <input class="form-check-input" type="checkbox" id="field-hide_controls" name="hide_controls" value="true" aria-describedby="help-hide_controls" {% if data.hide_controls in (true, 'true', 'True') %}checked{% endif %}>
     <label class="form-check-label" for="field-hide_controls">{{ _('Hide the control bar (Open in new tab, Fullscreen, Reload)') }}</label>
     <p class="form-text" id="help-hide_controls">{{ _('On phones and at high zoom, Open in new tab still shows, so visitors can always reach the page.') }}</p>
   </div>
+</div>
 </div>

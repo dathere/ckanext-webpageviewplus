@@ -23,7 +23,9 @@
   'data-schematic': _('Data Schematic'),
 } %}
 
+{% asset 'webpageviewplus/webpageviewplus-css' %}
 {% asset 'webpageviewplus/webpageviewplus-js' %}
+<div class="webpageviewplus-form">
 {% call form.input('page_url', id='field-page_url', label=_('Web Page url'), placeholder=_('eg. http://example.com  (if blank uses resource url)'), value=data.page_url, error=errors.page_url, classes=['control-full', 'control-large'], attrs={'class': 'form-control', 'aria-describedby': 'help-page_url'}) %}
   <p class="form-text" id="help-page_url">
     {# TRANSLATORS: {services} is a comma-separated list of service names, such as "YouTube, Vimeo, Datawrapper". #}
@@ -121,6 +123,8 @@
         <p class="form-text" id="help-thumbnail_resource">{{ _('An image uploaded to this dataset (PNG, JPEG, WebP or GIF), shown small beside this resource in the dataset\'s list. With None, a well-known service\'s logo or the format icon shows.') }}</p>
       {% endif %}
     </div>
+  </div>
+  <div class="form-group">
     <div class="form-check">
       <input class="form-check-input" type="checkbox" id="field-no_auto_thumbnail" name="no_auto_thumbnail" value="true" aria-describedby="help-no_auto_thumbnail" {% if data.no_auto_thumbnail in (true, 'true', 'True') %}checked{% endif %}>
       <label class="form-check-label" for="field-no_auto_thumbnail">{{ _('Don\'t use the page\'s own preview image') }}</label>
@@ -133,7 +137,7 @@
   </div>
 {% endif %}
 
-<div class="form-group control-medium">
+<div class="form-group">
   <div class="form-check">
     <input class="form-check-input" type="checkbox" id="field-hide_controls" name="hide_controls" value="true" aria-describedby="help-hide_controls" {% if data.hide_controls in (true, 'true', 'True') %}checked{% endif %}>
     <label class="form-check-label" for="field-hide_controls">{{ _('Hide the control bar (Open in new tab, Fullscreen, Reload)') }}</label>
@@ -180,3 +184,4 @@
     </div>
   </fieldset>
 {% endif %}
+</div>

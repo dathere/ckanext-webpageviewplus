@@ -4,6 +4,7 @@ import re
 import sys
 
 import pytest
+from bs4 import BeautifulSoup
 from PIL import Image
 from werkzeug.datastructures import FileStorage
 
@@ -312,6 +313,26 @@ class TestThumbnails:
         ).body
         assert 'name="thumbnail_resource"' in body
         assert 'value="{}"'.format(image["id"]) in body
+
+    def test_form_controls_are_out_of_themes_reach(self, app):
+        # Themes size every input in .control-medium (checkboxes too), so
+        # checkboxes stay out of it, and style.css's scoped rules need
+        # every control inside the form's wrapper.
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        sysadmin = factories.SysadminWithToken()
+        html = BeautifulSoup(app.get(
+            url_for("dataset_resource.edit_view", id=dataset["name"],
+                    resource_id=page["id"], view_type="webpage_view_plus"),
+            headers={"Authorization": sysadmin["token"]},
+        ).body, "html.parser")
+        wrapper = html.find(class_="webpageviewplus-form")
+        checkboxes = wrapper.find_all("input", type="checkbox")
+        assert {c["name"] for c in checkboxes} >= {
+            "no_auto_thumbnail", "hide_controls", "consent_gate"}
+        assert not [c["name"] for c in checkboxes if c.find_parent(class_="control-medium")]
+        assert {"preset", "height_mode", "thumbnail_resource"} <= {
+            s["name"] for s in wrapper.find_all("select")}
 
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")

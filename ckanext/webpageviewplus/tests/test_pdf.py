@@ -4,9 +4,11 @@ from types import SimpleNamespace
 from urllib.parse import parse_qs, unquote, urlsplit
 
 import pytest
+from bs4 import BeautifulSoup
 from werkzeug.datastructures import FileStorage
 
 from ckan.exceptions import CkanConfigurationException
+from ckan.plugins.toolkit import url_for
 from ckan.tests import factories, helpers
 
 from ckanext.webpageviewplus import content, frameability, pdf, plugin
@@ -364,6 +366,23 @@ def test_offered_for_pdfs():
     assert view_plugin.can_view({"resource": {"format": "PDF", "url": "x"}})
     assert view_plugin.can_view({"resource": {"format": "", "url": "https://a.org/b.PDF"}})
     assert not view_plugin.can_view({"resource": {"format": "CSV", "url": "https://a.org/b.csv"}})
+
+
+def test_form_controls_are_out_of_themes_reach(app):
+    # As test_thumbnails' namesake: no checkbox in a .control-medium group,
+    # every control inside the wrapper style.css scopes its rules to.
+    dataset = factories.Dataset()
+    resource = factories.Resource(package_id=dataset["id"], url=LINK, format="PDF")
+    sysadmin = factories.SysadminWithToken()
+    html = BeautifulSoup(app.get(
+        url_for("dataset_resource.edit_view", id=dataset["name"],
+                resource_id=resource["id"], view_type=pdf.VIEW_TYPE),
+        headers={"Authorization": sysadmin["token"]},
+    ).body, "html.parser")
+    wrapper = html.find(class_="webpageviewplus-form")
+    checkbox = wrapper.find("input", type="checkbox", attrs={"name": "hide_controls"})
+    assert checkbox.find_parent(class_="control-medium") is None
+    assert wrapper.find("select", attrs={"name": "height_mode"})
 
 
 def test_not_offered_for_unreadable_uploads(monkeypatch):
