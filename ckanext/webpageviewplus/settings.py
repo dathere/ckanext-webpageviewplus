@@ -11,7 +11,7 @@ from publicsuffixlist import PublicSuffixList
 import ckan.plugins.toolkit as toolkit
 from ckan.exceptions import CkanConfigurationException
 
-from ckanext.webpageviewplus import frame
+from ckanext.webpageviewplus import frame, services
 
 PREFIX = "ckanext.webpageviewplus."
 
@@ -77,6 +77,13 @@ CONTROLS = ("open", "fullscreen", "reload", "share")
 
 def controls() -> list[str]:
     return [c.lower() for c in toolkit.aslist(_get("controls"))]
+
+
+def default_view_services() -> frozenset[str]:
+    """Names of the services whose links get a view from CKAN's default
+    views (keys in services.KEYS; unknown keys stop CKAN in check())."""
+    keys = (k.lower() for k in toolkit.aslist(_get("default_view_services")))
+    return frozenset(services.KEYS[k] for k in keys if k in services.KEYS)
 
 
 COLOR_SCHEMES = ("light", "dark", "auto")
@@ -258,6 +265,13 @@ def check() -> None:
         raise CkanConfigurationException(
             PREFIX + "controls: unknown buttons " + " ".join(bad)
             + " (choose from " + " ".join(CONTROLS) + ")"
+        )
+    bad = [k for k in toolkit.aslist(_get("default_view_services"))
+           if k.lower() not in services.KEYS]
+    if bad:
+        raise CkanConfigurationException(
+            PREFIX + "default_view_services: unknown services " + " ".join(bad)
+            + " (choose from " + " ".join(services.KEYS) + ")"
         )
     if color_scheme() not in COLOR_SCHEMES:
         # The value is written into the frame's style attribute.

@@ -245,6 +245,23 @@ groups:
           Links to well-known services get one without being listed. The
           view is offered on every resource either way.
 
+      - key: ckanext.webpageviewplus.default_view_services
+        default: >-
+          youtube vimeo datawrapper flourish observable tableau-public power-bi
+          arcgis-storymaps carto plotly-cloud google-forms typeform arcgis-online
+          looker-studio google-sheets google-docs google-slides our-world-in-data
+          streamlit hugging-face-spaces shinyapps-io infogram felt umap
+          openstreetmap internet-archive sketchfab google-colab
+        type: list
+        description: |
+          Well-known services whose links get a view where
+          ckan.views.default_views lists webpage_view_plus, by key (the
+          service's name in lower case, other characters as "-": youtube,
+          tableau-public, shinyapps-io). Every service but microsoft-office and
+          jupyter by default: they match a link to any .docx, .xlsx...
+          or .ipynb file on any site, and their views send the file's address
+          to Microsoft or nbviewer. Empty: no service gets one.
+
       - key: ckanext.webpageviewplus.pdf_max_size
         default: 25
         type: int

@@ -724,8 +724,9 @@ Microsoft's own servers. So the file must be public: for a resource in a private
 form says it can't be shown. Each view sends the visitor to Microsoft and gives Microsoft the
 file's address, so consider `consent_gate`; with `allowed_hosts`, list
 `view.officeapps.live.com`. With no page URL, the form suggests the viewer for the resource's
-own file, and a linked file in a public dataset can get its view
-[automatically](#views-made-automatically) (an uploaded one never does). The resource
+own file. Office links get no view [automatically](#views-made-automatically) unless you add
+`microsoft-office` to `default_view_services`, and then only linked files in public datasets
+(an uploaded one never does). The resource
 list keeps the file's own format (DOCX, XLSX...). OpenDocument files (`.odt`, `.ods`, `.odp`) render too,
 though the viewer refuses some files it can't read: check yours. [ckanext-officedocs](https://github.com/jqnatividad/ckanext-officedocs)
 shows Office files without a sandbox, so it also works on sites without a separate domain.
@@ -745,11 +746,23 @@ service's name as its title). Add `webpage_view_plus` to CKAN's own list of defa
 ckan.views.default_views = image_view datatables_view webpage_view_plus
 ```
 
+`ckanext.webpageviewplus.default_view_services` picks the services, by key: the service's name
+in lower case, with spaces and other characters as `-` (`youtube`, `tableau-public`,
+`shinyapps-io`). By default it's every recognised service except Microsoft Office
+(`microsoft-office`) and Jupyter (`jupyter`): they match a link to any Office or `.ipynb` file
+on any site, each view sends the file's address to Microsoft or nbviewer, and portals often link
+many spreadsheets and notebooks. For example, only videos and charts:
+
+```ini
+ckanext.webpageviewplus.default_view_services = youtube vimeo datawrapper flourish
+```
+
 CKAN then makes the view when such a resource is created, or when its format changes (not
 for resources added by editing the whole dataset, e.g. `package_update` from a harvester). Only
 settings that work on your site are used: without a [separate domain for uploads](#a-separate-domain-for-uploads),
 services that need `external` (YouTube, Vimeo, Tableau Public...) get no view, and nor does a
-link to a host outside `allowed_hosts`, or an Office file in a private dataset. Uploaded files
+link to a host outside `allowed_hosts`, or an Office file in a private dataset (when Office is
+listed). Uploaded files
 never get one: an editor decides whether Microsoft's viewer may fetch them. Other pages get no
 view unless you list their formats in `ckanext.webpageviewplus.formats` (e.g. `html htm`); those
 views frame the resource's own link with the default preset.
@@ -788,7 +801,7 @@ unsandboxed, which this extension allows only once uploads can't run as CKAN.
 | --- | --- | --- |
 | Needs | nothing | a separate domain for uploads |
 | Formats | DOC, DOCX, XLS, XLSX, XLSB, PPT, PPTX, PPS, PPSX, ODT, ODS, ODP (configurable) | DOC, DOCX, XLS, XLSX, PPT, PPTX, PPSX, ODT, ODS, ODP (XLSB didn't open in tests) |
-| How a view is made | made for those formats automatically | the form suggests the viewer for the file, or for a link to one pasted as the page URL; with `webpage_view_plus` in `ckan.views.default_views`, linked files in public datasets get one automatically |
+| How a view is made | made for those formats automatically | the form suggests the viewer for the file, or for a link to one pasted as the page URL; with `webpage_view_plus` in `ckan.views.default_views` and `microsoft-office` in `default_view_services`, linked files in public datasets get one automatically |
 | Frame | Microsoft's viewer, no sandbox | the same viewer under the `external` preset, with the site's host list and Permissions Policy |
 | Height | one height for the site (400 px by default) | per view: 800 px, or 16:9 for slides |
 | Private datasets | no view, or with a setting a card suggesting a Chrome extension | the form says the file can't be shown, as Microsoft can't fetch it |
@@ -1217,7 +1230,8 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.min_height` / `max_height` | `400` / `4000` | Clamp for viewport and auto heights, in px |
 | `ckanext.webpageviewplus.site_aliases` | empty | Other hosts this CKAN is reachable under; treated as CKAN's own |
 | `ckanext.webpageviewplus.allowed_hosts` | empty (any) | Allow-list of hosts a view's page URL may point to (not checked when a view frames its resource's URL) |
-| `ckanext.webpageviewplus.formats` | empty | Resource formats (e.g. `html htm`) that also get a view where `ckan.views.default_views` lists `webpage_view_plus`; recognised services' links get one regardless. See [Views made automatically](#views-made-automatically) |
+| `ckanext.webpageviewplus.default_view_services` | every service but `microsoft-office` and `jupyter` | Recognised services (by key, e.g. `youtube tableau-public`) whose links get a view where `ckan.views.default_views` lists `webpage_view_plus`; empty for none. See [Views made automatically](#views-made-automatically) |
+| `ckanext.webpageviewplus.formats` | empty | Resource formats (e.g. `html htm`) that also get a view where `ckan.views.default_views` lists `webpage_view_plus`; recognised services' links follow `default_view_services`. See [Views made automatically](#views-made-automatically) |
 | `ckanext.webpageviewplus.controls` | `open fullscreen reload share` | Buttons in the control bar; empty hides it |
 | `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing, check pages when views are saved, and show a card for those that refuse. Makes CKAN request editor-typed URLs, see [Frameability check](#frameability-check) |
 | `ckanext.webpageviewplus.thumbnail_fetch` | `false` | With the `webpage_view_plus_thumbnails` plugin, fetch thumbnails when views are saved: the page's own preview image, and linked images editors pick. Makes CKAN request page and image URLs, see [Thumbnails in the resource list](#thumbnails-in-the-resource-list) |

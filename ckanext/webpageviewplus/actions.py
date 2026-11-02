@@ -111,12 +111,14 @@ def default_view_suggestion(
     resource: dict[str, Any], private: bool
 ) -> Optional[services.Suggestion]:
     """The settings a view CKAN creates by default gets for a well-known
-    service's link, if they work on this site. Never an upload: an editor
-    chooses whether Microsoft's viewer may fetch the site's own file."""
+    service's link, if the site lists the service in default_view_services
+    and the settings work on this site. Never an upload: an editor chooses
+    whether Microsoft's viewer may fetch the site's own file."""
     if resource.get("url_type") == "upload":
         return None
     found = services.suggest(resource.get("url") or "")
-    if found is None or suggestion_problem(found, private):
+    if found is None or found.service not in settings.default_view_services() \
+            or suggestion_problem(found, private):
         return None
     return found
 

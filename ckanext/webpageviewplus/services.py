@@ -664,6 +664,16 @@ NAMES: tuple[str, ...] = (
 )
 
 
+def key(name: str) -> str:
+    """A service's name as a setting value: YouTube is youtube, Tableau
+    Public is tableau-public, shinyapps.io is shinyapps-io."""
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+# Each service by its key, for default_view_services.
+KEYS: dict[str, str] = {key(name): name for name in NAMES}
+
+
 # Logos for the resource list (webpage_view_plus_thumbnails), by the name
 # suggest() gives a view's stored embed URL, as files in
 # public/webpageviewplus/logos/. They're Simple Icons 16.36.0 (CC0; each brand's

@@ -8,9 +8,12 @@
   `ckan.views.default_views`, a resource whose link is a recognised service's page (a YouTube
   watch link, say) gets a Website (Plus) view with the settings the form would suggest, and the
   service's name as its title. Only where those settings work on the site: services needing
-  `external` wait for a content origin, `allowed_hosts` applies, Office files need a public
-  dataset, and uploads never get one. `ckan views create webpage_view_plus` adds them to
-  existing resources.
+  `external` wait for a content origin, `allowed_hosts` applies, and uploads never get one.
+  `ckanext.webpageviewplus.default_view_services` picks the services by key (`youtube`,
+  `tableau-public`...); by default every service except Microsoft Office and Jupyter, which
+  match any linked Office or `.ipynb` file and whose views send its address to Microsoft or
+  nbviewer (Office, if listed, still needs a public dataset).
+  `ckan views create webpage_view_plus` adds them to existing resources.
 
 ### Changed
 

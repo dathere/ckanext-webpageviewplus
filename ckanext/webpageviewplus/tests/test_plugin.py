@@ -252,6 +252,27 @@ class TestDefaultViews:
         resource = factories.Resource(package_id=dataset["id"], url=WATCH, format="")
         assert _views(resource) == []
 
+    def test_office_links_left_out_by_default(self, content_origin):
+        resource = factories.Resource(
+            package_id=factories.Dataset()["id"],
+            url="https://files.example.org/report.docx", format="DOCX")
+        assert _views(resource) == []
+
+    def test_notebook_links_left_out_by_default(self, content_origin):
+        resource = factories.Resource(
+            package_id=factories.Dataset()["id"],
+            url="https://raw.githubusercontent.com/org/repo/main/analysis.ipynb")
+        assert _views(resource) == []
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.default_view_services", "jupyter")
+    def test_notebook_links_when_listed(self, content_origin):
+        resource = factories.Resource(
+            package_id=factories.Dataset()["id"],
+            url="https://raw.githubusercontent.com/org/repo/main/analysis.ipynb")
+        assert [v["title"] for v in _views(resource)] == ["Jupyter"]
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.default_view_services",
+                             "youtube microsoft-office")
     def test_office_link_only_in_a_public_dataset(self, content_origin):
         url = "https://files.example.org/report.docx"
         public = factories.Resource(
@@ -262,6 +283,20 @@ class TestDefaultViews:
             package_id=factories.Dataset(owner_org=org["id"], private=True)["id"],
             url=url, format="DOCX")
         assert _views(private) == []
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.default_view_services", "Datawrapper")
+    def test_only_the_listed_services(self, content_origin):
+        dataset = factories.Dataset()
+        video = factories.Resource(package_id=dataset["id"], url=WATCH)
+        chart = factories.Resource(
+            package_id=dataset["id"], url="https://datawrapper.dwcdn.net/abc12/1/")
+        assert _views(video) == []
+        assert [v["title"] for v in _views(chart)] == ["Datawrapper"]
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.default_view_services", "")
+    def test_no_services_when_empty(self, content_origin):
+        resource = factories.Resource(package_id=factories.Dataset()["id"], url=WATCH)
+        assert _views(resource) == []
 
     def test_none_for_html_pages_by_default(self, content_origin):
         resource = factories.Resource(
@@ -773,6 +808,32 @@ def test_unknown_control_stops_startup(monkeypatch):
     )
     with pytest.raises(CkanConfigurationException, match="controls"):
         settings.check()
+
+
+def test_unknown_default_view_service_stops_startup(monkeypatch):
+    from ckan.exceptions import CkanConfigurationException
+    from ckanext.webpageviewplus import settings
+
+    real_get = settings._get
+    monkeypatch.setattr(settings, "_get", lambda key: "youtube tableau"
+                        if key == "default_view_services" else real_get(key))
+    with pytest.raises(CkanConfigurationException, match="default_view_services.*tableau"):
+        settings.check()
+
+
+def test_default_view_services_default_leaves_out_catch_alls():
+    import os
+    import yaml
+    from ckanext.webpageviewplus import services
+
+    path = os.path.join(os.path.dirname(services.__file__), "config_declaration.yaml")
+    with open(path) as f:
+        options = [o for group in yaml.safe_load(f)["groups"] for o in group["options"]]
+    [option] = [o for o in options
+                if o["key"] == "ckanext.webpageviewplus.default_view_services"]
+    assert len(services.KEYS) == len(services.NAMES)  # no two names share a key
+    assert sorted(option["default"].split()) == sorted(
+        k for k in services.KEYS if k not in ("microsoft-office", "jupyter"))
 
 
 def test_unknown_credentialless_preset_stops_startup(monkeypatch):

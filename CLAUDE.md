@@ -248,8 +248,11 @@ order now being built:
 - Automatic views: with `webpage_view_plus` in CKAN's `ckan.views.default_views`, CKAN makes a
   view (title and description only) wherever `can_view` passes. Being `always_available`, the
   view is offered everywhere, so `can_view` only picks default views: a link
-  `actions.default_view_suggestion` accepts (a suggestion with no `suggestion_problem`, never an
-  upload), plus the site's `formats` (default empty). The main plugin's chained
+  `actions.default_view_suggestion` accepts (a service in `default_view_services`, by
+  `services.key()` of its name, every one but the catch-alls `microsoft-office` and `jupyter`
+  by default; a suggestion with no
+  `suggestion_problem`; never an upload), plus the site's `formats` (default empty). A new
+  service goes in that setting's default too (`test_default_view_services_default_leaves_out_catch_alls`). The main plugin's chained
   `resource_view_create` (`_with_service_settings`) fills page_url, preset, height and the
   service's name as title into a Website (Plus) view created with neither page_url nor preset.
   With `service_format`, that save's `resource_patch` makes `resource_update` ask for default
