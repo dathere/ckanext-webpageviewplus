@@ -47,8 +47,9 @@ for everyone who opens the view, no upload needed. This extension:
 - does the same when someone downloads an uploaded HTML, SVG or XML file and opens it;
 - accepts only web addresses as pages to embed, never `javascript:`;
 - with a [separate domain for uploads](#a-separate-domain-for-uploads), moves uploaded pages off
-  your site's address altogether. They still run in a sandbox, but on an address your browser
-  doesn't trust with your login, and a fake sign-in form there no longer looks like your site.
+  your site's address altogether, onto one your browser doesn't trust with your login. In a view
+  they're still sandboxed; opened on their own, that other address is what keeps them away from
+  your login, and a fake sign-in form there no longer looks like your site.
 
 **It makes embedded pages look and work better.** Heights that fit the page, a control bar,
 help for editors pasting links from well-known services, and a card explaining why a page
