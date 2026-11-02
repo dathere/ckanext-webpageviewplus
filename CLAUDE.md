@@ -90,7 +90,8 @@ order now being built:
      (`default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:`, `report-to` plus
      `report-uri`). Reports go to `/webpageviewplus/report/<resource_id>` on the content origin
      itself (no CORS; `ContentHostMiddleware` lets that prefix through), are reduced to
-     distinct other hosts (at most 20 per request, 64 KB bodies) and kept per resource in
+     distinct other hosts (at most 20 per request, 64 KB bodies, only for uploads the route
+     serves, at most `connections.MAX_STORED` hosts per resource) and kept per resource in
      `webpage_view_plus_connections` (second migration). `webpageviewplus_connections_show`,
      `ckan webpageviewplus connections`, `purge-stats` also purges them, and
      `show_connections` (default off: anyone can post a report) adds "This page connects to".
@@ -173,10 +174,13 @@ order now being built:
     and owns its `Set-Cookie`/`Cache-Control`, because CKAN's own response hooks run after the
     view and would overwrite them. Every failure is a 404, so private resources aren't revealed.
 - `downloads.py`: an `after_app_request` hook. HTML uploads served by `*_resource.download` are
-  302'd to their content URL when `content.serves` applies; otherwise HTML/SVG/XML from those
-  responses and `resource_proxy.proxy_view` get a CSP `sandbox` header (no
-  `allow-same-origin`). It matches on the response mimetype, because editors can set a
-  resource's mimetype.
+  302'd to their content URL when `content.serves` applies; otherwise every one of those
+  responses and `resource_proxy.proxy_view`'s gets `nosniff`, and a CSP `sandbox` header (no
+  `allow-same-origin`) unless its raw Content-Type is one well-formed passive type
+  (`is_passive_type`, an allow-list; PDF must stay on it, as Chrome refuses its viewer in a
+  sandbox). Fail closed: CKAN sends the resource's mimetype, which editors set, and browsers
+  run `text/plain, text/html` as HTML and sniff `unknown/unknown`, `html` or ` ` into it.
+  `cli._active_content` (check-views) uses the same test.
 - `assets/webpageviewplus.js`: plain script, no dependencies and nothing inline, so a site CSP
   without `'unsafe-inline'` works. It's included via `{% asset %}`. `webassets.yml` is read only
   at CKAN startup, so restart ckan-dev after adding a bundle. It does three things:
@@ -269,7 +273,9 @@ order now being built:
   only: `/webpageviewplus/pdfjs/<version>/...` (allow-listed types, `immutable`, its own CSP)
   and `/webpageviewplus/pdf/<view_id>/<file>` (signed per view as `pdf:<view_id>` for private
   datasets; uploads via `content.file_response`, links via `cached_pdf`: `fetch_body`, `%PDF-`
-  in the first 1024 bytes, a copy under `ckan.storage_path` for `pdf_cache_seconds`). On
+  in the first 1024 bytes, a copy under `ckan.storage_path` for `pdf_cache_seconds`; a failed
+  fetch remembered for `FAILED_SECONDS`, one fetch per URL at a time by a lock file, and other
+  workers serve the copy being refreshed rather than wait). On
   CKAN's host, `/webpageviewplus/pdf-view/<view_id>` re-checks `resource_view_show` and
   redirects to a fresh viewer URL: it's the Reload and Load URL (`reload_url`), as a raw PDF in
   the sandbox would be blocked by Chrome. The frame is `build_frame(..., "data-schematic",
@@ -313,8 +319,9 @@ order now being built:
   fetched; check a new one's address on a real embed. Services whose preview image is only their logo are in
   `services.GENERIC_PREVIEWS` (found by fetching each one's stored embed URL). Fetches use
   `frameability.fetch_body`: the probe's guards plus a byte cap counted while reading. Every
-  failure is "no copy"; `check-views` passes `keep=True` so a copy whose source is unchanged
-  survives a failed refresh. PDF (Plus) views (`VIEW_TYPES`) take a picked image only
+  failure is "no copy"; view saves (`actions.thumbnails_view_*`) and `check-views` pass
+  `keep=True` so a copy whose source is unchanged survives a failed refresh (`refresh_from`
+  doesn't: a replaced image that won't decode should drop its stale copy). PDF (Plus) views (`VIEW_TYPES`) take a picked image only
   (`source_for(..., view_type)`). A Website (Plus) view of Microsoft's Office viewer gets
   `office:<file url>`: the preview picture inside the file (`office_preview`:
   `Thumbnails/thumbnail.png` in ODF, `docProps/thumbnail.*` in OOXML, entry capped), read from

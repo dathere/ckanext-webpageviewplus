@@ -52,6 +52,27 @@ class TestHardenedDownloads:
         url = _upload(b"a,b\n1,2\n", "data.csv", "text/csv")
         response = app.get(url)
         assert not response.headers.getlist("Content-Security-Policy")
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+
+    def test_pdf_upload_not_sandboxed(self, app, local_storage):
+        # Chrome refuses its PDF viewer in a sandboxed document.
+        url = _upload(b"%PDF-1.4\n", "report.pdf", "application/pdf")
+        assert not app.get(url).headers.getlist("Content-Security-Policy")
+
+    @pytest.mark.parametrize("mimetype", [
+        "text/plain, text/html",  # browsers take the last type
+        "text/csv, text/html",
+        "unknown/unknown",  # sniffed
+        "html",
+        " ",
+        "application/x-unlisted",
+    ])
+    def test_crafted_mimetype_is_sandboxed(self, app, local_storage, mimetype):
+        url = _upload(b"<script>parent.x</script>", "notes.txt", mimetype)
+        response = app.get(url)
+        csp = response.headers.getlist("Content-Security-Policy")
+        assert any(p.startswith(SANDBOX) for p in csp), mimetype
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.harden_downloads", "false")
     def test_can_be_turned_off(self, app, local_storage):
@@ -82,6 +103,33 @@ def test_active_types(mimetype, active):
     from ckanext.webpageviewplus.downloads import is_active_type
 
     assert is_active_type(mimetype) is active
+
+
+@pytest.mark.parametrize(
+    "content_type,passive",
+    [
+        ("text/csv; charset=utf-8", True),
+        ("image/png", True),
+        ("application/pdf", True),
+        ("application/geo+json", True),
+        ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", True),
+        ("image/svg+xml", False),
+        ("application/vnd.google-earth.kml+xml", False),
+        ("text/html; charset=utf-8", False),
+        ("text/plain, text/html", False),
+        ("text/plain,text/html", False),
+        ("unknown/unknown", False),
+        ("*/*", False),
+        ("html", False),
+        ("", False),
+        ("multipart/x-mixed-replace", False),
+        ("text/xsl", False),
+    ],
+)
+def test_passive_types(content_type, passive):
+    from ckanext.webpageviewplus.downloads import is_passive_type
+
+    assert is_passive_type(content_type) is passive
 
 
 @pytest.mark.parametrize(

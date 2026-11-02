@@ -79,6 +79,23 @@ def dns(monkeypatch):
     return table
 
 
+def test_form_check_has_a_deadline(monkeypatch):
+    # Without one, a server dripping its headers holds the worker for as
+    # long as it likes: the per-read timeout never fires.
+    seen = []
+
+    def probe(url, ckan, deadline=None):
+        seen.append(deadline)
+        return fa.Probe(fa.UNKNOWN)
+
+    monkeypatch.setattr(fa, "probe", probe)
+    fa._cache.clear()
+    before = time.monotonic()
+    fa.check("https://pages.example.com/slow", CKAN)
+    assert seen and seen[0] is not None
+    assert before < seen[0] <= time.monotonic() + fa.TIMEOUT
+
+
 @pytest.mark.parametrize(
     "addresses,public",
     [

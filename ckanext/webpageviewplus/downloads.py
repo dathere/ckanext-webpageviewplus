@@ -3,11 +3,15 @@
 CKAN core serves an uploaded HTML resource inline, as text/html, from CKAN's
 own origin, so anyone who opens its download link (or a frame that navigates
 there) runs its scripts as CKAN. The resource proxy does the same for any
-linked page. This adds a CSP ``sandbox`` to such responses: the page still
-renders and runs its scripts, but in an opaque origin that can't read CKAN
-pages, its cookies or its API with the viewer's session.
+linked page. This adds a CSP ``sandbox`` to every such response that isn't
+plainly a passive type (``is_passive_type``; the Content-Type comes from the
+resource's mimetype, which editors set): a page still renders and runs its
+scripts, but in an opaque origin that can't read CKAN pages, its cookies or
+its API with the viewer's session. All of them get ``nosniff``.
 """
 from __future__ import annotations
+
+import re
 
 from flask import Blueprint, Response, redirect, request
 
@@ -43,6 +47,34 @@ def is_active_type(mimetype: str) -> bool:
         mimetype in ACTIVE_TYPES
         or mimetype.endswith("+xml")
         or mimetype.endswith("/xml")
+    )
+
+
+_MIME_TOKEN = re.compile(r"[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*")
+_PASSIVE_FAMILIES = ("image/", "audio/", "video/", "font/")
+_PASSIVE_TEXT = frozenset(["text/plain", "text/csv", "text/tab-separated-values"])
+_PASSIVE_APPLICATION = frozenset([
+    "application/pdf", "application/json", "application/zip", "application/gzip",
+    "application/x-gzip", "application/octet-stream",
+])
+
+
+def is_passive_type(content_type: str) -> bool:
+    """Whether a Content-Type is one a browser never runs scripts in. Fail
+    closed: CKAN sends a resource's mimetype as its Content-Type, and
+    editors can set it to anything. Browsers run "text/plain, text/html" as
+    HTML (the last type wins), sniff "unknown/unknown", "html" or " " into
+    HTML, so only one well-formed type on this list counts. PDF must be:
+    Chrome refuses its PDF viewer in a sandboxed document."""
+    mimetype = content_type.partition(";")[0].strip().lower()
+    if not _MIME_TOKEN.fullmatch(mimetype) or is_active_type(mimetype):
+        return False
+    return (
+        mimetype.startswith(_PASSIVE_FAMILIES)
+        or mimetype in _PASSIVE_TEXT
+        or mimetype in _PASSIVE_APPLICATION
+        or mimetype.endswith("+json")
+        or mimetype.startswith("application/vnd.")
     )
 
 
@@ -91,10 +123,10 @@ def sandbox_active_downloads(response: Response) -> Response:
             return redirected
     if not settings.harden_downloads():
         return response
-    if not is_active_type(response.mimetype or ""):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    if is_passive_type(response.headers.get("Content-Type", "")):
         return response
     # Added as its own header, so any policy the site already sends still
     # applies too (browsers enforce every CSP header).
     response.headers.add("Content-Security-Policy", DOWNLOAD_SANDBOX)
-    response.headers["X-Content-Type-Options"] = "nosniff"
     return response

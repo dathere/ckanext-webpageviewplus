@@ -1,6 +1,6 @@
 [project]
 name = "ckanext-webpageviewplus"
-version = "0.9.0"
+version = "0.9.1"
 description = "An enhanced web page resource view for CKAN"
 readme = "README.md"
 authors = [
@@ -24,8 +24,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# The webpage_view_plus_thumbnails plugin re-encodes images with Pillow.
-thumbnails = ["Pillow>=9.1"]
+# The webpage_view_plus_thumbnails plugin re-encodes images with Pillow, from
+# other sites too: 10.3 is past known decoder holes (libwebp CVE-2023-4863).
+thumbnails = ["Pillow>=10.3"]
 
 [project.urls]
 Homepage = "https://github.com/dathere/ckanext-webpageviewplus"

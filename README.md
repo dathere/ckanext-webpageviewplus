@@ -640,8 +640,14 @@ visitor's cookies or storage, as extra hardening against trackers.
 
 ### Uploaded HTML downloads are sandboxed
 
-With this plugin enabled, HTML, SVG and XML from CKAN's resource downloads and the resource
-proxy get a `Content-Security-Policy: sandbox` header without `allow-same-origin`. Pages still
+With this plugin enabled, CKAN's resource downloads and the resource proxy get a
+`Content-Security-Policy: sandbox` header without `allow-same-origin`, on everything except
+types a browser never runs scripts in: images (not SVG), audio, video, fonts, plain text, CSV,
+TSV, JSON, PDF, zip, gzip, `application/octet-stream` and `application/vnd.*` (not XML ones).
+CKAN sends a resource's mimetype as its type, and editors can set it to anything, so a type
+that isn't exactly one of those counts as able to run scripts: browsers run `text/plain,
+text/html` as HTML, and guess HTML for `unknown/unknown`. All of these responses also get
+`X-Content-Type-Options: nosniff`. Pages still
 render and run scripts, but in an isolated origin. **This changes core behaviour:** opened
 from its download link, a page that needs storage or a real origin (for example a qsv Data
 Schematic's maps) loses those features. With a content origin, HTML upload downloads redirect
@@ -989,7 +995,7 @@ and lists the ones that can't show their page:
 | `mixed-content` | an `http://` page on an `https://` site, or one redirecting to `http://`, which browsers block |
 | `not-http` | not an `http://` or `https://` URL |
 | `host-not-allowed` | a page URL outside `allowed_hosts` (`webpage_view_plus` views only) |
-| `unsandboxed-upload` | with `harden_downloads = false`, a core `webpage_view` framing uploaded HTML, SVG or XML unsandboxed, as CKAN; `migrate` fixes it |
+| `unsandboxed-upload` | with `harden_downloads = false`, a core `webpage_view` framing an upload that could run scripts (HTML, SVG or XML, or a mimetype that isn't plainly passive) unsandboxed, as CKAN; `migrate` fixes it |
 
 It fetches each URL once per run, with the same guards as the form's check (public addresses
 only, headers only), whatever `frameability_check` is set to. Uploads and CKAN's own pages
@@ -1249,7 +1255,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.content_origin` | empty (off) | Origin serving uploaded HTML, a separate site from CKAN's; see [Deploying a content origin](#deploying-a-content-origin) |
 | `ckanext.webpageviewplus.signing_secret` | empty | HMAC key (32+ characters) for private content URLs; required with `content_origin` |
 | `ckanext.webpageviewplus.url_ttl` | `300` | Signing window for private content URLs, in seconds (minimum 30) |
-| `ckanext.webpageviewplus.harden_downloads` | `true` | Sandbox HTML/SVG/XML that CKAN serves from its own origin (downloads, resource proxy) |
+| `ckanext.webpageviewplus.harden_downloads` | `true` | Sandbox anything that could run scripts that CKAN serves from its own origin (downloads, resource proxy), judged strictly by its type |
 | `ckanext.webpageviewplus.default_preset` | `interactive` | Preset for new views |
 | `ckanext.webpageviewplus.presets` | all four | Presets editors may choose from |
 | `ckanext.webpageviewplus.editor_can_loosen` | `false` | Let editors (not only sysadmins) set sandbox, allow and referrer policy |

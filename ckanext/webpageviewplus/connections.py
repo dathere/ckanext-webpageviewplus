@@ -27,6 +27,7 @@ PREFIX = "/webpageviewplus/report/"
 ENDPOINT_NAME = "webpageviewplus"
 MAX_BODY = 64 * 1024
 MAX_HOSTS = 20
+MAX_STORED = 200
 SCHEMES = {"http": "http", "https": "https", "ws": "http", "wss": "https"}
 
 metadata = sa.MetaData()
@@ -100,18 +101,29 @@ def hosts_in(body: bytes, own_host: str) -> list[str]:
 
 
 def record(resource_id: str, hosts: list[str]) -> None:
+    """Count reports per host. Anyone can post one, so a resource keeps at
+    most MAX_STORED hosts: once full, only hosts it has are counted."""
     if not hosts:
         return
     today = datetime.date.today()
-    stmt = insert(table).values(
-        [{"resource_id": resource_id, "host": h, "reports": 1, "last_seen": today}
-         for h in hosts])
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["resource_id", "host"],
-        set_={"reports": table.c.reports + 1, "last_seen": stmt.excluded.last_seen},
-    )
     try:
         with model.meta.engine.begin() as connection:
+            mine = table.c.resource_id == resource_id
+            total = connection.execute(
+                sa.select(sa.func.count()).select_from(table).where(mine)).scalar()
+            known = set(connection.execute(
+                sa.select(table.c.host).where(mine, table.c.host.in_(hosts))).scalars())
+            new = [h for h in hosts if h not in known][:max(0, MAX_STORED - total)]
+            counted = [h for h in hosts if h in known] + new
+            if not counted:
+                return
+            stmt = insert(table).values(
+                [{"resource_id": resource_id, "host": h, "reports": 1, "last_seen": today}
+                 for h in counted])
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["resource_id", "host"],
+                set_={"reports": table.c.reports + 1, "last_seen": stmt.excluded.last_seen},
+            )
             connection.execute(stmt)
     except sa.exc.ProgrammingError:
         log.warning("webpageviewplus: no connections table; run "

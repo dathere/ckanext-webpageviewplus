@@ -1,2 +1,2 @@
 pytest-ckan
-Pillow>=9.1
+Pillow>=10.3

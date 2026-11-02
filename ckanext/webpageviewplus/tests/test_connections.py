@@ -140,6 +140,23 @@ class TestReports:
         assert _post(app, report, big).status_code == 204
         assert _hosts(resource) == []
 
+    def test_only_for_uploads_it_serves(self, app):
+        # Other resources never send reports, so a report for one is noise.
+        dataset = factories.Dataset()
+        link = factories.Resource(package_id=dataset["id"], url="https://a.example/p.html")
+        report = "{}/webpageviewplus/report/{}".format(CONTENT, link["id"])
+        assert _post(app, report, _reports("https://cdn.example.org/x.js")).status_code == 204
+        assert _hosts(link) == []
+
+    def test_hosts_per_resource_capped(self, app, monkeypatch):
+        monkeypatch.setattr(connections, "MAX_STORED", 3)
+        _, resource = _upload()
+        connections.record(resource["id"], ["a.example", "b.example"])
+        connections.record(resource["id"], ["c.example", "d.example", "a.example"])
+        rows = helpers.call_action("webpageviewplus_connections_show", id=resource["id"])
+        assert sorted((r["host"], r["reports"]) for r in rows) == [
+            ("a.example", 2), ("b.example", 1), ("c.example", 1)]
+
     @pytest.mark.ckan_config("ckanext.webpageviewplus.show_connections", "true")
     def test_disclosure(self, app):
         dataset, resource = _upload()

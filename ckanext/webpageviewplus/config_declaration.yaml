@@ -43,9 +43,12 @@ groups:
         default: true
         type: bool
         description: |
-          Add a CSP sandbox (without allow-same-origin) to HTML, SVG and XML
-          that CKAN serves from its own origin: resource downloads and the
-          resource proxy. Pages still render and run scripts, but can't act
+          Add a CSP sandbox (without allow-same-origin) to what CKAN serves
+          from its own origin as resource downloads and through the resource
+          proxy, unless its type is plainly one a browser never runs scripts
+          in (images but not SVG, text, CSV, JSON, PDF, zip...: judged
+          strictly, as editors set a resource's mimetype), plus nosniff on
+          all of them. Pages still render and run scripts, but can't act
           as CKAN with the viewer's session. Changes core behaviour: such a
           page opened from its download link loses storage and a real origin
           (e.g. a qsv Data Schematic's maps), until a content origin serves

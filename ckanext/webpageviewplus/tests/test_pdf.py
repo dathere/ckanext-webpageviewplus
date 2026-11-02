@@ -231,6 +231,44 @@ class TestLinks:
         assert _get(app, _file_url(view, resource), status=404).status_code == 404
         assert "pdf_fetch_failed" in [e["event"] for e in events_log()]
 
+    def test_failure_remembered(self, fetches, events_log):
+        bodies, calls = fetches
+        bodies[LINK] = b"not a pdf"
+        assert pdf.cached_pdf(LINK) is None
+        assert pdf.cached_pdf(LINK) is None
+        assert calls == [LINK]
+        assert [e["event"] for e in events_log()].count("pdf_fetch_failed") == 1
+
+    def test_failure_forgotten_after_a_while(self, fetches, monkeypatch):
+        bodies, calls = fetches
+        bodies[LINK] = b"not a pdf"
+        assert pdf.cached_pdf(LINK) is None
+        monkeypatch.setattr(pdf, "FAILED_SECONDS", 0)
+        bodies[LINK] = PDF
+        assert pdf.cached_pdf(LINK) is not None
+        assert calls == [LINK, LINK]
+
+    def test_no_wait_while_another_worker_fetches(self, fetches, monkeypatch):
+        _, calls = fetches
+        path = pdf.cached_pdf(LINK)
+        monkeypatch.setattr(pdf, "_fresh", lambda p: False)
+        open(path[:-len(".pdf")] + ".lock", "w").close()
+        assert pdf.cached_pdf(LINK) == path  # the copy being refreshed
+        os.remove(path)
+        assert pdf.cached_pdf(LINK) is None
+        assert calls == [LINK]
+
+    def test_dead_workers_lock_taken_over(self, fetches):
+        _, calls = fetches
+        base = os.path.join(pdf._cache_dir(), pdf.hashlib.sha256(LINK.encode()).hexdigest())
+        os.makedirs(os.path.dirname(base), exist_ok=True)
+        open(base + ".lock", "w").close()
+        old = pdf.time.time() - pdf.FETCH_SECONDS - 60
+        os.utime(base + ".lock", (old, old))
+        assert pdf.cached_pdf(LINK) == base + ".pdf"
+        assert not os.path.exists(base + ".lock")
+        assert calls == [LINK]
+
     def test_no_storage_path(self, app, fetches, monkeypatch, ckan_config):
         _, calls = fetches
         monkeypatch.setitem(ckan_config, "ckan.storage_path", "")

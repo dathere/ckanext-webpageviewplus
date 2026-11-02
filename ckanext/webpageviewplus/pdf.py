@@ -40,6 +40,9 @@ PDFJS_DIR = os.path.join(os.path.dirname(__file__), "pdfjs", PDFJS_VERSION)
 HEIGHT_MODES = ("fixed", "viewport")
 DEFAULT_HEIGHT = ("fixed", "800")
 FETCH_SECONDS = 30
+# How long a failed fetch of a linked PDF is remembered, so requests for a
+# broken link don't each start another fetch.
+FAILED_SECONDS = 60
 USER_AGENT = "ckanext-webpageviewplus pdf_view_plus"
 # A PDF's header must start within its first 1024 bytes.
 HEADER_WINDOW = 1024
@@ -123,40 +126,90 @@ def _fresh(path: str) -> bool:
         return False
 
 
-def cached_pdf(url: str) -> Optional[str]:
+def cached_pdf(url: str, view_id: str = "") -> Optional[str]:
     """A file on disk holding the PDF at ``url``: fetched at most once per
     pdf_cache_seconds and shared by every visitor (and every CKAN worker
     using the same storage_path), so a busy view doesn't make CKAN download
     the file again for each one. None when it can't be fetched or isn't a
     PDF, or when ckan.storage_path isn't set; a failed refresh serves
-    nothing."""
+    nothing.
+
+    Anyone can request a public view's PDF, so a failed fetch is remembered
+    for FAILED_SECONDS, and only one worker fetches a URL at a time (a lock
+    file). The others don't wait for it: they serve the copy being refreshed
+    (it's public at its source, so there's nothing to revoke), or nothing."""
     folder = _cache_dir()
     if folder is None:
         return None
-    path = os.path.join(folder, hashlib.sha256(url.encode()).hexdigest() + ".pdf")
+    base = os.path.join(folder, hashlib.sha256(url.encode()).hexdigest())
+    path = base + ".pdf"
     if _fresh(path):
         return path
-    body = frameability.fetch_body(
-        url, time.monotonic() + FETCH_SECONDS, settings.pdf_max_size(), USER_AGENT)
-    if body is None or not looks_like_pdf(body.data):
-        # The stale copy stays on disk (never served; _prune drops it):
-        # removing it here could remove a fresh one another worker just stored.
+    if _age(base + ".failed") < FAILED_SECONDS:
         return None
     os.makedirs(folder, exist_ok=True)
-    # A name of its own: two threads may fetch the same PDF at once.
-    fd, temp = tempfile.mkstemp(dir=folder, suffix=".tmp")
+    if not _lock(base + ".lock"):
+        return path if os.path.exists(path) else None
     try:
-        with os.fdopen(fd, "wb") as f:
-            f.write(body.data)
-        os.replace(temp, path)  # atomic: a reader never sees half a file
-    except OSError:
+        body = frameability.fetch_body(
+            url, time.monotonic() + FETCH_SECONDS, settings.pdf_max_size(), USER_AGENT)
+        if body is None or not looks_like_pdf(body.data):
+            # The stale copy stays on disk (never served; _prune drops it).
+            _touch(base + ".failed")
+            events.emit("pdf_fetch_failed", view_id=view_id, host=frame.url_host(url))
+            return None
+        # A name of its own, so a reader never sees half a file.
+        fd, temp = tempfile.mkstemp(dir=folder, suffix=".tmp")
         try:
-            os.remove(temp)
+            with os.fdopen(fd, "wb") as f:
+                f.write(body.data)
+            os.replace(temp, path)
         except OSError:
-            pass
-        return None
+            _remove(temp)
+            return None
+        _remove(base + ".failed")
+    finally:
+        _remove(base + ".lock")
     _prune(folder)
     return path
+
+
+def _age(path: str) -> float:
+    try:
+        return time.time() - os.path.getmtime(path)
+    except OSError:
+        return float("inf")
+
+
+def _lock(path: str) -> bool:
+    """Take the fetch lock; a lock older than a fetch can take is left by a
+    worker that died, and is taken over."""
+    for _ in range(2):
+        try:
+            os.close(os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+            return True
+        except FileExistsError:
+            if _age(path) < FETCH_SECONDS + 30:
+                return False
+            _remove(path)
+        except OSError:
+            return False
+    return False
+
+
+def _touch(path: str) -> None:
+    try:
+        with open(path, "w"):
+            pass
+    except OSError:
+        pass
+
+
+def _remove(path: str) -> None:
+    try:
+        os.remove(path)
+    except OSError:
+        pass
 
 
 def _prune(folder: str) -> None:
@@ -318,9 +371,8 @@ def serve(view_id: str, filename: str):
     else:
         if not host_allowed(url):
             abort(404)
-        path = cached_pdf(url)
+        path = cached_pdf(url, view_id)
         if path is None:
-            events.emit("pdf_fetch_failed", view_id=view_id, host=frame.url_host(url))
             abort(404)
         request.environ[content.CACHE_ENVIRON_KEY] = (
             "private" if private else "max-age={}".format(settings.pdf_cache_seconds()))

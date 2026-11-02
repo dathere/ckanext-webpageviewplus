@@ -169,13 +169,14 @@ def resource_view_update(
 
 
 # The webpage_view_plus_thumbnails plugin's own chain, so its copies are made
-# only when it's enabled.
+# only when it's enabled. keep=True: re-saving a view while its image's site
+# is slow mustn't lose the thumbnail it already has.
 @toolkit.chained_action
 def thumbnails_view_create(
     original: Any, context: Context, data_dict: dict[str, Any]
 ) -> dict[str, Any]:
     view = original(context, data_dict)
-    thumbnails.after_save(view)
+    thumbnails.after_save(view, keep=True)
     thumbnails.service_format(context, view)
     return view
 
@@ -185,7 +186,7 @@ def thumbnails_view_update(
     original: Any, context: Context, data_dict: dict[str, Any]
 ) -> dict[str, Any]:
     view = original(context, data_dict)
-    thumbnails.after_save(view)
+    thumbnails.after_save(view, keep=True)
     thumbnails.service_format(context, view)
     return view
 

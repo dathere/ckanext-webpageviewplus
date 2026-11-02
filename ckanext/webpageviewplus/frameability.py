@@ -483,8 +483,9 @@ def _probe(
 
 def _fetch(url: str, ckan: tuple[str, list[str], Optional[int]]) -> tuple[str, str]:
     # The form's check: every failure is the same "unknown", so editors can't
-    # use it to probe which hosts or ports exist.
-    result = probe(url, ckan)
+    # use it to probe which hosts or ports exist. The deadline bounds the
+    # whole check, so a server dripping its answer can't hold the worker.
+    result = probe(url, ckan, deadline=time.monotonic() + TIMEOUT)
     return result.verdict, result.reason
 
 

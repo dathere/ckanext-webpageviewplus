@@ -294,13 +294,14 @@ ACTIVE_CONTENT = ("html", "htm", "xhtml", "svg", "xml")
 
 
 def _active_content(resource: model.Resource) -> bool:
-    """Whether an upload looks like HTML, SVG or XML, which run scripts."""
+    """Whether an upload looks like HTML, SVG or XML, which run scripts, or
+    has a mimetype a browser might run scripts in (``is_passive_type``)."""
     from ckanext.webpageviewplus import downloads
 
     fmt = (resource.format or "").lower()
     ext = (resource.url or "").rpartition(".")[2].lower()
     return (fmt in ACTIVE_CONTENT or ext in ACTIVE_CONTENT
-            or downloads.is_active_type(resource.mimetype or ""))
+            or bool(resource.mimetype and not downloads.is_passive_type(resource.mimetype)))
 
 
 def assess(

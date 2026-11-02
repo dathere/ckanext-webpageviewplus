@@ -295,10 +295,13 @@ def report(resource_id: str):
     if settings.connection_reports():
         body = request.stream.read(connections.MAX_BODY + 1)
         resource_obj = model.Resource.get(resource_id)
+        # Only uploads this route serves send reports (connections.policy).
         if (
             len(body) <= connections.MAX_BODY
             and resource_obj is not None
             and resource_obj.state == "active"
+            and resource_obj.package is not None
+            and serves(resource_dict(resource_obj))
         ):
             connections.record(resource_id, connections.hosts_in(
                 body, frame.url_host(settings.content_origin())))

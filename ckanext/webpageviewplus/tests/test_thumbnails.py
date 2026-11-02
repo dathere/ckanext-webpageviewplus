@@ -501,6 +501,18 @@ class TestFetch:
         _update(view, no_auto_thumbnail=True)
         assert thumbnails.stored(view["id"]) is None
 
+    def test_resave_keeps_the_copy_when_the_site_is_down(self, app, web):
+        import responses
+
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        view = _view(page["id"])
+        before = thumbnails.stored(view["id"])
+        assert before
+        web.replace(responses.GET, PAGE, status=503)
+        _update(view, title="A new title")
+        assert thumbnails.stored(view["id"])["source"] == before["source"]
+
     def test_uploads_and_ckan_pages_not_fetched(self, monkeypatch):
         _no_fetching(monkeypatch)
         dataset = factories.Dataset()

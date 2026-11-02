@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.9.1 (2026-11-02)
+
+### Security
+
+- `harden_downloads` could be bypassed by an editor. CKAN sends a resource's mimetype, which
+  editors set, as its download's Content-Type, and the sandbox was only added for exactly
+  HTML, SVG or XML types. Browsers run a download typed `text/plain, text/html` as HTML, and
+  guess HTML for `unknown/unknown`, `html` or a blank type, so such an upload ran on CKAN's own
+  address with the visitor's login. Every site with `harden_downloads` on (the default) was
+  exposed, through resource downloads and the resource proxy. Now every such response gets
+  `nosniff`, and the sandbox goes on everything except one well-formed type a browser never
+  runs scripts in (images but not SVG, audio, video, fonts, plain text, CSV, TSV, JSON, PDF,
+  zip, gzip, `application/octet-stream`, `application/vnd.*`). `check-views` judges uploads'
+  mimetypes the same way. Upgrading is enough; no setting changes.
+- The thumbnails extra needs Pillow 10.3 or newer: thumbnails decode images from other sites,
+  and older Pillow has known decoder holes (libwebp's CVE-2023-4863 before 10.0.1).
+
+### Fixed
+
+- Linked PDFs (PDF (Plus)): a failed fetch is remembered for a minute, and only one worker
+  fetches a link at a time; the others serve the copy being refreshed instead of waiting. A
+  broken or slow link could otherwise keep workers busy with one fetch per request.
+- The view form's embeddability check (`frameability_check`) now has an overall deadline, so
+  a page that sends its headers a byte at a time can't hold a worker.
+- Connection reports (`connection_reports`) are only accepted for uploads the content origin
+  serves, and a resource keeps at most 200 hosts, so posting reports can't grow the table
+  without limit.
+- Re-saving a view no longer drops its thumbnail when the image's site is down for a moment;
+  the copy stays until its source changes.
+
 ## 0.9.0 (2026-11-02)
 
 ### Added

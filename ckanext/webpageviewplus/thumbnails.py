@@ -525,9 +525,9 @@ def after_save(
     memo: Optional[dict[tuple[str, str], Optional[bytes]]] = None,
 ) -> None:
     """Make (or drop) a saved view's copy. Never fails the save. With
-    ``keep`` (check-views), a copy whose source is unchanged stays when
-    making a new one fails, so a site that's down for a moment doesn't
-    lose its thumbnails."""
+    ``keep`` (view saves and check-views), a copy whose source is unchanged
+    stays when making a new one fails, so a site that's down for a moment
+    doesn't lose its thumbnails."""
     if view.get("view_type") not in VIEW_TYPES:
         return
     try:
