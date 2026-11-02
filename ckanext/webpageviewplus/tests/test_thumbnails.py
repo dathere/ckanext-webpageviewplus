@@ -820,13 +820,15 @@ class TestOfficeAndPdfViews:
         from ckan import model
         model.Resource.get(doc["id"]).state = "deleted"
         model.Session.commit()
+        # (The dataset page lists resources from the search index on CKAN
+        # 2.12, which this skips, so only the route is checked here.)
         assert app.get(serve).status_code == 404
-        assert "webpageviewplus/thumbnail/" not in _page(app, dataset)
         # Deleted through them: the copy goes.
         model.Resource.get(doc["id"]).state = "active"
         model.Session.commit()
         helpers.call_action("resource_delete", id=doc["id"])
         assert thumbnails.stored(view["id"]) is None
+        assert "webpageviewplus/thumbnail/" not in _page(app, dataset)
 
     def test_check_views_remakes_pdf_thumbnails(self):
         from click.testing import CliRunner
