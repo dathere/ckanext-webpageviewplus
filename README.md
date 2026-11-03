@@ -334,13 +334,16 @@ the site disallows or the [security rule](#how-the-protection-works) refuses: if
 skips the view and says so. Back up the database first, and start with a dry run:
 
     ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate --dry-run
-    ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate [--uploads-only] [--preset NAME]
+    ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate [--uploads-only] [--preset NAME] [--dataset NAME]
 
 **Without a content origin, if your site embeds third-party apps or dashboards, use
 `--uploads-only`.** Stock `webpage_view` runs embedded pages unsandboxed, and a migrated
 third-party app (running as `interactive`) would lose its own logins and saved settings.
 `--uploads-only` converts just the views of uploaded HTML, which gain the most. Linked pages
 stay on `webpage_view` until you set up a content origin.
+
+On a large site, `--dataset NAME` migrates one dataset's views at a time, so you can check a
+few before converting the rest.
 
 
 ## Translations
@@ -456,7 +459,16 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   A: Give every server the same `signing_secret`, so an address signed on one is accepted by
   another, and point your separate domain at the same servers as CKAN. Stored checks, thumbnails
   and view counts are in the database, so they need no shared disk. Uploads need shared storage
-  as they always do in CKAN.
+  as they always do in CKAN. PDF (Plus) keeps its copies of linked PDFs under
+  `ckan.storage_path`: shared, each file is fetched once; on each server's own disk, once per
+  server, which works too.
+
+- **Q: Can a CDN cache our dataset pages?**<br>
+  A: Only if it honours `Vary`. Pages with views send `Vary: Save-Data, Sec-GPC`, because the
+  consent card and load-on-tap depend on those headers. A CDN that caches HTML and ignores
+  `Vary` (Cloudflare's "Cache Everything", for one) would serve one visitor's version to all,
+  and view counts would undercount. Leave HTML uncached there, or bypass the cache for pages with
+  views. Thumbnails are fine to cache: their address changes with the picture.
 
 - **Q: Which browsers does it support?**<br>
   A: Chrome and Edge 88+, Firefox 89+ and Safari 15+, on desktops, phones and tablets. The
@@ -470,8 +482,11 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   `webpage_view_plus` from `ckan.plugins` (with `webpage_view_plus_thumbnails` and
   `pdf_view_plus`, if enabled: they won't start without it) hides its views, as CKAN hides any
   view whose plugin isn't enabled, but keeps them in the database: enabling it again brings them
-  back. There's no command to convert views back to `webpage_view`, so run `migrate --dry-run`
-  first and back up the database before migrating.
+  back. Don't run `ckan views clean` while it's off: that deletes every view whose plugin isn't
+  enabled, and with them their counts, thumbnails and stored checks. To remove the extension's
+  tables too, run `ckan db downgrade -p webpage_view_plus` before removing it. There's no
+  command to convert views back to `webpage_view`, so run `migrate --dry-run` first and back up
+  the database before migrating.
 
 - **Q: Which languages does it come in?**<br>
   A: English, German, Spanish, French, Italian, Japanese and Brazilian Portuguese, following the
@@ -571,7 +586,7 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   "Thumbnail in the resource list" in the view form; for a PDF (Plus) view you can pick "The
   PDF's first page" there instead. Without one, a well-known service shows its own thumbnail or
   logo, an Office file shows the preview picture saved inside it, and where the site allows it
-  the page's own preview image is used; tick "Don't use the page's own preview image" to leave
+  the page's own preview image is used; tick "Don't make a thumbnail automatically" to leave
   those out. See [Thumbnails in the resource list](#thumbnails-in-the-resource-list).
 
 - **Q: Why do visitors see "This view loads content from …" first?**<br>
@@ -809,7 +824,11 @@ ckan views create -y webpage_view_plus   # every dataset
 ```
 
 It skips resources that already have a Website (Plus) view, but not those with core's
-`webpage_view`: [migrate](#migrating-from-webpage_view) those first.
+`webpage_view`: [migrate](#migrating-from-webpage_view) those first. Each new view is saved
+like an editor's, so with `frameability_check`, `thumbnail_fetch` or `service_format` on, each
+one may fetch its page and image (a few seconds at most) and update its resource. On a large
+site, or with a harvester creating many datasets, turn those off for the backfill, then run
+`ckan webpageviewplus check-views` to check pages and make thumbnails in one pass.
 
 **Self-hosted dashboards (Apache Superset, Plotly Dash).** These have no fixed address to
 recognise, and whether they can be embedded is up to their own server:
@@ -955,7 +974,9 @@ excludes your CKAN), and suggests linking to it instead. It never blocks saving.
 **A card instead of a blank frame.** Saving a view checks its page once more (at most 5 seconds,
 redirects included) and stores the answer. A view whose page refuses to be framed then shows a
 card, "*host* doesn't allow its pages to be shown inside other sites", with Open in new tab
-(if the site's `controls` include it), instead of the empty box browsers draw. Showing a view
+(if the site's `controls` include it), instead of the empty box browsers draw. A page that
+answered 404 or 410 gets "This page is gone" instead of the other site's own error page in the
+frame. The form's preview shows the same card, so editors see it too. Showing a view
 only reads the stored answer: **visitors never make CKAN fetch anything**, so a slow site can't
 hold up dataset pages. An answer counts only for the URL it was taken for, so a view whose page
 URL changed, or that was never checked, shows its frame as before. Pages that couldn't be
@@ -964,7 +985,10 @@ checked show their frame too. Keep answers current with `check-views` from cron 
 
 An `http://` page on an `https://` site gets a card too, whatever this setting: browsers block
 it as mixed content. That needs no fetch. With the setting on, so does a page whose stored check
-found it redirecting to `http://`.
+found it redirecting to `http://`. Saving a view with an `http://` page address on an
+`https://` site is refused, with a hint to use its `https://` address. A view of Microsoft's
+Office viewer in a private dataset (saved before the dataset was made private) gets a card
+saying the viewer can't open private files; saving one there is refused.
 
 **It makes your CKAN server request URLs that editors type**, so it's off by default. If you
 enable it, the server:
@@ -1040,8 +1064,8 @@ image comes from, first match wins:
    saved with one (Office's "Save preview picture"; not the older `.doc`, `.xls`, `.ppt`).
    When the view is saved, CKAN reads just that picture out of the file: an upload to the
    same dataset is read from CKAN's storage, with no setting needed, and a file on another
-   site is fetched only with `thumbnail_fetch` on (at most 20 MB). The editor's "Don't use
-   the page's own preview image" turns it off too.
+   site is fetched only with `thumbnail_fetch` on (at most 20 MB). The editor's "Don't make
+   a thumbnail automatically" turns it off too.
 3. **The page's own preview image**, with `ckanext.webpageviewplus.thumbnail_fetch = true`
    (off by default), fetched once when the view is saved and stored the same way. For YouTube,
    Datawrapper, Flourish, Tableau Public and Internet Archive it's the image each service
@@ -1049,8 +1073,8 @@ image comes from, first match wins:
    `plain.png`...), so the page itself isn't fetched. Otherwise it's the image the page names
    for link previews (`og:image`, then `twitter:image`). Uploads and
    CKAN's own pages aren't fetched. Power BI, Looker Studio, Typeform and Microsoft's Office
-   viewer name only their own logo or a stock image, so they're skipped. An editor can tick "Don't use the page's own
-   preview image" on a view. A copy counts only for the address it was taken from: when a
+   viewer name only their own logo or a stock image, so they're skipped. An editor can tick "Don't make a thumbnail
+   automatically" on a view. A copy counts only for the address it was taken from: when a
    view's page changes, its thumbnail goes until the view is saved again or `check-views`
    runs.
 4. **The service's logo**, when the resource has only this one view and its address is a
@@ -1084,7 +1108,10 @@ default), saving a view on a resource whose only view is a well-known service's,
 them ("YouTube: 12"). It's off by default because `format` is also in the API and is published
 as DCAT's `dct:format`, where profiles expect a media type. It never overwrites any other
 format, and isn't undone if the view changes later. It's a resource update, so it shows in
-the dataset's activity stream and runs other plugins' resource hooks.
+the dataset's activity stream, reindexes the dataset and runs other plugins' resource hooks.
+Harvested datasets (ckanext-harvest's) are left alone: the next harvest would set the format
+back. A schema whose format field only accepts fixed choices (ckanext-scheming) refuses the
+service's name, and the format stays as it was.
 
 `ckan webpageviewplus check-views` remakes every Website (Plus) view's thumbnail too, so run
 from cron it picks up changed pages and images replaced through `package_update`. When
@@ -1214,8 +1241,11 @@ denies ad and tracking features (Topics, Attribution Reporting, FLEDGE), and its
 it). It sees CKAN's requests, at most one per
   file per `pdf_cache_seconds`.
 - **Server logs** for admins, on the `ckanext.webpageviewplus.events` logger, with structured
-  fields and nothing about the visitor: `view_rendered` (preset, notices),
-  `same_origin_refused`, `signature_refused`, `frameability_blocked` and `pdf_fetch_failed`.
+  fields and nothing about the visitor: `view_rendered` (preset, notices; at DEBUG, as there's
+  one per page view), `frame_refused` (a card shown instead of the page), `same_origin_refused`,
+  `signature_refused`, `frameability_blocked`, `pdf_fetch_failed` and
+  `content_request_on_ckan_host` (a content-origin address that reached CKAN's own host: your
+  proxy rewrites `Host`, and upload views come up empty).
 
 #### Opt-in view counting
 
@@ -1232,7 +1262,8 @@ says "This view counts visits", linking to the privacy policy.
   `ckan webpageviewplus stats-summary`.
 - **Retention:** run `ckan webpageviewplus purge-stats` daily from cron; it deletes totals
   older than `view_counting_retention_days` (365).
-- Anyone can post to the beacon endpoint, so totals can be inflated: treat them as indicative.
+- Anyone who can see a view can post to its beacon endpoint, so totals can be inflated: treat
+  them as indicative. A private dataset's views are only counted for people who may see it.
 
 #### What uploaded pages contact
 
@@ -1286,7 +1317,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 
 | Command | Does |
 | --- | --- |
-| `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME]` | Convert `webpage_view` views, see [Migrating from webpage_view](#migrating-from-webpage_view) |
+| `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME] [--dataset NAME]` | Convert `webpage_view` views, see [Migrating from webpage_view](#migrating-from-webpage_view) |
 | `ckan webpageviewplus migrate-pdf [--dry-run]` | Convert ckanext-pdfview's `pdf_view` views to PDF (Plus), see [PDF views](#pdf-views) |
 | `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails, except with `--no-store`. Run it weekly from cron |
 | `ckan webpageviewplus purge-stats` | Delete view counts and reported hosts older than the retention period. Run it daily from cron |

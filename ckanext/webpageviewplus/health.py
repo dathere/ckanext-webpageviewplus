@@ -119,9 +119,10 @@ def stored(view_id: str, url: str) -> Optional[dict[str, Any]]:
 
 def refused(view_id: Optional[str], url: str, third_party: bool = True) -> Optional[str]:
     """Why a page can't be shown, from what's already known: "mixed" (http
-    on an https site, itself or in its stored redirect chain) or "blocked"
-    (its stored check found it refusing to be framed; third-party pages
-    only). None means show the frame."""
+    on an https site, itself or in its stored redirect chain), "blocked"
+    (its stored check found it refusing to be framed) or "gone" (it answered
+    404 or 410); stored checks are for third-party pages only. None means
+    show the frame."""
     if mixed_content(url):
         return "mixed"
     if third_party and view_id and settings.frameability_check():
@@ -130,6 +131,8 @@ def refused(view_id: Optional[str], url: str, third_party: bool = True) -> Optio
             return "mixed"
         if row and row["verdict"] == frameability.BLOCKED:
             return "blocked"
+        if row and row["problem"] == "gone":
+            return "gone"
     return None
 
 

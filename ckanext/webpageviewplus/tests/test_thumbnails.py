@@ -141,7 +141,7 @@ class TestThumbnails:
         assert response.headers["Content-Type"] == "image/jpeg"
         assert response.headers["X-Content-Type-Options"] == "nosniff"
         # The URL names the copy (v=), so browsers needn't ask again.
-        assert response.headers["Cache-Control"] == "public, max-age=31536000, immutable"
+        assert response.headers["Cache-Control"] == "public, max-age=86400, immutable"
         assert response.data == row["image"]
         etag = response.headers["ETag"]
         again = app.get(src, headers={"If-None-Match": etag})
@@ -259,8 +259,9 @@ class TestThumbnails:
         assert "/webpageviewplus/logos/youtube.svg" in body
         assert '<span class="webpageviewplus-format">YouTube</span>' in body
         assert '<span class="webpageviewplus-thumbnail"><img' in body  # no copy frame
-        # The service's name isn't the dataset's format.
+        # The service's name isn't the dataset's format; the format still is.
         assert 'property="dc:format">YouTube' not in body
+        assert '<span property="dc:format" content="HTML" hidden></span>' in body
 
     def test_service_without_logo_keeps_icon(self, app):
         dataset = factories.Dataset()
@@ -682,6 +683,13 @@ class TestServiceFormat:
         _view(page["id"])
         assert _format(page) == "HTML"
 
+    def test_harvested_dataset_left_alone(self):
+        # The next harvest would set the format back.
+        dataset = factories.Dataset(extras=[{"key": "harvest_object_id", "value": "abc"}])
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        _view(page["id"], page_url=YOUTUBE, preset="external")
+        assert _format(page) == "HTML"
+
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus webpage_view_plus_thumbnails")
 @pytest.mark.ckan_config("ckan.views.default_views", "")
@@ -851,11 +859,13 @@ class TestOfficeAndPdfViews:
         # check-views fetches each file once per run, but an upload is read
         # only for a view in its own dataset: a private dataset's preview
         # mustn't reach a public view pointing at the same file.
-        private = factories.Dataset(private=True, owner_org=factories.Organization()["id"])
+        private = factories.Dataset(private=False, owner_org=factories.Organization()["id"])
         doc = _office_upload(private, _office_file(), "minutes.odt")
         download = "{}/dataset/{}/resource/{}/download/minutes.odt".format(
             SITE, private["id"], doc["id"])
         own = _view(doc["id"], page_url=_embed(download), preset="interactive")
+        # Made private after its view was saved (saving one there is refused).
+        helpers.call_action("package_patch", id=private["id"], private=True)
         public = factories.Dataset()
         page = factories.Resource(package_id=public["id"], url=PAGE, format="HTML")
         other = _view(page["id"], page_url=_embed(download), preset="interactive")
@@ -865,6 +875,25 @@ class TestOfficeAndPdfViews:
             thumbnails.after_save(view, memo=memo)
         assert thumbnails.stored(own["id"])
         assert thumbnails.stored(other["id"]) is None
+
+    def test_office_viewer_in_a_private_dataset(self, app):
+        # Microsoft's viewer fetches the file itself: refused at save, and a
+        # card once the dataset is made private.
+        dataset = factories.Dataset(owner_org=factories.Organization()["id"])
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        embed = _embed("https://files.example.org/minutes.docx")
+        view = _view(page["id"], page_url=embed, preset="interactive")
+        helpers.call_action("package_patch", id=dataset["id"], private=True)
+        with pytest.raises(ValidationError) as e:
+            _view(page["id"], page_url=embed, preset="interactive")
+        assert "private dataset" in e.value.error_dict["page_url"][0]
+        sysadmin = factories.SysadminWithToken()
+        body = app.get(
+            url_for("dataset_resource.read", id=dataset["name"], resource_id=page["id"],
+                    view_id=view["id"]),
+            headers={"Authorization": sysadmin["token"]}).body
+        assert "can't open files in a private dataset" in body
+        assert "<iframe" not in body
 
     def test_deleted_office_upload_drops_its_preview(self, app, ckan_config):
         dataset = factories.Dataset()

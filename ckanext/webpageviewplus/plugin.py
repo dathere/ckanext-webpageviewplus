@@ -174,6 +174,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
         private = bool((data_dict.get("package") or {}).get("private"))
         if actions.default_view_suggestion(resource, private) is not None:
             return True
+        if resource.get("url_type") != "upload" and health.mixed_content(resource.get("url") or ""):
+            return False  # browsers block an http:// page in an https:// site
         formats = settings.formats()
         if (resource.get("format") or "").lower() in formats:
             return True
@@ -197,6 +199,14 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
 
         form_vars = {
             "presets": settings.allowed_presets(),
+            # External never applies to uploads (frame.preset_for_upload).
+            "upload_resource": resource.get("url_type") == "upload",
+            # A PDF shows better in PDF (Plus), where it's offered.
+            "suggest_pdf_view": (
+                plugins.plugin_loaded(pdf.VIEW_TYPE)
+                and bool(settings.isolating_content_origin())
+                and pdf.is_pdf_resource(resource)
+            ),
             "default_preset": settings.default_preset(),
             "height_modes": frame.HEIGHT_MODES,
             "referrer_policies": frame.REFERRER_POLICIES,
@@ -307,6 +317,10 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
         # never fetches anything (health.py).
         refused = None if is_upload else health.refused(
             resource_view.get("id"), url, third_party)
+        # Microsoft's Office viewer fetches the file from its own servers.
+        if (not refused and page_url and (data_dict.get("package") or {}).get("private")
+                and services.is_office_viewer(page_url)):
+            refused = "private_file"
         if refused:
             events.emit("frame_refused", reason=refused, host=frame.url_host(url))
         consent = third_party and not refused and (
@@ -499,13 +513,7 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
             # Kept by a storage this extension can't read (a cloud storage
             # extension on CKAN 2.10/2.11): the view would show nothing.
             return False
-        if (resource.get("format") or "").lower() in pdf.PDF_FORMATS:
-            return True
-        try:
-            path = urlsplit(resource.get("url") or "").path
-        except ValueError:
-            return False
-        return path.lower().endswith(".pdf")
+        return pdf.is_pdf_resource(resource)
 
     def setup_template_variables(
         self, context: Context, data_dict: dict[str, Any]
@@ -517,6 +525,7 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
         form_vars = {
             "height_modes": pdf.HEIGHT_MODES,
             "content_origin": settings.content_origin(),
+            "pdf_max_mb": settings.pdf_max_size() // (1024 * 1024),
             # Whether the stored first-page copy still matches the file, so
             # the form redraws it only when needed.
             "first_page_ready": (

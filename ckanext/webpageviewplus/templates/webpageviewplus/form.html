@@ -26,13 +26,17 @@
 {% asset 'webpageviewplus/webpageviewplus-css' %}
 {% asset 'webpageviewplus/webpageviewplus-js' %}
 <div class="webpageviewplus-form">
-{% call form.input('page_url', id='field-page_url', label=_('Web Page url'), placeholder=_('eg. http://example.com  (if blank uses resource url)'), value=data.page_url, error=errors.page_url, classes=['control-full', 'control-large'], attrs={'class': 'form-control', 'aria-describedby': 'help-page_url'}) %}
+{% call form.input('page_url', id='field-page_url', label=_('Web Page url'), placeholder=_('eg. https://example.com  (if blank uses resource url)'), value=data.page_url, error=errors.page_url, classes=['control-full', 'control-large'], attrs={'class': 'form-control', 'aria-describedby': 'help-page_url'}) %}
   <p class="form-text" id="help-page_url">
     {# TRANSLATORS: {services} is a comma-separated list of service names, such as "YouTube, Vimeo, Datawrapper". #}
     {{ _('Leave blank to show this resource\'s own address. Paste a link from {services} and the form suggests its embed address and settings.').format(services=service_names | join(', ')) }}
     {% if allowed_hosts %}{{ _('This site accepts pages from these hosts only: {hosts}.').format(hosts=allowed_hosts | join(', ')) }}{% endif %}
   </p>
 {% endcall %}
+{% if suggest_pdf_view %}
+  <div class="alert alert-info">{{ _('This resource is a PDF: the PDF (Plus) view shows it better, on phones too.') }}</div>
+{% endif %}
+
 {# Well-known services (YouTube, Datawrapper...): offers the embed address
    and the settings the embed needs. Filled in by the script. #}
 <div class="webpageviewplus-service" role="status" aria-live="polite"
@@ -45,7 +49,7 @@
      {# TRANSLATORS: a button accepting the suggested embed address and settings. #}
      data-apply="{{ _('Use them') }}"
      data-applied="{{ _('Using the embed address and settings for {service}. Save the view to keep them.') }}"
-     data-needs-content-origin="{{ _('{service} only works with the {preset} preset, which this site runs as Interactive until it serves uploads from a separate content origin, so it won\'t play here yet.') }}"
+     data-needs-content-origin="{{ _('{service} only works with the {preset} preset, which this site runs as Interactive until it has a separate domain for uploads, so it won\'t play here yet. Ask your site administrator.') }}"
      data-preset-not-allowed="{{ _('{service} only works with the {preset} preset, which this site doesn\'t allow.') }}"
      data-host-not-allowed="{{ _('{service} embeds come from {host}, which isn\'t on this site\'s list of allowed hosts.') }}"
      data-private-dataset="{{ _('{service}\'s viewer fetches the file from its own servers, so it can\'t show a file in a private dataset.') }}"></div>
@@ -54,7 +58,8 @@
        data-webpageviewplus-frameability
        data-api="{{ h.url_for('api.action', ver=3, logic_function='webpageviewplus_frameability') }}"
        data-resource-id="{{ resource.id }}"
-       data-blocked="{{ _('This site refuses to be embedded ({reason}), so the view will show an error. Consider linking to it instead.') }}"
+       data-resource-url="{{ '' if upload_resource else resource.url }}"
+       data-blocked="{{ _('This site refuses to be embedded, so the view will show an error. Consider linking to it instead.') }}"
        data-unknown="{{ _('Couldn\'t check whether this site allows embedding.') }}"></div>
 {% endif %}
 
@@ -62,7 +67,7 @@
   <label class="form-label" for="field-preset">{{ _('Security preset') }}</label>
   <div class="controls">
     <select id="field-preset" name="preset" class="form-control form-select" aria-describedby="help-preset">
-      {% for name in presets %}
+      {% for name in presets if not (upload_resource and name == 'external') %}
         <option value="{{ name }}" {% if (data.preset or default_preset) == name %}selected{% endif %}>{{ preset_labels.get(name, name) }}</option>
       {% endfor %}
     </select>
@@ -76,12 +81,12 @@
 
 {% if frame and 'degraded' in frame.notices %}
   <div class="alert alert-warning">
-    {{ _('This preset needs uploaded HTML to be served from a separate content origin, which this site doesn\'t have yet, so the view runs as Interactive.') }}
+    {{ _('This preset needs a separate domain for uploads, which this site doesn\'t have yet, so the view runs as Interactive. Ask your site administrator if you need it.') }}
     {% if (data.preset or default_preset) == 'data-schematic' %}{{ _('Charts, the Tour and Explore work, but maps stay blank.') }}{% endif %}
   </div>
 {% endif %}
 {% if frame and 'same_origin_fallback' in frame.notices %}
-  <div class="alert alert-warning">{{ _('This view\'s sandbox would let scripts keep a real origin, which isn\'t allowed here, so it runs as Strict.') }}</div>
+  <div class="alert alert-warning">{{ _('These sandbox settings could let the page use visitors\' logins on this site, which isn\'t allowed, so the view runs as Strict.') }}</div>
 {% endif %}
 {% if frame and 'credentialless' in frame.notices %}
   <div class="alert alert-info">{{ _('In Chrome and Edge, this site loads pages with this preset without the visitor\'s cookies or saved data, so logins inside the page and sign-in popups won\'t work.') }}</div>
@@ -127,7 +132,7 @@
   <div class="form-group">
     <div class="form-check">
       <input class="form-check-input" type="checkbox" id="field-no_auto_thumbnail" name="no_auto_thumbnail" value="true" aria-describedby="help-no_auto_thumbnail" {% if data.no_auto_thumbnail in (true, 'true', 'True') %}checked{% endif %}>
-      <label class="form-check-label" for="field-no_auto_thumbnail">{{ _('Don\'t use the page\'s own preview image') }}</label>
+      <label class="form-check-label" for="field-no_auto_thumbnail">{{ _('Don\'t make a thumbnail automatically') }}</label>
       {% if thumbnail_fetch %}
         <p class="form-text" id="help-no_auto_thumbnail">{{ _('Otherwise, when no image is chosen above, this site fetches the image the page names for link previews, once when the view is saved, and shows a small copy.') }}</p>
       {% else %}

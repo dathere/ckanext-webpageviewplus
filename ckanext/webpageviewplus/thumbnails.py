@@ -746,6 +746,9 @@ def service_format(context: dict[str, Any], view: dict[str, Any]) -> None:
         # An Office document keeps its own format (DOCX...), not the viewer's name.
         if found is None or found.service == services.OFFICE:
             return
+        if _harvested(resource.package_id):
+            # The next harvest would set the format back (and reindex again).
+            return
         # The editor may already change this resource (adding views needs
         # it); auth is skipped so a theme's stricter resource_update rules
         # can't fail a save that already succeeded.
@@ -755,6 +758,13 @@ def service_format(context: dict[str, Any], view: dict[str, Any]) -> None:
         )
     except Exception:
         log.warning("webpageviewplus: setting the service's format failed", exc_info=True)
+
+
+def _harvested(package_id: str) -> bool:
+    """Whether ckanext-harvest made this dataset (it shows a
+    harvest_object_id extra on harvested datasets)."""
+    package = toolkit.get_action("package_show")({"ignore_auth": True}, {"id": package_id})
+    return any(e.get("key") == "harvest_object_id" for e in package.get("extras") or [])
 
 
 def for_resource(pkg: dict[str, Any], res: dict[str, Any]) -> Optional[dict[str, Any]]:

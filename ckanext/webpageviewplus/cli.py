@@ -124,7 +124,12 @@ def webpageviewplus():
     type=click.Choice(sorted(frame.PRESETS)),
     help="Preset for every migrated view (default: detect, else the site default).",
 )
-def migrate(dry_run: bool, uploads_only: bool, preset: Optional[str]):
+@click.option(
+    "--dataset",
+    help="Only this dataset's views (name or id), to migrate a large site in steps.",
+)
+def migrate(dry_run: bool, uploads_only: bool, preset: Optional[str],
+            dataset: Optional[str] = None):
     """Convert webpage_view views to webpage_view_plus.
 
     Keeps each view's id, title, description, order and page_url.
@@ -139,12 +144,17 @@ def migrate(dry_run: bool, uploads_only: bool, preset: Optional[str]):
         raise click.UsageError(
             "{} isn't in ckanext.webpageviewplus.presets".format(preset)
         )
-    views = (
-        model.Session.query(model.ResourceView)
-        .filter(model.ResourceView.view_type == "webpage_view")
-        .order_by(model.ResourceView.resource_id, model.ResourceView.order)
-        .all()
-    )
+    query = model.Session.query(model.ResourceView).filter(
+        model.ResourceView.view_type == "webpage_view")
+    if dataset:
+        package = model.Package.get(dataset)
+        if package is None:
+            raise click.UsageError("No dataset {}".format(dataset))
+        query = query.join(
+            model.Resource, model.Resource.id == model.ResourceView.resource_id
+        ).filter(model.Resource.package_id == package.id)
+    views = query.order_by(
+        model.ResourceView.resource_id, model.ResourceView.order).all()
     migrated = 0
     for view in views:
         config = dict(view.config or {})

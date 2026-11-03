@@ -764,3 +764,11 @@ def suggest(url: str) -> Optional[Suggestion]:
         if inner:
             return _office(_OFFICE_VIEWER, "/op/embed.aspx", {"src": [inner]})
     return None
+
+
+def is_office_viewer(url: str) -> bool:
+    """Whether a page URL shows a file in Microsoft's Office viewer, which
+    fetches the file from Microsoft's servers (so never one in a private
+    dataset)."""
+    found = suggest(url)
+    return found is not None and found.service == OFFICE

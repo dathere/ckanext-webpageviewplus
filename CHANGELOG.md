@@ -16,6 +16,47 @@
   mimetypes the same way. Upgrading is enough; no setting changes.
 - The thumbnails extra needs Pillow 10.3 or newer: thumbnails decode images from other sites,
   and older Pillow has known decoder holes (libwebp's CVE-2023-4863 before 10.0.1).
+- A page URL on the content origin (an upload's content address, pasted) counts as an upload,
+  so the `external` preset can't frame it without a sandbox.
+- The fetch guard judges NAT64 addresses (`64:ff9b::/96`) by the IPv4 address inside, so a
+  host resolving to one can't reach a private or link-local address on networks with NAT64.
+- View counts are only taken from people who may see the view: a private dataset's views
+  can't be counted by strangers posting to the beacon.
+
+### Added
+
+- A view whose page answered 404 or 410 when last checked shows "This page is gone" instead of
+  the other site's own error page (needs `frameability_check`, as for pages that refuse
+  framing). The form's preview shows the same card.
+- A view of Microsoft's Office viewer in a private dataset shows a card saying the viewer can't
+  open private files, and saving one there is refused.
+- The Website (Plus) form points PDF resources to PDF (Plus), where that view is offered. The
+  PDF (Plus) form says how large a linked PDF may be.
+- `ckan webpageviewplus migrate --dataset NAME` migrates one dataset's views at a time.
+- A content-origin request that reaches CKAN's own host is logged
+  (`content_request_on_ckan_host`): the sign of a proxy rewriting `Host`, which leaves upload
+  views empty.
+
+### Changed
+
+- Saving a view whose page address is `http://` on an `https://` site is refused, with a hint to
+  use its `https://` address: browsers would block it. Default views skip such resources.
+- Heights as people type them: "600px" and "80%" are accepted, and a value given with the
+  preset's default height picks its mode (a number Fixed, 16/9 an aspect ratio, 80% a share of
+  the window) instead of being ignored. The error says what the chosen mode takes.
+- Editor-facing messages say "a separate domain for uploads" and what a setting would allow
+  ("use visitors' logins"), not "content origin" or "real origin", and suggest asking the
+  site administrator. The form's placeholder shows an `https://` address. The thumbnail opt-out
+  is labelled "Don't make a thumbnail automatically", which is what it does. The embeddability
+  warning no longer quotes the refusing header (it's in a tooltip).
+- External isn't offered for uploads in the form (it was refused at save).
+- The form's embeddability check also checks the resource's own link when the page URL is
+  blank, like the service suggestion.
+- Thumbnails of public datasets are cached by browsers for a day (`immutable`): their address
+  names the copy, so a dataset page no longer costs a request per thumbnail on every visit.
+- `view_rendered` is logged at DEBUG: there's one per page view.
+- `service_format` leaves harvested datasets alone: the next harvest would set the format back.
+- New translated strings in all six languages.
 
 ### Fixed
 
@@ -29,6 +70,15 @@
   without limit.
 - Re-saving a view no longer drops its thumbnail when the image's site is down for a moment;
   the copy stays until its source changes.
+- Database errors no longer break pages: a deleted view, a read-only replica or a busy database
+  while counting or reading stored checks, thumbnails or reported hosts is logged, and the page
+  renders. View stats before `ckan db upgrade -p webpage_view_plus` answer with no counts.
+- The embeddability action refuses (403) a request without `resource_id`, instead of a 404.
+- The PDF (Plus) first-page message says to edit the view again after saving, which is when
+  the page is drawn.
+- Docs: removing the extension (`ckan views clean` deletes its views; `ckan db downgrade -p`),
+  linked PDFs' copies on each server's disk, CDNs that ignore `Vary`, and backfilling views on
+  large or harvested sites.
 
 ## 0.9.0 (2026-11-02)
 

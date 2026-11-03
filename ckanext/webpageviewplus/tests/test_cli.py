@@ -72,6 +72,18 @@ class TestMigrate:
         assert _show(link_view)["view_type"] == "webpage_view"
         assert _show(page_url_view)["view_type"] == "webpage_view"
 
+    def test_one_dataset(self, cli):
+        dataset = factories.Dataset()
+        mine = _stock_view(factories.Resource(
+            package_id=dataset["id"], url="https://pages.example.com/a.html"))
+        other = _stock_view(factories.Resource(url="https://pages.example.com/b.html"))
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate", "--dataset", dataset["name"]])
+        assert result.exit_code == 0, result.output
+        assert _show(mine)["view_type"] == "webpage_view_plus"
+        assert _show(other)["view_type"] == "webpage_view"
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate", "--dataset", "no-such"])
+        assert result.exit_code != 0
+
     def test_preset_option(self, cli):
         view = _stock_view(factories.Resource(url="https://pages.example.com/a.html"))
         result = cli.invoke(ckan, ["webpageviewplus", "migrate", "--preset", "external"])

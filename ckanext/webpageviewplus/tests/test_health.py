@@ -155,10 +155,26 @@ class TestRefusedCard:
 
     def test_mixed_content_card(self, app, probes, monkeypatch):
         monkeypatch.setattr(health.settings, "site_url", lambda: "https://test.ckan.net")
-        _, body = _page(app, page_url="http://pages.example.com/a.html")
+        # A view of an http resource's own address (a page URL is refused).
+        _, body = _page(app, page_url="", url="http://pages.example.com/a.html")
         assert MIXED in body
         assert "<iframe" not in body
         assert probes["calls"] == []
+
+    def test_http_page_url_refused_at_save(self, app, monkeypatch):
+        monkeypatch.setattr(health.settings, "site_url", lambda: "https://test.ckan.net")
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        with pytest.raises(helpers.logic.ValidationError) as e:
+            _view(resource["id"], page_url="http://pages.example.com/a.html")
+        assert "https://" in e.value.error_dict["page_url"][0]
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.frameability_check", "true")
+    def test_gone_page_card(self, app, probes):
+        # Instead of the other site's own 404 page in the frame.
+        probes[PAGE] = fa.Probe(fa.UNKNOWN, "", "gone", 404)
+        _, body = _page(app)
+        assert "This page is gone: pages.example.com said it no longer exists" in body
+        assert "<iframe" not in body
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.frameability_check", "true")
     def test_refused_view_not_counted(self, app, probes, ckan_config, monkeypatch):
@@ -259,7 +275,7 @@ class TestMixedContent:
         monkeypatch.setattr(health.settings, "site_url", lambda: "https://test.ckan.net")
 
     def test_http_page_on_own_host(self, app, probes):
-        _, body = _page(app, page_url="http://test.ckan.net/about")
+        _, body = _page(app, page_url="", url="http://test.ckan.net/about")
         assert MIXED in body
         assert "<iframe" not in body
 

@@ -19,6 +19,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 import ckan.model as model
 import ckan.plugins.toolkit as toolkit
+from ckan.common import current_user
 
 from ckanext.webpageviewplus import settings
 
@@ -127,6 +128,24 @@ def _view(view_id: str) -> Optional[model.ResourceView]:
     return model.Session.query(model.ResourceView).get(view_id)
 
 
+def _may_see(view: model.ResourceView) -> bool:
+    """Only someone who could have seen the view counts it: anyone can post
+    a beacon, and a private dataset's views shouldn't be countable by
+    strangers."""
+    resource = model.Resource.get(view.resource_id)
+    if resource is None or resource.state != "active":
+        return False
+    try:
+        toolkit.check_access(
+            "package_show",
+            {"user": getattr(current_user, "name", "") or ""},
+            {"id": resource.package_id},
+        )
+    except (toolkit.NotAuthorized, toolkit.ObjectNotFound):
+        return False
+    return True
+
+
 beacon = Blueprint("webpageviewplus_beacon", __name__)
 
 
@@ -141,6 +160,7 @@ def count(view_id: str):
         and view.view_type == "webpage_view_plus"
         and countable(view.config or {})
         and not viewer_opts_out()
+        and _may_see(view)
     ):
         add(view_id, **{
             flag: 1 for flag in FLAGS if request.form.get(flag, "").strip() == "1"

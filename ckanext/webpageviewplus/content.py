@@ -224,6 +224,12 @@ def on_content_host() -> bool:
 @content.route(PATH)
 def serve(resource_id: str, filename: str):
     if not on_content_host():
+        if settings.content_origin():
+            # Frames point here only on the content host: a proxy that
+            # rewrites Host to CKAN's sends them here instead, and every
+            # upload view comes up empty.
+            events.emit("content_request_on_ckan_host", host=frame.url_host(
+                request.host_url))
         abort(404)
     resource_obj = model.Resource.get(resource_id)
     if resource_obj is None or resource_obj.state != "active":
@@ -375,13 +381,15 @@ class ContentHostMiddleware:
 
 
 IMMUTABLE_ENVIRON_KEY = "webpageviewplus.immutable"
-IMMUTABLE = "public, max-age=31536000, immutable"
+# A day, not a year: a copy taken down (dataset made private, image
+# removed) mustn't linger in browsers and shared caches for long.
+IMMUTABLE = "public, max-age=86400, immutable"
 
 
 def _immutable_if_asked(environ: dict[str, Any], start_response: Any) -> Any:
     """On CKAN's host: a view that set IMMUTABLE_ENVIRON_KEY (a public
     response whose URL names its content, like a thumbnail's ?v=<digest>)
-    gets a year's Cache-Control. CKAN's own response hook runs after the
+    gets a day's Cache-Control. CKAN's own response hook runs after the
     view and would set max-age=ckan.cache_expires, so it's replaced here."""
     def finish(status: str, headers: list, exc_info: Any = None):
         if environ.get(IMMUTABLE_ENVIRON_KEY) and status[:3] in ("200", "304"):

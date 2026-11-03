@@ -398,10 +398,14 @@
     if (!status || !input || !window.fetch) return;
     var timer = null;
     var current = 0;
+    // With no page URL the view shows the resource's own link (never set
+    // for uploads, which this site serves itself).
+    var resourceUrl = (status.getAttribute("data-resource-url") || "").trim();
     function run() {
-      var url = input.value.trim();
+      var url = input.value.trim() || resourceUrl;
       var request = ++current;
       status.textContent = "";
+      status.removeAttribute("title");
       status.classList.remove("alert", "alert-warning");
       if (!url) return;
       var query = "?resource_id=" + encodeURIComponent(status.getAttribute("data-resource-id")) +
@@ -413,7 +417,9 @@
           var result = body.result;
           var text = "";
           if (result.verdict === "blocked") {
-            text = status.getAttribute("data-blocked").replace("{reason}", result.reason);
+            text = status.getAttribute("data-blocked");
+            // The header that refuses it, in English, for whoever asks.
+            if (result.reason) status.setAttribute("title", result.reason);
           } else if (result.verdict === "unknown") {
             text = status.getAttribute("data-unknown");
           }

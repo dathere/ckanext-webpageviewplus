@@ -76,10 +76,12 @@ class TestContentRoute:
         )
         assert response.headers["Cache-Control"] == "no-store"
 
-    def test_not_served_on_ckan_host(self, app):
+    def test_not_served_on_ckan_host(self, app, events_log):
         resource = _upload(factories.Dataset())
         path = urlsplit(_content_url(resource)).path
         assert app.get(path, status=404).status_code == 404
+        # The symptom of a proxy rewriting Host: logged for admins.
+        assert "content_request_on_ckan_host" in [e["event"] for e in events_log()]
 
     def test_content_host_serves_nothing_else(self, app):
         response = app.get("/dataset/", base_url=CONTENT, status=404)

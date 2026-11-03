@@ -3,6 +3,7 @@ import re
 import pytest
 from bs4 import BeautifulSoup
 
+import ckan.model as model
 from ckan.plugins import plugin_loaded
 from ckan.plugins.toolkit import ValidationError, url_for
 from ckan.tests import factories, helpers
@@ -149,6 +150,31 @@ def test_new_view_form_renders(app):
     response = app.get(url, headers={"Authorization": sysadmin["token"]})
     assert response.status_code == 200
     assert 'name="page_url"' in response
+
+
+def _form(app, resource):
+    sysadmin = factories.SysadminWithToken()
+    dataset = model.Package.get(resource["package_id"])
+    url = url_for("{}_resource.edit_view".format(dataset.type), id=dataset.name,
+                  resource_id=resource["id"], view_type="webpage_view_plus")
+    return BeautifulSoup(app.get(url, headers={"Authorization": sysadmin["token"]}).body,
+                         "html.parser")
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+def test_external_not_offered_for_uploads(app, local_storage):
+    import io
+    from werkzeug.datastructures import FileStorage
+
+    dataset = factories.Dataset()
+    upload = factories.Resource(
+        package_id=dataset["id"], url="page.html", url_type="upload",
+        upload=FileStorage(io.BytesIO(b"<p>hi"), filename="page.html"))
+    link = factories.Resource(package_id=dataset["id"], url="https://pages.example.com/a")
+    offered = lambda r: [o["value"] for o in _form(app, r).select("#field-preset option")]
+    assert "external" not in offered(upload)
+    assert "external" in offered(link)
 
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
@@ -493,6 +519,28 @@ class TestViewValidation:
         resource = factories.Resource(url="https://pages.example.com/a.html")
         with pytest.raises(ValidationError):
             _view(factories.Sysadmin(), resource["id"], height_mode=mode, height_value=value)
+
+    @pytest.mark.parametrize(
+        "mode,value,expected",
+        [
+            ("", "800", ("fixed", "800")),  # a value with the preset's default
+            ("", "16/9", ("aspect", "16/9")),
+            ("", "80%", ("viewport", "80")),
+            ("fixed", " 600px ", ("fixed", "600")),
+            ("viewport", "70%", ("viewport", "70")),
+        ],
+    )
+    def test_height_as_typed(self, mode, value, expected):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        view = _view(factories.Sysadmin(), resource["id"], height_mode=mode, height_value=value)
+        assert (view["height_mode"], view["height_value"]) == expected
+
+    def test_height_error_says_what_fits(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        with pytest.raises(ValidationError) as e:
+            _view(factories.Sysadmin(), resource["id"], height_mode="viewport",
+                  height_value="200")
+        assert "1 to 100" in e.value.error_dict["height_value"][0]
 
     def test_sysadmin_sets_advanced_fields(self):
         resource = factories.Resource(url="https://pages.example.com/a.html")

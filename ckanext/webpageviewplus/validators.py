@@ -8,7 +8,7 @@ import ckan.plugins.toolkit as toolkit
 from ckan.lib.navl.dictization_functions import missing
 from ckan.types import Context, FlattenDataDict, FlattenErrorDict, FlattenKey
 
-from ckanext.webpageviewplus import content, frame, settings, thumbnails
+from ckanext.webpageviewplus import content, frame, health, services, settings, thumbnails
 
 ADVANCED_FIELDS = ("sandbox", "allow", "referrer_policy")
 
@@ -97,6 +97,36 @@ def _resource(data: FlattenDataDict) -> Optional[model.Resource]:
     return model.Resource.get(resource_id) if resource_id else None
 
 
+def _tidy_height(data: FlattenDataDict, infer_mode: bool) -> None:
+    """Take a height as people type it: "600px", "80%", and, with the
+    preset's default height chosen, a value picks its mode (16/9 an aspect
+    ratio, 80% a share of the window, a number Fixed) rather than being
+    silently ignored."""
+    value = _get(data, "height_value")
+    if not isinstance(value, str):
+        return
+    tidy = value.strip()
+    share = tidy.endswith("%")
+    if tidy.lower().endswith("px"):
+        tidy = tidy[:-2].strip()
+    elif share:
+        tidy = tidy[:-1].strip()
+    data[("height_value",)] = tidy
+    if infer_mode and tidy and not _get(data, "height_mode"):
+        if frame.ASPECT_RE.match(tidy):
+            data[("height_mode",)] = "aspect"
+        else:
+            data[("height_mode",)] = "viewport" if share else "fixed"
+
+
+def _height_error(mode: str) -> str:
+    if mode == "viewport":
+        return toolkit._("A share of the window takes a number from 1 to 100")
+    if mode == "aspect":
+        return toolkit._("An aspect ratio takes width/height, such as 16/9")
+    return toolkit._("Fixed takes a number of pixels, such as 600")
+
+
 def view_after_validator(
     key: FlattenKey,
     data: FlattenDataDict,
@@ -123,19 +153,39 @@ def view_after_validator(
         return
 
     # Height value must fit its mode.
+    if not errors.get(("height_mode",)):
+        _tidy_height(data, infer_mode=True)
     mode = _get(data, "height_mode")
     if mode and mode != "auto":
         value = _get(data, "height_value") or ""
         if not frame.height_value_valid(mode, value):
-            _add_error(
-                errors,
-                "height_value",
-                toolkit._("Height value doesn't fit the height mode"),
-            )
+            _add_error(errors, "height_value", _height_error(mode))
 
     resource = _resource(data)
     page_url = _get(data, "page_url")
     if page_url:
+        if health.mixed_content(page_url):
+            _add_error(
+                errors,
+                "page_url",
+                toolkit._(
+                    "This page uses http://, which browsers block inside this "
+                    "https:// site. Use its https:// address, or link to it instead"
+                ),
+            )
+            return
+        stored_resource = _resource(data)
+        package = stored_resource.package if stored_resource is not None else None
+        if package is not None and package.private and services.is_office_viewer(page_url):
+            _add_error(
+                errors,
+                "page_url",
+                toolkit._(
+                    "Microsoft's viewer fetches the file from its own servers, "
+                    "so it can't show a file in a private dataset"
+                ),
+            )
+            return
         # A pasted content-origin URL is an upload too: never unsandboxed.
         url, is_upload = page_url, frame.on_content_origin(page_url, settings.content_origin())
     elif resource is not None:
@@ -185,10 +235,10 @@ def view_after_validator(
             errors,
             "sandbox" if override else "preset",
             toolkit._(
-                "This frame can't let scripts keep a real origin: don't "
-                "combine allow-scripts with allow-same-origin. Pages on this "
-                "site never may; other pages may once uploaded HTML is served "
-                "from a separate content origin"
+                "These settings could let the page use visitors' logins on "
+                "this site: don't combine allow-scripts with allow-same-origin. "
+                "Pages on this site never may; other pages may once the site "
+                "has a separate domain for uploads"
             ),
         )
 
@@ -232,17 +282,14 @@ def pdf_after_validator(
 ) -> None:
     """pdf_view_plus's checks across fields."""
     _check_thumbnail(data, errors, first_page=True)
+    _tidy_height(data, infer_mode=False)
     mode = _get(data, "height_mode")
     value = _get(data, "height_value")
     # A blank value is the default (800 px, or 80% of the window), as the
     # form says: its height list has no blank choice, so it always posts one.
     if mode and value and not errors.get(("height_mode",)):
         if not frame.height_value_valid(mode, value):
-            _add_error(
-                errors,
-                "height_value",
-                toolkit._("Height value doesn't fit the height mode"),
-            )
+            _add_error(errors, "height_value", _height_error(mode))
     pdf_url = _get(data, "pdf_url")
     allowed_hosts = settings.allowed_hosts()
     if (

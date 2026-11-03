@@ -70,14 +70,17 @@ order now being built:
    - DOM events `webpageviewplus:loaded|expanded|failed` bubble from the wrapper. `failed` is
      only a timeout on loads the script starts (Load, Reload): the first load may finish before
      the script runs. `data-load-timeout` on the wrapper is a test hook.
-   - `events.emit` logs structured events (`view_rendered`, `same_origin_refused`,
-     `signature_refused`, `frameability_blocked`, `pdf_fetch_failed`) on `ckanext.webpageviewplus.events`, with
-     fields in `record.webpageviewplus` and nothing about the viewer. Tests use the
+   - `events.emit` logs structured events (`view_rendered`, `frame_refused`, `same_origin_refused`,
+     `signature_refused`, `frameability_blocked`, `pdf_fetch_failed`,
+     `content_request_on_ckan_host`) on `ckanext.webpageviewplus.events`, with
+     fields in `record.webpageviewplus` and nothing about the viewer. `view_rendered` (one per
+     page view) is at DEBUG (`events.QUIET`), the rest at INFO. Tests use the
      `events_log` fixture (`tests/conftest.py`).
    - Opt-in view counting (`stats.py`), trimmed scope as decided: the site's `view_counting`
      (needs `privacy_policy_url`, http(s) only) plus each view's `count_views`. Impressions are
      added at render (not in the view form); seen/loaded/engaged/failed come in one beacon per
-     page load (`POST /webpageviewplus/count/<view_id>`, CSRF-exempt, always 204). GPC and
+     page load (`POST /webpageviewplus/count/<view_id>`, CSRF-exempt, always 204, counted only
+     for someone who may `package_show` the dataset: `stats._may_see`). GPC and
      obvious bots (`stats.is_bot`) are never counted. Daily totals per view in
      `webpage_view_plus_view_counts` (alembic migration under `migration/webpage_view_plus`;
      sites run `ckan db upgrade -p webpage_view_plus`, and CI does after `db init`).
@@ -105,7 +108,8 @@ order now being built:
    services' fixed thumbnail addresses (`services.thumbnail_address`: YouTube, Datawrapper,
    Flourish, Tableau Public, Internet Archive; source `service:<url>`). Stage 4 done:
    `service_format` (`thumbnails.service_format`, after each view save: `resource_patch`
-   with `ignore_auth`, only for an empty or HTML format and a resource's only view).
+   with `ignore_auth`, only for an empty or HTML format and a resource's only view, never on
+   a harvested dataset: `_harvested`, a `harvest_object_id` extra).
 10. Done (unreleased, for 0.8.0): `pdf_view_plus` (spec section "PDF viewer on the content
    origin"): PDF.js from the content origin for uploaded and linked PDFs; see `pdf.py` below.
    `ckan webpageviewplus migrate-pdf` converts ckanext-pdfview's `pdf_view` views (same
@@ -130,7 +134,9 @@ order now being built:
   could parse differently are refused outright (`is_http_url`). An upload counts as CKAN's unless
   it's framed from the content origin (`frame.frame_on_ckan_host`).
 - **`external` never applies to uploads** (`frame.preset_for_upload`). User content always gets a
-  sandbox, and `data-schematic` is the upload preset.
+  sandbox, and `data-schematic` is the upload preset. A page URL on the content origin's host
+  counts as an upload too (`frame.on_content_origin`, in `build_frame`, the validator and
+  `migrate`), so a pasted content URL can't get `external`.
 - Checked on save (`view_after_validator`) AND on render (`build_frame`, which falls back to
   `strict`), and `migrate` follows the same rule. All three must agree, so change them together.
 - Tests that exercise post-isolation logic simulate it with the `content_origin` fixture
@@ -287,9 +293,12 @@ order now being built:
   the page once after the save (`health.after_save`, `SAVE_SECONDS` overall via
   `frameability.probe(deadline=...)`, never failing the save) and store the answer per view in
   `webpage_view_plus_frameability` (third migration). `setup_template_variables` reads it
-  (`health.refused`): a stored `blocked` for the view's current URL, or an http page on an
-  https site (`mixed`, no setting needed), renders the "can't be embedded" card instead of the
-  frame, beating consent/Save-Data cards and view counting. `frameability.check()` (the form's
+  (`health.refused`): a stored `blocked` or `gone` (404/410) for the view's current URL, or an
+  http page on an https site (`mixed`, no setting needed), renders a card instead of the
+  frame, beating consent/Save-Data cards and view counting; so does Microsoft's Office viewer in
+  a private dataset (`private_file`, `services.is_office_viewer`, no setting needed). Saving an
+  http page URL on an https site, or an Office viewer URL in a private dataset, is refused
+  (`view_after_validator`), and `can_view` skips http resources there for default views. `frameability.check()` (the form's
   action) still collapses every failure to "unknown"; `probe()` keeps status and failure kind
   for `ckan webpageviewplus check-views` (`cli.assess`), which also covers core `webpage_view`
   views, fetches each URL once, stores answers for plus views, and exits 1 on any problem.
@@ -344,7 +353,10 @@ order now being built:
   survives a failed refresh. The per-view opt-out is `no_auto_thumbnail`, not the spec's
   `auto_thumbnail`, because an unticked checkbox sends nothing (as with `hide_controls`). `thumbnail_resource` is in the main schema, and `view_after_validator` refuses an
   image outside the view's dataset, because `/webpageviewplus/thumbnail/<view_id>` authorises
-  against the view's dataset. Uploads are read through `content.stored_file` (disk, or on 2.12 any
+  against the view's dataset. On a public dataset, a request whose `v=` names the stored copy's
+  digest is cached for a day (`content.IMMUTABLE`; a day, so a copy taken down doesn't linger):
+  the view sets `content.IMMUTABLE_ENVIRON_KEY` and `ContentHostMiddleware` replaces the
+  Cache-Control CKAN's response hook set. Uploads are read through `content.stored_file` (disk, or on 2.12 any
   storage that streams). Rendering does one query per dataset (`_views`, cached on `g`), which reads
   every view type, since logos and names need the resource's only view to be a known
   service's. Logos are Simple Icons SVGs in `public/webpageviewplus/logos/`, named in

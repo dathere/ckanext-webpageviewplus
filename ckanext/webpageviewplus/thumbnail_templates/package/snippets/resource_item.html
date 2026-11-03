@@ -3,21 +3,25 @@
 {#- A resource with a Website (Plus) view: its stored thumbnail or its
     service's logo in place of the format icon, and the service's name in
     place of the format (the dataset's format itself is unchanged, so the
-    service's name isn't marked up as dc:format). The rest of CKAN's title
-    markup is kept as each CKAN version renders it. -#}
+    service's name isn't marked up as dc:format: the real format is, in a
+    hidden span). The rest of CKAN's title markup is kept as each CKAN
+    version renders it. -#}
 {% block resource_item_title %}
   {%- set thumb = h.webpageviewplus_thumbnail(pkg, res) -%}
   {%- if thumb -%}
+    {%- set format_meta -%}
+      {%- if res.format -%}<span property="dc:format" content="{{ h.get_translated(res, 'format') }}" hidden></span>{%- endif -%}
+    {%- endset -%}
     {%- set label -%}
       {%- if thumb.src -%}
         <span class="webpageviewplus-thumbnail{{ '' if thumb.logo else ' webpageviewplus-copy' }}"><img src="{{ thumb.src }}" alt="" width="80" height="45" loading="lazy" decoding="async"></span>
         {%- if thumb.service -%}
-          <span class="webpageviewplus-format">{{ thumb.service }}</span>
+          <span class="webpageviewplus-format">{{ thumb.service }}</span>{{ format_meta }}
         {%- else -%}
           <span class="webpageviewplus-format" property="dc:format">{{ h.get_translated(res, 'format') }}</span>
         {%- endif -%}
       {%- else -%}
-        <span class="format-label" data-format="{{ res.format.lower() or 'data' }}">{{ thumb.service }}</span>
+        <span class="format-label" data-format="{{ res.format.lower() or 'data' }}">{{ thumb.service }}</span>{{ format_meta }}
       {%- endif -%}
     {%- endset -%}
     {% asset 'webpageviewplus/thumbnails-css' %}

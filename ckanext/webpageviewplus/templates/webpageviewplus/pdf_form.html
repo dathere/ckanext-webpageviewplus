@@ -15,6 +15,7 @@
 {% call form.input('pdf_url', id='field-pdf_url', label=_('PDF url'), placeholder=_('eg. https://example.com/report.pdf  (if blank uses resource url)'), value=data.pdf_url, error=errors.pdf_url, classes=['control-full', 'control-large'], attrs={'class': 'form-control', 'aria-describedby': 'help-pdf_url'}) %}
   <p class="form-text" id="help-pdf_url">
     {{ _("Leave blank to show this resource's own file. A PDF on another site is fetched by this site and shown from here, so visitors never contact that site.") }}
+    {{ _('Files on other sites are shown up to {size} MB.').format(size=pdf_max_mb) }}
     {% if allowed_hosts %}{{ _('This site accepts pages from these hosts only: {hosts}.').format(hosts=allowed_hosts | join(', ')) }}{% endif %}
   </p>
 {% endcall %}
@@ -59,7 +60,7 @@
          data-working="{{ _('Drawing the first page…') }}"
          data-done="{{ _('The first page is ready. Save the view to use it.') }}"
          data-failed="{{ _('Couldn\'t draw the first page. Check the PDF shows in the view, then try again.') }}"
-         data-save-first="{{ _('Save the view first, then choose the first page again.') }}"></p>
+         data-save-first="{{ _('Save the view, then edit it again to draw the first page.') }}"></p>
     </div>
   </div>
 {% endif %}

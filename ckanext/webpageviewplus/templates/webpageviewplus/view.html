@@ -6,10 +6,14 @@
     <p class="webpageviewplus-card-title">{{ frame.title }}</p>
     {% if refused == 'mixed' %}
       <p>{{ _("This page can't be shown here: it's served over http://, which browsers block inside https:// sites.") }}</p>
+    {% elif refused == 'gone' %}
+      <p>{{ _("This page is gone: {host} said it no longer exists when the view was last checked.").format(host=refused_host) }}</p>
+    {% elif refused == 'private_file' %}
+      <p>{{ _("Microsoft's viewer can't open files in a private dataset, so this view can't show it.") }}</p>
     {% else %}
       <p>{{ _("{host} doesn't allow its pages to be shown inside other sites.").format(host=refused_host) }}</p>
     {% endif %}
-    {% if 'open' in controls %}
+    {% if 'open' in controls and refused != 'private_file' %}
       <a class="btn btn-sm btn-outline-secondary" href="{{ open_url }}" target="_blank" rel="noopener noreferrer">{{ _('Open in new tab') }}</a>
     {% endif %}
   </div>

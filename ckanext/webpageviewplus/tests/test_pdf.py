@@ -423,6 +423,18 @@ def test_form_controls_are_out_of_themes_reach(app):
     assert wrapper.find("select", attrs={"name": "height_mode"})
 
 
+def test_website_form_points_pdfs_to_pdf_plus(app):
+    dataset = factories.Dataset()
+    resource = factories.Resource(package_id=dataset["id"], url=LINK, format="PDF")
+    sysadmin = factories.SysadminWithToken()
+    body = app.get(
+        url_for("dataset_resource.edit_view", id=dataset["name"],
+                resource_id=resource["id"], view_type="webpage_view_plus"),
+        headers={"Authorization": sysadmin["token"]},
+    ).body
+    assert "the PDF (Plus) view shows it better" in body
+
+
 def test_not_offered_for_unreadable_uploads(monkeypatch):
     monkeypatch.setattr(content, "_readable_uploader", lambda resource: None)
     upload = {"format": "PDF", "url": "a.pdf", "url_type": "upload", "id": "x"}

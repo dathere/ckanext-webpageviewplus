@@ -97,6 +97,15 @@ class TestCounting:
         _beacon(app, view, headers={"User-Agent": "curl/8"}, seen=1)
         assert sum(_stats(sysadmin, view)["totals"].values()) == 0
 
+    def test_only_counted_by_those_who_may_see_it(self, app):
+        # Anyone can post a beacon: a private dataset's view isn't counted
+        # by strangers.
+        sysadmin, dataset, resource, view = _counted()
+        helpers.call_action("package_patch", id=dataset["id"], private=True,
+                            owner_org=factories.Organization()["id"])
+        _beacon(app, view, seen=1)
+        assert sum(_stats(sysadmin, view)["totals"].values()) == 0
+
     def test_view_not_opted_in(self, app):
         sysadmin, dataset, resource, view = _counted(count_views=False)
         body = _read(app, dataset, resource).body
