@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- In a private dataset, a view of a link to an Office file itself (`.docx`, `.xlsx`, ...) was
+  refused on save and shown as "can't open files in a private dataset", as if it went through
+  Microsoft's viewer. Only views of the viewer's own address are refused now.
+
 ## 0.10.3 (2026-11-03)
 
 ### Changed

@@ -377,6 +377,19 @@ def test_office_refused(url):
     assert services.suggest(url) is None
 
 
+@pytest.mark.parametrize("url,expected", [
+    ("https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fx.example%2Fa.docx", True),
+    ("https://VIEW.officeapps.live.com./op/view.aspx?src=https%3A%2F%2Fx.example%2Fa.xlsx", True),
+    # A link to the file itself: suggest() offers the viewer, but a view
+    # with it frames the file, which Microsoft never fetches.
+    ("https://x.example/a.docx", False),
+    ("https://www.youtube.com/watch?v=dQw4w9WgXcQ", False),
+    ("", False),
+])
+def test_is_office_viewer(url, expected):
+    assert services.is_office_viewer(url) is expected
+
+
 def test_suggested_heights_are_valid():
     for url in RECOGNISED:
         found = services.suggest(url)

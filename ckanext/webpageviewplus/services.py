@@ -769,6 +769,8 @@ def suggest(url: str) -> Optional[Suggestion]:
 def is_office_viewer(url: str) -> bool:
     """Whether a page URL shows a file in Microsoft's Office viewer, which
     fetches the file from Microsoft's servers (so never one in a private
-    dataset)."""
+    dataset). A link to the file itself isn't: suggest() only offers the
+    viewer for it, and the view frames the file."""
     found = suggest(url)
-    return found is not None and found.service == OFFICE
+    return found is not None and found.service == OFFICE \
+        and (urlsplit(url.strip()).hostname or "").rstrip(".") == _OFFICE_VIEWER

@@ -920,6 +920,22 @@ class TestOfficeAndPdfViews:
         assert "can't open files in a private dataset" in body
         assert "<iframe" not in body
 
+
+    def test_office_file_link_in_a_private_dataset(self, app):
+        # A link to the file itself is framed directly, not through
+        # Microsoft's viewer, so neither the save nor the render refuses it.
+        dataset = factories.Dataset(owner_org=factories.Organization()["id"], private=True)
+        linked = factories.Resource(package_id=dataset["id"],
+                                    url="https://files.example.org/minutes.docx")
+        view = _view(linked["id"], preset="interactive")
+        sysadmin = factories.SysadminWithToken()
+        body = app.get(
+            url_for("dataset_resource.read", id=dataset["name"], resource_id=linked["id"],
+                    view_id=view["id"]),
+            headers={"Authorization": sysadmin["token"]}).body
+        assert "can't open files in a private dataset" not in body
+        assert "<iframe" in body
+
     def test_deleted_office_upload_drops_its_preview(self, app, ckan_config):
         dataset = factories.Dataset()
         doc = _office_upload(dataset, _office_file(), "minutes.odt")
