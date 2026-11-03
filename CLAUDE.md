@@ -298,7 +298,8 @@ order now being built:
   frame, beating consent/Save-Data cards and view counting; so does Microsoft's Office viewer in
   a private dataset (`private_file`, `services.is_office_viewer`, no setting needed). Saving an
   http page URL on an https site, or an Office viewer URL in a private dataset, is refused
-  (`view_after_validator`), and `can_view` skips http resources there for default views. `frameability.check()` (the form's
+  (`view_after_validator`) on create or when the page URL changes (`_page_url_kept`: a view
+  already saved that way keeps its card and other edits still save), and `can_view` skips http resources there for default views. `frameability.check()` (the form's
   action) still collapses every failure to "unknown"; `probe()` keeps status and failure kind
   for `ckan webpageviewplus check-views` (`cli.assess`), which also covers core `webpage_view`
   views, fetches each URL once, stores answers for plus views, and exits 1 on any problem.

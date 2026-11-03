@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.1 (2026-11-03)
+
+### Changed
+
+- 0.10.0's two new save refusals (an `http://` page address on an `https://` site, and
+  Microsoft's Office viewer in a private dataset) now apply only when a view is created or its
+  page address changes. A view already saved that way keeps showing its card, and editors can
+  still change its title or other settings without first fixing the address.
+
 ## 0.10.0 (2026-11-02)
 
 ### Security

@@ -988,7 +988,9 @@ it as mixed content. That needs no fetch. With the setting on, so does a page wh
 found it redirecting to `http://`. Saving a view with an `http://` page address on an
 `https://` site is refused, with a hint to use its `https://` address. A view of Microsoft's
 Office viewer in a private dataset (saved before the dataset was made private) gets a card
-saying the viewer can't open private files; saving one there is refused.
+saying the viewer can't open private files; saving one there is refused. Both refusals apply
+only when a view is created or its page address changes: a view already saved that way keeps
+its card, and other edits, such as its title, still save.
 
 **It makes your CKAN server request URLs that editors type**, so it's off by default. If you
 enable it, the server:

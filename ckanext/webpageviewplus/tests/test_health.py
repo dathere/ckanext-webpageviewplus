@@ -168,6 +168,19 @@ class TestRefusedCard:
             _view(resource["id"], page_url="http://pages.example.com/a.html")
         assert "https://" in e.value.error_dict["page_url"][0]
 
+    def test_http_page_url_kept_on_other_edits(self, app, monkeypatch):
+        # Saved before the site moved to https: the card shows, and a title
+        # can still be fixed, but a new http address is refused.
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        view = _view(resource["id"], page_url="http://pages.example.com/a.html")
+        monkeypatch.setattr(health.settings, "site_url", lambda: "https://test.ckan.net")
+        update = dict(view, title="Renamed")
+        helpers.call_action("resource_view_update", context={"ignore_auth": True}, **update)
+        with pytest.raises(helpers.logic.ValidationError):
+            helpers.call_action(
+                "resource_view_update", context={"ignore_auth": True},
+                **dict(update, page_url="http://pages.example.com/b.html"))
+
     @pytest.mark.ckan_config("ckanext.webpageviewplus.frameability_check", "true")
     def test_gone_page_card(self, app, probes):
         # Instead of the other site's own 404 page in the frame.

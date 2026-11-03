@@ -887,6 +887,10 @@ class TestOfficeAndPdfViews:
         with pytest.raises(ValidationError) as e:
             _view(page["id"], page_url=embed, preset="interactive")
         assert "private dataset" in e.value.error_dict["page_url"][0]
+        # Other edits to the existing view still save; the card stays.
+        helpers.call_action(
+            "resource_view_update", context={"ignore_auth": True},
+            **dict(view, title="Minutes"))
         sysadmin = factories.SysadminWithToken()
         body = app.get(
             url_for("dataset_resource.read", id=dataset["name"], resource_id=page["id"],

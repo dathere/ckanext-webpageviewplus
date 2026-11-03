@@ -89,6 +89,13 @@ def _stored_view(data: FlattenDataDict) -> Optional[model.ResourceView]:
     return model.ResourceView.get(view_id) if view_id else None
 
 
+def _page_url_kept(data: FlattenDataDict, page_url: str) -> bool:
+    """The view is already saved with this page address. Problems the card
+    already shows then don't block other edits, such as a title."""
+    stored = _stored_view(data)
+    return stored is not None and (stored.config or {}).get("page_url") == page_url
+
+
 def _resource(data: FlattenDataDict) -> Optional[model.Resource]:
     resource_id = _get(data, "resource_id")
     if not resource_id:
@@ -164,7 +171,8 @@ def view_after_validator(
     resource = _resource(data)
     page_url = _get(data, "page_url")
     if page_url:
-        if health.mixed_content(page_url):
+        kept = _page_url_kept(data, page_url)
+        if not kept and health.mixed_content(page_url):
             _add_error(
                 errors,
                 "page_url",
@@ -176,7 +184,8 @@ def view_after_validator(
             return
         stored_resource = _resource(data)
         package = stored_resource.package if stored_resource is not None else None
-        if package is not None and package.private and services.is_office_viewer(page_url):
+        if (not kept and package is not None and package.private
+                and services.is_office_viewer(page_url)):
             _add_error(
                 errors,
                 "page_url",
