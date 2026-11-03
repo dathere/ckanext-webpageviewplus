@@ -1,4 +1,5 @@
 import pytest
+from bs4 import BeautifulSoup
 
 from ckan.plugins import toolkit
 from ckan.plugins.toolkit import url_for
@@ -467,6 +468,43 @@ def test_form_has_suggestion_region(app):
     assert "data-webpageviewplus-service" in body
     assert "webpageviewplus_service_suggest" in body
     assert 'data-preset-names="{&#34;' in body
+
+
+def _service_region(app, resource_url):
+    sysadmin = factories.SysadminWithToken()
+    dataset = factories.Dataset()
+    resource = factories.Resource(package_id=dataset["id"], url=resource_url)
+    url = url_for("{}_resource.edit_view".format(dataset["type"]), id=dataset["name"],
+                  resource_id=resource["id"], view_type="webpage_view_plus")
+    body = app.get(url, headers={"Authorization": sysadmin["token"]}).body
+    return BeautifulSoup(body, "html.parser").select_one("[data-webpageviewplus-service]")
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestFormContentOriginHint:
+    """Rendered by the server, so it shows even when the form's script
+    doesn't load."""
+
+    def test_shown_without_isolation(self, app):
+        region = _service_region(app, "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        assert "alert-warning" in region["class"]
+        assert region.get_text(strip=True) == (
+            "YouTube only works with the External preset, which this site runs as "
+            "Interactive until it has a separate domain for uploads, so it won't "
+            "play here yet. Ask your site administrator.")
+
+    def test_not_shown_with_isolation(self, app, monkeypatch):
+        from ckanext.webpageviewplus import settings
+        monkeypatch.setattr(settings, "isolating_content_origin",
+                            lambda: "https://usercontent.example.net")
+        region = _service_region(app, "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        assert "alert-warning" not in region["class"]
+        assert region.get_text(strip=True) == ""
+
+    def test_not_shown_for_sandboxed_services(self, app):
+        region = _service_region(app, "https://datawrapper.dwcdn.net/XSj9X/")
+        assert region.get_text(strip=True) == ""
 
 
 @pytest.mark.parametrize("url,expected", [

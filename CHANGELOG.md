@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.3 (2026-11-03)
+
+### Changed
+
+- The view form now explains why a well-known service such as YouTube won't play until the
+  site has a content origin even when the form's script doesn't load (for example when the
+  site's asset bundles fail to build). Before, nothing was shown.
+
 ## 0.10.2 (2026-11-03)
 
 ### Security

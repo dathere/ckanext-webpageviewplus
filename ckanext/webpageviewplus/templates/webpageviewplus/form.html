@@ -37,9 +37,11 @@
   <div class="alert alert-info">{{ _('This resource is a PDF: the PDF (Plus) view shows it better, on phones too.') }}</div>
 {% endif %}
 
+{% set needs_content_origin_text = _('{service} only works with the {preset} preset, which this site runs as Interactive until it has a separate domain for uploads, so it won\'t play here yet. Ask your site administrator.') %}
 {# Well-known services (YouTube, Datawrapper...): offers the embed address
-   and the settings the embed needs. Filled in by the script. #}
-<div class="webpageviewplus-service" role="status" aria-live="polite"
+   and the settings the embed needs. Filled in by the script, except the
+   content origin warning, rendered here too so it shows without the script. #}
+<div class="webpageviewplus-service{% if needs_content_origin %} alert alert-warning{% endif %}" role="status" aria-live="polite"
      data-webpageviewplus-service
      data-api="{{ h.url_for('api.action', ver=3, logic_function='webpageviewplus_service_suggest') }}"
      data-resource-id="{{ resource.id }}"
@@ -49,10 +51,14 @@
      {# TRANSLATORS: a button accepting the suggested embed address and settings. #}
      data-apply="{{ _('Use them') }}"
      data-applied="{{ _('Using the embed address and settings for {service}. Save the view to keep them.') }}"
-     data-needs-content-origin="{{ _('{service} only works with the {preset} preset, which this site runs as Interactive until it has a separate domain for uploads, so it won\'t play here yet. Ask your site administrator.') }}"
+     data-needs-content-origin="{{ needs_content_origin_text }}"
      data-preset-not-allowed="{{ _('{service} only works with the {preset} preset, which this site doesn\'t allow.') }}"
      data-host-not-allowed="{{ _('{service} embeds come from {host}, which isn\'t on this site\'s list of allowed hosts.') }}"
-     data-private-dataset="{{ _('{service}\'s viewer fetches the file from its own servers, so it can\'t show a file in a private dataset.') }}"></div>
+     data-private-dataset="{{ _('{service}\'s viewer fetches the file from its own servers, so it can\'t show a file in a private dataset.') }}">
+  {%- if needs_content_origin -%}
+    {{ needs_content_origin_text.format(service=needs_content_origin.service, preset=preset_names.get(needs_content_origin.preset, needs_content_origin.preset)) }}
+  {%- endif -%}
+</div>
 {% if frameability_check %}
   <div class="webpageviewplus-frameability" role="status" aria-live="polite"
        data-webpageviewplus-frameability

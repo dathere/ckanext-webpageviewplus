@@ -49,6 +49,15 @@ def vary_held_back(response: Response) -> Response:
     return response
 
 
+def _needs_content_origin(url: str, private: bool) -> dict[str, str] | None:
+    """The service and preset to name when a well-known service's page
+    won't play until the site has a content origin, else None."""
+    found = services.suggest(url or "")
+    if found is None or actions.suggestion_problem(found, private) != "needs_content_origin":
+        return None
+    return {"service": found.service, "preset": found.preset}
+
+
 @toolkit.blanket.config_declarations
 class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
     """Resource view that embeds a web page in an <iframe>, with a security
@@ -216,6 +225,10 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             "isolated": settings.isolating_content_origin(),
             "allowed_hosts": settings.allowed_hosts(),
             "service_names": services.NAMES,
+            # Shown without the form's script too, so a site whose asset
+            # bundles fail to load still tells the editor why.
+            "needs_content_origin": _needs_content_origin(
+                url, bool((data_dict.get("package") or {}).get("private"))),
             "view_counting": settings.view_counting(),
             # The images this view may use, when thumbnails are on.
             "thumbnail_choices": (
