@@ -199,7 +199,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
 
         form_vars = {
             "presets": settings.allowed_presets(),
-            # External never applies to uploads (frame.preset_for_upload).
+            # An upload's own address is never checked for framing.
             "upload_resource": resource.get("url_type") == "upload",
             # A PDF shows better in PDF (Plus), where it's offered.
             "suggest_pdf_view": (
@@ -318,8 +318,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
         refused = None if is_upload else health.refused(
             resource_view.get("id"), url, third_party)
         # Microsoft's Office viewer fetches the file from its own servers.
-        if (not refused and page_url and (data_dict.get("package") or {}).get("private")
-                and services.is_office_viewer(page_url)):
+        if (not refused and not is_upload and (data_dict.get("package") or {}).get("private")
+                and services.is_office_viewer(url)):
             refused = "private_file"
         if refused:
             events.emit("frame_refused", reason=refused, host=frame.url_host(url))

@@ -190,6 +190,13 @@ class TestRefusedCard:
         assert "<iframe" not in body
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.frameability_check", "true")
+    def test_gone_beats_blocked(self, app, probes):
+        # A 404 page that also refuses framing is gone, not refusing.
+        probes[PAGE] = fa.Probe(fa.BLOCKED, "", "gone", 404)
+        _, body = _page(app)
+        assert "This page is gone" in body
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.frameability_check", "true")
     def test_refused_view_not_counted(self, app, probes, ckan_config, monkeypatch):
         monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.view_counting", "true")
         monkeypatch.setitem(

@@ -140,15 +140,14 @@ class TestThumbnails:
         response = app.get(src)
         assert response.headers["Content-Type"] == "image/jpeg"
         assert response.headers["X-Content-Type-Options"] == "nosniff"
-        # The URL names the copy (v=), so browsers needn't ask again.
-        assert response.headers["Cache-Control"] == "public, max-age=86400, immutable"
+        # Checked on every use, so a copy taken down isn't served from caches.
+        assert response.headers["Cache-Control"] == "public, no-cache"
         assert response.data == row["image"]
         etag = response.headers["ETag"]
         again = app.get(src, headers={"If-None-Match": etag})
         assert again.status_code == 304
-        # Without the copy's name in the URL, CKAN's own caching applies.
         plain = app.get(url_for("webpageviewplus_thumbnails.serve", view_id=view["id"]))
-        assert "immutable" not in plain.headers["Cache-Control"]
+        assert plain.headers["Cache-Control"] == "public, no-cache"
 
     def test_picked_image_streamed_from_storage(self, request):
         # A storage that isn't on disk (memory here; S3 and the like on real
@@ -245,7 +244,7 @@ class TestThumbnails:
         assert "public" not in response.headers["Cache-Control"]
         named = app.get(src + "?v=" + thumbnails.stored(view["id"])["digest"][:16],
                         headers={"Authorization": sysadmin["token"]})
-        assert "immutable" not in named.headers["Cache-Control"]
+        assert "public" not in named.headers["Cache-Control"]
 
     def test_unknown_view_404(self, app):
         app.get(url_for("webpageviewplus_thumbnails.serve", view_id="nope"), status=404)
@@ -520,6 +519,24 @@ class TestFetch:
         web.replace(responses.GET, PAGE, status=503)
         _update(view, title="A new title")
         assert thumbnails.stored(view["id"])["source"] == before["source"]
+
+    def test_failed_read_keeps_the_copy(self, app, web, monkeypatch):
+        # A database error reading the copy isn't "no copy": never delete it.
+        import responses
+        import sqlalchemy as sa
+
+        dataset = factories.Dataset()
+        page = factories.Resource(package_id=dataset["id"], url=PAGE, format="HTML")
+        view = _view(page["id"])
+        assert thumbnails.stored(view["id"])
+        web.replace(responses.GET, PAGE, status=503)
+
+        def fail(view_id):
+            raise sa.exc.OperationalError("SELECT", {}, Exception("gone away"))
+        monkeypatch.setattr(thumbnails, "_read", fail)
+        thumbnails.after_save(view, keep=True)
+        monkeypatch.undo()
+        assert thumbnails.stored(view["id"])
 
     def test_uploads_and_ckan_pages_not_fetched(self, monkeypatch):
         _no_fetching(monkeypatch)
@@ -887,6 +904,10 @@ class TestOfficeAndPdfViews:
         with pytest.raises(ValidationError) as e:
             _view(page["id"], page_url=embed, preset="interactive")
         assert "private dataset" in e.value.error_dict["page_url"][0]
+        # The viewer's address as the resource's own URL is the same.
+        linked = factories.Resource(package_id=dataset["id"], url=embed)
+        with pytest.raises(ValidationError):
+            _view(linked["id"], preset="interactive")
         # Other edits to the existing view still save; the card stays.
         helpers.call_action(
             "resource_view_update", context={"ignore_auth": True},

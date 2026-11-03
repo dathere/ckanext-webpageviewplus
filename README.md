@@ -661,7 +661,8 @@ types a browser never runs scripts in: images (not SVG), audio, video, fonts, pl
 TSV, JSON, PDF, zip, gzip, `application/octet-stream` and `application/vnd.*` (not XML ones).
 CKAN sends a resource's mimetype as its type, and editors can set it to anything, so a type
 that isn't exactly one of those counts as able to run scripts: browsers run `text/plain,
-text/html` as HTML, and guess HTML for `unknown/unknown`. All of these responses also get
+text/html` (or `text/plain; charset=UTF-8, text/html`) as HTML, and guess HTML for
+`unknown/unknown`. All of these responses also get
 `X-Content-Type-Options: nosniff`. Pages still
 render and run scripts, but in an isolated origin. **This changes core behaviour:** opened
 from its download link, a page that needs storage or a real origin (for example a qsv Data

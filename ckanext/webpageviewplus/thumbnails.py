@@ -508,14 +508,20 @@ def delete(view_id: str) -> None:
         pass
 
 
+def _read(view_id: str) -> Optional[dict[str, Any]]:
+    """The stored copy, raising on a database error: after_save must never
+    take a failed read for a missing copy and delete it."""
+    with model.meta.engine.connect() as connection:
+        row = connection.execute(
+            sa.select(table).where(table.c.view_id == view_id)).first()
+    return dict(row._mapping) if row else None
+
+
 def stored(view_id: str) -> Optional[dict[str, Any]]:
     try:
-        with model.meta.engine.connect() as connection:
-            row = connection.execute(
-                sa.select(table).where(table.c.view_id == view_id)).first()
+        return _read(view_id)
     except sa.exc.SQLAlchemyError:
         return None
-    return dict(row._mapping) if row else None
 
 
 def after_save(
@@ -545,7 +551,7 @@ def after_save(
             if draft and draft["source"] == source:
                 store(view["id"], source, draft["image"])
             else:
-                row = stored(view["id"])
+                row = _read(view["id"])
                 if not (row and row["source"] == source):
                     delete(view["id"])
             _drop_draft(view["id"])
@@ -558,7 +564,7 @@ def after_save(
             store(view["id"], source, image)
             return
         if keep and source:
-            row = stored(view["id"])
+            row = _read(view["id"])
             if row and row["source"] == source:
                 return
         delete(view["id"])
@@ -838,9 +844,7 @@ def serve(view_id: str):
     # same for everyone who may see it).
     if content.is_public(resource.package_id):
         request.environ.pop("__no_cache__", None)
-        if request.args.get("v") == row["digest"][:16]:
-            # The URL names this copy: a new copy gets a new URL.
-            request.environ[content.IMMUTABLE_ENVIRON_KEY] = True
+        request.environ[content.REVALIDATE_ENVIRON_KEY] = True
     else:
         request.environ["__no_cache__"] = True
     response = Response(row["image"], mimetype=MIMETYPE)

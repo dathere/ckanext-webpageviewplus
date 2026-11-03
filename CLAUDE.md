@@ -182,7 +182,8 @@ order now being built:
 - `downloads.py`: an `after_app_request` hook. HTML uploads served by `*_resource.download` are
   302'd to their content URL when `content.serves` applies; otherwise every one of those
   responses and `resource_proxy.proxy_view`'s gets `nosniff`, and a CSP `sandbox` header (no
-  `allow-same-origin`) unless its raw Content-Type is one well-formed passive type
+  `allow-same-origin`) unless its raw Content-Type is one well-formed passive type, with no
+  comma anywhere
   (`is_passive_type`, an allow-list; PDF must stay on it, as Chrome refuses its viewer in a
   sandbox). Fail closed: CKAN sends the resource's mimetype, which editors set, and browsers
   run `text/plain, text/html` as HTML and sniff `unknown/unknown`, `html` or ` ` into it.
@@ -297,7 +298,8 @@ order now being built:
   http page on an https site (`mixed`, no setting needed), renders a card instead of the
   frame, beating consent/Save-Data cards and view counting; so does Microsoft's Office viewer in
   a private dataset (`private_file`, `services.is_office_viewer`, no setting needed). Saving an
-  http page URL on an https site, or an Office viewer URL in a private dataset, is refused
+  http page URL on an https site, or an Office viewer URL (page URL or, when blank, the
+  resource's own URL) in a private dataset, is refused
   (`view_after_validator`) on create or when the page URL changes (`_page_url_kept`: a view
   already saved that way keeps its card and other edits still save), and `can_view` skips http resources there for default views. `frameability.check()` (the form's
   action) still collapses every failure to "unknown"; `probe()` keeps status and failure kind
@@ -354,10 +356,11 @@ order now being built:
   survives a failed refresh. The per-view opt-out is `no_auto_thumbnail`, not the spec's
   `auto_thumbnail`, because an unticked checkbox sends nothing (as with `hide_controls`). `thumbnail_resource` is in the main schema, and `view_after_validator` refuses an
   image outside the view's dataset, because `/webpageviewplus/thumbnail/<view_id>` authorises
-  against the view's dataset. On a public dataset, a request whose `v=` names the stored copy's
-  digest is cached for a day (`content.IMMUTABLE`; a day, so a copy taken down doesn't linger):
-  the view sets `content.IMMUTABLE_ENVIRON_KEY` and `ContentHostMiddleware` replaces the
-  Cache-Control CKAN's response hook set. Uploads are read through `content.stored_file` (disk, or on 2.12 any
+  against the view's dataset. On a public dataset, the copy is sent `public, no-cache` with its
+  digest as ETag (`content.REVALIDATE`; never a max-age, so a copy taken down, by the dataset
+  going private or the image being removed, isn't served from caches): the view sets
+  `content.REVALIDATE_ENVIRON_KEY` and `ContentHostMiddleware` replaces the Cache-Control
+  CKAN's response hook set. After the first load a thumbnail costs a 304. Uploads are read through `content.stored_file` (disk, or on 2.12 any
   storage that streams). Rendering does one query per dataset (`_views`, cached on `g`), which reads
   every view type, since logos and names need the resource's only view to be a known
   service's. Logos are Simple Icons SVGs in `public/webpageviewplus/logos/`, named in

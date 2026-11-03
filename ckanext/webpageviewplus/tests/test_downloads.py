@@ -61,6 +61,7 @@ class TestHardenedDownloads:
 
     @pytest.mark.parametrize("mimetype", [
         "text/plain, text/html",  # browsers take the last type
+        "text/plain; charset=UTF-8, text/html",  # even after parameters
         "text/csv, text/html",
         "unknown/unknown",  # sniffed
         "html",
@@ -117,6 +118,7 @@ def test_active_types(mimetype, active):
         ("application/vnd.google-earth.kml+xml", False),
         ("text/html; charset=utf-8", False),
         ("text/plain, text/html", False),
+        ("text/plain; charset=UTF-8, text/html", False),
         ("text/plain,text/html", False),
         ("unknown/unknown", False),
         ("*/*", False),

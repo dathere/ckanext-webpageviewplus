@@ -129,10 +129,10 @@ def refused(view_id: Optional[str], url: str, third_party: bool = True) -> Optio
         row = stored(view_id, url)
         if row and row["problem"] == "mixed-content":
             return "mixed"
-        if row and row["verdict"] == frameability.BLOCKED:
-            return "blocked"
         if row and row["problem"] == "gone":
             return "gone"
+        if row and row["verdict"] == frameability.BLOCKED:
+            return "blocked"
     return None
 
 

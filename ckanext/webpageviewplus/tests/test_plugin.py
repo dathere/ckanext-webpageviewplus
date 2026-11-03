@@ -163,18 +163,24 @@ def _form(app, resource):
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
 @pytest.mark.usefixtures("non_clean_db", "with_plugins")
-def test_external_not_offered_for_uploads(app, local_storage):
+def test_external_offered_for_uploads(app, local_storage):
+    # An upload's view may frame a third-party page (Microsoft's Office
+    # viewer for an uploaded .docx); the save check refuses External for
+    # the upload itself.
     import io
     from werkzeug.datastructures import FileStorage
 
     dataset = factories.Dataset()
     upload = factories.Resource(
-        package_id=dataset["id"], url="page.html", url_type="upload",
-        upload=FileStorage(io.BytesIO(b"<p>hi"), filename="page.html"))
-    link = factories.Resource(package_id=dataset["id"], url="https://pages.example.com/a")
+        package_id=dataset["id"], url="minutes.docx", url_type="upload",
+        upload=FileStorage(io.BytesIO(b"PK"), filename="minutes.docx"))
     offered = lambda r: [o["value"] for o in _form(app, r).select("#field-preset option")]
-    assert "external" not in offered(upload)
-    assert "external" in offered(link)
+    assert "external" in offered(upload)
+    with pytest.raises(ValidationError):
+        helpers.call_action(
+            "resource_view_create", context={"ignore_auth": True},
+            resource_id=upload["id"], view_type="webpage_view_plus", title="Doc",
+            preset="external")
 
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")

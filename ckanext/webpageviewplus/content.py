@@ -356,7 +356,7 @@ class ContentHostMiddleware:
             environ.get("HTTP_HOST") or environ.get("SERVER_NAME") or ""
         )
         if not origin or host != frame.url_host(origin):
-            return self.app(environ, _immutable_if_asked(environ, start_response))
+            return self.app(environ, _revalidate_if_asked(environ, start_response))
         if not (environ.get("PATH_INFO") or "").startswith(
             (self.PREFIX, connections.PREFIX) + self.PDF_PREFIXES
         ):
@@ -380,21 +380,21 @@ class ContentHostMiddleware:
         return self.app(environ, finish)
 
 
-IMMUTABLE_ENVIRON_KEY = "webpageviewplus.immutable"
-# A day, not a year: a copy taken down (dataset made private, image
-# removed) mustn't linger in browsers and shared caches for long.
-IMMUTABLE = "public, max-age=86400, immutable"
+REVALIDATE_ENVIRON_KEY = "webpageviewplus.revalidate"
+# Stored, but checked (ETag) on every use: a copy taken down (dataset made
+# private, image removed) mustn't be served from browsers or shared caches.
+REVALIDATE = "public, no-cache"
 
 
-def _immutable_if_asked(environ: dict[str, Any], start_response: Any) -> Any:
-    """On CKAN's host: a view that set IMMUTABLE_ENVIRON_KEY (a public
-    response whose URL names its content, like a thumbnail's ?v=<digest>)
-    gets a day's Cache-Control. CKAN's own response hook runs after the
-    view and would set max-age=ckan.cache_expires, so it's replaced here."""
+def _revalidate_if_asked(environ: dict[str, Any], start_response: Any) -> Any:
+    """On CKAN's host: a view that set REVALIDATE_ENVIRON_KEY (a public
+    response with an ETag, like a thumbnail) gets REVALIDATE. CKAN's own
+    response hook runs after the view and would set
+    max-age=ckan.cache_expires, so it's replaced here."""
     def finish(status: str, headers: list, exc_info: Any = None):
-        if environ.get(IMMUTABLE_ENVIRON_KEY) and status[:3] in ("200", "304"):
+        if environ.get(REVALIDATE_ENVIRON_KEY) and status[:3] in ("200", "304"):
             headers = [(k, v) for k, v in headers if k.lower() != "cache-control"]
-            headers.append(("Cache-Control", IMMUTABLE))
+            headers.append(("Cache-Control", REVALIDATE))
         return start_response(status, headers, exc_info)
     return finish
 

@@ -67,7 +67,7 @@
   <label class="form-label" for="field-preset">{{ _('Security preset') }}</label>
   <div class="controls">
     <select id="field-preset" name="preset" class="form-control form-select" aria-describedby="help-preset">
-      {% for name in presets if not (upload_resource and name == 'external') %}
+      {% for name in presets %}
         <option value="{{ name }}" {% if (data.preset or default_preset) == name %}selected{% endif %}>{{ preset_labels.get(name, name) }}</option>
       {% endfor %}
     </select>

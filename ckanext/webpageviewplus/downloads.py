@@ -66,6 +66,9 @@ def is_passive_type(content_type: str) -> bool:
     HTML (the last type wins), sniff "unknown/unknown", "html" or " " into
     HTML, so only one well-formed type on this list counts. PDF must be:
     Chrome refuses its PDF viewer in a sandboxed document."""
+    if "," in content_type:
+        # Even after parameters: browsers split the header on commas.
+        return False
     mimetype = content_type.partition(";")[0].strip().lower()
     if not _MIME_TOKEN.fullmatch(mimetype) or is_active_type(mimetype):
         return False

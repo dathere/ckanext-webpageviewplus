@@ -93,7 +93,7 @@ def _page_url_kept(data: FlattenDataDict, page_url: str) -> bool:
     """The view is already saved with this page address. Problems the card
     already shows then don't block other edits, such as a title."""
     stored = _stored_view(data)
-    return stored is not None and (stored.config or {}).get("page_url") == page_url
+    return stored is not None and ((stored.config or {}).get("page_url") or "") == page_url
 
 
 def _resource(data: FlattenDataDict) -> Optional[model.Resource]:
@@ -170,8 +170,8 @@ def view_after_validator(
 
     resource = _resource(data)
     page_url = _get(data, "page_url")
+    kept = _page_url_kept(data, page_url or "")
     if page_url:
-        kept = _page_url_kept(data, page_url)
         if not kept and health.mixed_content(page_url):
             _add_error(
                 errors,
@@ -182,24 +182,24 @@ def view_after_validator(
                 ),
             )
             return
-        stored_resource = _resource(data)
-        package = stored_resource.package if stored_resource is not None else None
-        if (not kept and package is not None and package.private
-                and services.is_office_viewer(page_url)):
-            _add_error(
-                errors,
-                "page_url",
-                toolkit._(
-                    "Microsoft's viewer fetches the file from its own servers, "
-                    "so it can't show a file in a private dataset"
-                ),
-            )
-            return
         # A pasted content-origin URL is an upload too: never unsandboxed.
         url, is_upload = page_url, frame.on_content_origin(page_url, settings.content_origin())
     elif resource is not None:
         url, is_upload = resource.url or "", resource.url_type == "upload"
     else:
+        return
+
+    package = resource.package if resource is not None else None
+    if (not kept and not is_upload and package is not None and package.private
+            and services.is_office_viewer(url)):
+        _add_error(
+            errors,
+            "page_url",
+            toolkit._(
+                "Microsoft's viewer fetches the file from its own servers, "
+                "so it can't show a file in a private dataset"
+            ),
+        )
         return
 
     isolating = settings.isolating_content_origin()

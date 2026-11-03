@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.10.2 (2026-11-03)
+
+### Security
+
+- `harden_downloads` could still be bypassed with a mimetype like
+  `text/plain; charset=UTF-8, text/html`: the type was judged by what came before the first
+  `;`, but browsers split the header on commas and take the last type. Any comma in the
+  Content-Type now gets the sandbox. Upgrading is enough.
+- Thumbnails of public datasets are no longer cached for a day: they're sent `public, no-cache`
+  with an ETag, so a thumbnail of a dataset made private, or of a removed image, isn't served
+  from browsers or a CDN. A repeat visit costs a 304 per thumbnail.
+- The Office viewer check for private datasets also covers a view with no page URL whose
+  resource's own address is the viewer's.
+
+### Fixed
+
+- External is offered again in the form for uploaded resources. 0.10.0 hid it, which broke
+  Microsoft's Office viewer for uploaded documents (its page is on Microsoft's site) and could
+  silently change an existing External view's preset on save. External for the upload itself
+  is still refused at save.
+- A database error while re-saving a view no longer deletes its thumbnail.
+- A page that answers 404 or 410 and also refuses framing shows "This page is gone".
+
 ## 0.10.1 (2026-11-03)
 
 ### Changed
