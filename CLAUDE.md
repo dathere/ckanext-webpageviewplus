@@ -41,7 +41,11 @@ order now being built:
    (`wvp_helpers.py`) post as the framed page and record every height the script sets.
    `test_thumbnails.py` checks the dataset page's resource list: a picked upload, a service
    logo (Vimeo), a name without a logo (Power BI), unchanged rows, the `:has()` gutter and axe.
-   Browser CI enables `webpage_view_plus_thumbnails` (`ci.ini`) and installs `.[thumbnails]`.
+   Browser CI enables `webpage_view_plus_thumbnails` and `repo_view_plus` (`ci.ini`) and installs
+   `.[thumbnails,repos]`. `test_repos.py` uses two Repository views whose GitHub answers
+   `seed.py` writes straight into CKAN's cache (a copy, and a remembered "missing"), so GitHub is
+   never asked; `ci.ini` keeps copies a year. On the dev site they expire after
+   `repo_cache_seconds` (an hour), so re-run the seed before running it there.
 6. Done: accessibility. Skip link, live region, focus, contrast and forced colours, axe-core in
    the suite, and reflow: at 320px wide (400% zoom) every frame gets a 600px floor, and a view
    that hides its bar still shows Open in new tab unless the site's `controls` drops `open`.
@@ -312,7 +316,8 @@ order now being built:
   no scripts, so the invariant has nothing to refuse and no content origin is needed. Consent
   applies (README images are third-party), with `consent_host` github.com. Tests fake
   `repos._api` (`tests/test_repos.py`); don't use `with_request_context` there, or the route
-  sees an anonymous visitor.
+  sees an anonymous visitor. Browser tests: `browser_tests/test_repos.py` (sandbox and CSP,
+  the style hash, new-tab and in-page links, Reload, the missing card, consent).
 - `health.py`: views whose page can't be shown. **Rendering never fetches**: with
   `frameability_check` on, `resource_view_create`/`_update` are chained (`actions.py`) to probe
   the page once after the save (`health.after_save`, `SAVE_SECONDS` overall via

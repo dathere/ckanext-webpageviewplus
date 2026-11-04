@@ -3,7 +3,9 @@ two uploaded fixtures (the qsv protocol, and the generic resize message) and
 one view per case. View titles are unique across both. For the thumbnails
 plugin, an image, a page whose view picks it, and links to two well-known
 services (one with a logo, one without); nothing is fetched, as the
-browser CI runs without thumbnail_fetch. Idempotent: the
+browser CI runs without thumbnail_fetch. With repo_view_plus, two
+Repository views whose GitHub answers are written into CKAN's cache, so
+GitHub is never asked. Idempotent: the
 dataset is purged and recreated. Run inside the CKAN container, with
 CKAN_INI pointing at the site's config:
 
@@ -12,8 +14,10 @@ CKAN_INI pointing at the site's config:
 It calls actions with ignore_auth as the site user, so no API token is
 needed.
 """
+import hashlib
 import io
 import os
+import time
 
 from werkzeug.datastructures import FileStorage
 
@@ -80,6 +84,19 @@ SERVICE_LINKS = [
      "YtZDA4MDAxNGYyNDQyIiwidCI6ImQ2NDk2NzM4LWY5MTItNGExZS04NDE1LTQwY2E2ZjRhOTRlZCJ9"),
 ]
 PICKED_PAGE = b"<!doctype html><title>Picked thumbnail</title><p>Its view picks an image.</p>"
+
+# repo_view_plus: a copy of each repository's page is written where CKAN
+# keeps it, so the views never ask GitHub (ci.ini keeps copies for a year).
+REPO = "https://github.com/wvp-browser/example"
+MISSING_REPO = "https://github.com/wvp-browser/missing"
+REPO_README = (
+    '<div id="readme" data-path="README.md"><article>'
+    '<h1>Example</h1><p>Jump to <a href="#usage">Usage</a>, or see '
+    '<a href="https://example.com/">example.com</a>.</p>'
+    + "".join("<p>Filler paragraph {}.</p>".format(i) for i in range(60))
+    + '<h2><a id="user-content-usage" class="anchor" href="#usage">#</a>Usage</h2>'
+    '<p>The end of the README.</p></article></div>'
+)
 
 
 def _png():
@@ -164,6 +181,9 @@ def main():
                 {"name": name, "url": url}, "{} ({})".format(found.service, found.preset),
                 **fields)
 
+        if plugins.plugin_loaded("repo_view_plus"):
+            _seed_repos(act, ctx, pkg)
+
         # pdf_view_plus: an uploaded PDF, shown by PDF.js from the content origin.
         if plugins.plugin_loaded("pdf_view_plus"):
             with open(os.path.join(FIXTURES, "document.pdf"), "rb") as f:
@@ -179,6 +199,47 @@ def main():
                 "resource_id": resource["id"], "view_type": "pdf_view_plus",
                 "title": "PDF fixture",
             })
+
+
+def _seed_repos(act, ctx, pkg):
+    from ckanext.webpageviewplus import repos
+
+    folder = repos._folder()
+    os.makedirs(folder, exist_ok=True)
+
+    def base(url):
+        return os.path.join(folder, hashlib.sha256(repos.parse(url).key.encode()).hexdigest())
+
+    for suffix in (".json", ".failed", ".lock"):
+        for url in (REPO, MISSING_REPO):
+            if os.path.exists(base(url) + suffix):
+                os.remove(base(url) + suffix)
+    repos._write(base(REPO) + ".json", {
+        "site": "GitHub", "full_name": "wvp-browser/example",
+        "html_url": REPO, "description": "A repository the browser tests show",
+        "language": "Python", "stars": 1234, "forks": 56,
+        "pushed_at": "2026-11-01T12:00:00Z", "archived": False, "ref": "main",
+        "entries": [
+            {"name": "docs", "type": "dir", "url": REPO + "/tree/main/docs"},
+            {"name": "README.md", "type": "file", "url": REPO + "/blob/main/README.md"},
+        ],
+        "truncated": False,
+        "readme": repos.clean_readme(REPO_README, "wvp-browser", "example", "main",
+                                     "README.md"),
+    })
+    # GitHub's 404, remembered for a year: the view shows its card.
+    repos._write(base(MISSING_REPO) + ".failed",
+                 {"kind": "missing", "until": time.time() + 365 * 86400})
+    for name, url, title in (("Repository link", REPO, "Repository"),
+                             ("Missing repository link", MISSING_REPO, "Missing repository")):
+        resource = act("resource_create")(ctx(), {
+            "package_id": pkg["id"], "name": name, "url": url})
+        for v in act("resource_view_list")(ctx(), {"id": resource["id"]}):
+            act("resource_view_delete")(ctx(), {"id": v["id"]})
+        act("resource_view_create")(ctx(), {
+            "resource_id": resource["id"], "view_type": repos.VIEW_TYPE, "title": title,
+            "height_mode": "fixed", "height_value": "400",
+        })
 
 
 if __name__ == "__main__":

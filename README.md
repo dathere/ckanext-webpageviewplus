@@ -1478,8 +1478,8 @@ themselves (CKAN's fixtures drop them when they reset the test database).
 
 `browser_tests/` drives a running CKAN with Playwright in Chromium, Firefox and WebKit; see
 `.github/workflows/test.yml` for how CI starts and seeds one. The CKAN under test needs all three
-plugins, `webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus` (so the `[thumbnails]`
-extra), and a content origin, as in `browser_tests/ci.ini`.
+plugins, `webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus repo_view_plus` (so the
+`[thumbnails,repos]` extras), and a content origin, as in `browser_tests/ci.ini`.
 
 #### Releasing a new version of ckanext-webpageviewplus
 
