@@ -265,6 +265,21 @@ def main():
             scroll(page, 330, steps=10, pause=40)
             page.wait_for_timeout(3000)
 
+        # 6b. repo_view_plus: a GitHub repository, fetched and cached by CKAN
+        # (seeded where the plugin is on).
+        if "A GitHub repository" in present:
+            page.goto(view_url("wvp-features", "A GitHub repository", "A GitHub repository"))
+            page.frame_locator("iframe").first.locator(".repo-readme").wait_for()
+            page.wait_for_timeout(800)
+            caption(page, "Repository (Plus) view: a GitHub repository's files and README, "
+                          "fetched and cached by CKAN, shown with no scripts")
+            scroll(page, 330, steps=10, pause=40)
+            page.wait_for_timeout(1500)
+            box = frame_box()
+            page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+            scroll(page, 1600, steps=40, pause=60)
+            page.wait_for_timeout(1200)
+
         # 7. Thumbnails in the resource list (webpage_view_plus_thumbnails).
         page.goto(B + "/dataset/wvp-features")
         page.wait_for_timeout(800)
