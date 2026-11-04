@@ -186,6 +186,29 @@ class TestCached:
         answers["/repos/ckan/ckan"] = repos.Unavailable("failed")
         assert repos.cached(repos.Repo("ckan", "ckan")) == (fresh, "")
 
+    def _hold_lock(self, repo):
+        import hashlib
+        import os
+        folder = repos._folder()
+        os.makedirs(folder, exist_ok=True)
+        open(os.path.join(folder, hashlib.sha256(repo.key.encode()).hexdigest() + ".lock"),
+             "w").close()
+
+    def test_another_worker_fetching_and_no_copy_yet(self, api):
+        _, calls = api
+        self._hold_lock(repos.Repo("ckan", "ckan"))
+        assert repos.cached(repos.Repo("ckan", "ckan")) == (None, "failed")
+        assert calls == []
+
+    def test_another_worker_fetching_serves_the_old_copy(self, api, ckan_config, monkeypatch):
+        _, calls = api
+        old, _ = repos.cached(repos.Repo("ckan", "ckan"))
+        monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.repo_cache_seconds", 0)
+        self._hold_lock(repos.Repo("ckan", "ckan"))
+        fetched = len(calls)
+        assert repos.cached(repos.Repo("ckan", "ckan")) == (old, "")
+        assert len(calls) == fetched
+
     def test_no_storage_path(self, api, ckan_config, monkeypatch):
         monkeypatch.setitem(ckan_config, "ckan.storage_path", "")
         assert repos.cached(repos.Repo("ckan", "ckan")) == (None, "no_storage")
@@ -218,6 +241,21 @@ class TestView:
         with pytest.raises(ValidationError):
             _view(resource)
         assert _view(resource, repo_url=REPO)["repo_url"] == REPO
+
+    @pytest.mark.parametrize("mode, value, message", [
+        ("fixed", "tall", "Fixed takes a number of pixels"),
+        ("viewport", "150", "A share of the window takes a number from 1 to 100"),
+    ])
+    def test_save_refuses_a_bad_height(self, mode, value, message):
+        resource = factories.Resource(url=REPO)
+        with pytest.raises(ValidationError) as raised:
+            _view(resource, height_mode=mode, height_value=value)
+        assert any(message in error for error in raised.value.error_dict["height_value"])
+
+    @pytest.mark.parametrize("mode, value", [("fixed", "600"), ("viewport", "80")])
+    def test_save_keeps_a_good_height(self, mode, value):
+        view = _view(factories.Resource(url=REPO), height_mode=mode, height_value=value)
+        assert (view["height_mode"], view["height_value"]) == (mode, value)
 
     def test_page(self, app, api):
         view = _view(factories.Resource(url=REPO))
