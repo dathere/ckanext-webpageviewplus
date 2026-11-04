@@ -290,6 +290,8 @@ def check() -> None:
         raise CkanConfigurationException(PREFIX + "pdf_max_size: must be at least 1 (MB)")
     if _get("pdf_cache_seconds") is not None and pdf_cache_seconds() < 0:
         raise CkanConfigurationException(PREFIX + "pdf_cache_seconds: can't be negative")
+    if _get("repo_cache_seconds") is not None and repo_cache_seconds() < 0:
+        raise CkanConfigurationException(PREFIX + "repo_cache_seconds: can't be negative")
     if url_ttl() < 30:
         raise CkanConfigurationException(
             PREFIX + "url_ttl: must be at least 30 seconds"

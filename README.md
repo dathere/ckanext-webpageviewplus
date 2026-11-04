@@ -162,7 +162,7 @@ needs one, and `ckan.storage_path` set to show PDFs linked from other sites.
    | `webpage_view_plus` | the Website (Plus) view: web pages, uploaded HTML, well-known services, Office files | nothing |
    | `webpage_view_plus_thumbnails` | [thumbnails in the resource list](#thumbnails-in-the-resource-list) | `webpage_view_plus`, and Pillow (the `[thumbnails]` extra) |
    | `pdf_view_plus` | the [PDF (Plus) view](#pdf-views) | `webpage_view_plus`, a [separate domain for uploads](#a-separate-domain-for-uploads), and `ckan.storage_path` for PDFs linked from other sites |
-   | `repo_view_plus` | the [Repository (Plus) view](#repository-views) of a public GitHub repository | `webpage_view_plus`, `ckan.storage_path`, and nh3 (the `[repos]` extra) |
+   | `repo_view_plus` | the [Repository (Plus) view](#repository-views) of a public GitHub repository | `webpage_view_plus`, `ckan.storage_path`, and nh3 (the `[repos]` extra); beyond a handful of repositories, a `github_token` ([why](#repository-views)) |
 
    For example:
 
@@ -451,8 +451,9 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   A: Not by default. Two settings make CKAN fetch when a view is saved: the
   [frameability check](#frameability-check) and `thumbnail_fetch`, both off by default. And the
   [PDF (Plus) view](#pdf-views), if you enable it, fetches a PDF linked from another site the
-  first time it's viewed, then serves its copy for `pdf_cache_seconds`. All three reach public
-  addresses only.
+  first time it's viewed, then serves its copy for `pdf_cache_seconds`, and the
+  [Repository (Plus) view](#repository-views) fetches a repository's details from GitHub's API
+  the same way, for `repo_cache_seconds`. All of them reach public addresses only.
 
 - **Q: We keep uploads in S3 or other cloud storage. Does it work?**<br>
   A: On CKAN 2.12, yes: uploads in any `ckan.files` storage that can stream, S3 included, are
@@ -536,6 +537,18 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   webpageviewplus migrate-pdf`, which converts its views in place. It shows PDFs with PDF.js
   from that domain, so phones see them too, and a PDF's scripts never run in the view. Linked PDFs are
   fetched by CKAN and cached, at most `pdf_max_size` MB each. See [PDF views](#pdf-views).
+
+- **Q: Do repository views need a GitHub token?**<br>
+  A: Not for a few repositories, but yes for more. Your CKAN server, not your visitors'
+  browsers, asks GitHub for each repository, and without a token GitHub allows it 60 requests
+  an hour, shared by every visitor. A repository takes three, so about 20 can be loaded or
+  refreshed an hour; copies are kept for `repo_cache_seconds` (an hour by default). Past the
+  limit, a repository with no copy yet shows "This site has used up its requests to GitHub"
+  until GitHub's hour resets; ones with a copy keep showing it. Set
+  `ckanext.webpageviewplus.github_token` to a fine-grained token with no permissions (it only
+  reads public repositories, and is sent only to `api.github.com`) for 5,000 an hour. `ckan
+  webpageviewplus doctor` reminds you when it's missing. See
+  [Repository views](#repository-views).
 
 ### For editors
 

@@ -5,10 +5,11 @@ import pytest
 from bs4 import BeautifulSoup
 
 import ckan.plugins as plugins
+from ckan.exceptions import CkanConfigurationException
 from ckan.logic import ValidationError
 from ckan.tests import factories
 
-from ckanext.webpageviewplus import repos
+from ckanext.webpageviewplus import repos, settings
 
 pytest.importorskip("nh3")
 
@@ -67,6 +68,14 @@ class TestCleanReadme:
         out = self._clean('<a href="https://ckan.org">a</a><a href="#install">b</a>')
         assert '<a href="https://ckan.org" target="_blank" rel="noopener noreferrer">' in out
         assert '<a href="#user-content-install">b</a>' in out
+
+    def test_in_page_links_scroll_whatever_their_attributes(self):
+        out = self._clean(
+            '<a id="user-content-install" class="anchor" href="#install">a</a>'
+            '<a href="#usage" title="Say &quot;hi&quot; > there">b</a>')
+        assert '<a id="user-content-install" href="#user-content-install">a</a>' in out
+        assert 'href="#user-content-usage" title=' in out
+        assert "target" not in out and "rel=" not in out
 
     @pytest.mark.parametrize("html", [
         '<a href="javascript:alert(1)">x</a>',
@@ -261,6 +270,9 @@ class TestView:
         iframe = BeautifulSoup(body, "html.parser").select_one(".webpageviewplus iframe")
         assert " ".join(iframe["sandbox"]) == "allow-popups allow-popups-to-escape-sandbox"
         assert iframe["src"].endswith("/webpageviewplus/repo/" + view["id"])
+        # GitHub refuses framing, so Reload must load CKAN's page, not GitHub's.
+        reload = BeautifulSoup(body, "html.parser").select_one('[data-webpageviewplus-action="reload"]')
+        assert reload["data-reload-url"] == iframe["src"]
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.privacy_profile", "eu")
     def test_consent_card_names_github(self, app):
@@ -270,3 +282,10 @@ class TestView:
         body = app.get(_read(dataset, resource, view)).body
         assert "github.com" in BeautifulSoup(body, "html.parser").select_one(
             ".webpageviewplus").get_text()
+
+
+@pytest.mark.parametrize("key", ["repo_cache_seconds", "pdf_cache_seconds"])
+def test_negative_cache_seconds_stop_startup(key, ckan_config, monkeypatch):
+    monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus." + key, "-1")
+    with pytest.raises(CkanConfigurationException, match=key):
+        settings.check()

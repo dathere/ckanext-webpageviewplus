@@ -307,10 +307,22 @@ def clean_readme(html: str, owner: str, name: str, ref: str, path: str) -> str:
         strip_comments=True,
     )
     # In-page links scroll the page instead of opening a new tab.
-    return _IN_PAGE.sub(r"\1>", cleaned)
+    return _ANCHOR.sub(_in_page, cleaned)
 
 
-_IN_PAGE = re.compile(r'(<a href="#[^"]*") target="_blank" rel="noopener noreferrer">')
+# nh3 serializes every attribute double-quoted, with any '"' escaped, so this
+# matches whole <a> tags whatever their attributes or order.
+_ANCHOR = re.compile(r'<a((?:\s+[\w-]+="[^"]*")*)\s*>')
+_ATTRIBUTE = re.compile(r'\s+([\w-]+)="([^"]*)"')
+
+
+def _in_page(match: "re.Match[str]") -> str:
+    attributes = _ATTRIBUTE.findall(match.group(1))
+    if not any(name == "href" and value.startswith("#") for name, value in attributes):
+        return match.group(0)
+    return "<a{}>".format("".join(
+        ' {}="{}"'.format(name, value) for name, value in attributes
+        if name not in ("target", "rel")))
 
 
 # The copy

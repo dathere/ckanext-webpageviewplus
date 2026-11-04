@@ -769,7 +769,7 @@ class RepoViewPlusPlugin(plugins.SingletonPlugin):
             refused=None,
             refused_host=None,
             open_url=found.html_url,
-            reload_url=None,
+            reload_url=built.src,
             controls=settings.controls(),
             show_controls=not toolkit.asbool(resource_view.get("hide_controls")),
             color_scheme=settings.color_scheme(),

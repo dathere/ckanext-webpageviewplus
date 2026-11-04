@@ -313,6 +313,22 @@ class TestDoctor:
         assert any(level == "note" and "core Website views remain" in text
                    for level, text in wvp_cli.diagnose())
 
+    def test_repo_views_without_a_token(self, monkeypatch):
+        monkeypatch.setattr(wvp_cli, "_plugin_loaded", lambda name: name == "repo_view_plus")
+        assert any(level == "note" and text.startswith("repo_view_plus is on without github_token")
+                   for level, text in wvp_cli.diagnose())
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.github_token", "github_pat_x")
+    def test_repo_views_with_a_token(self, monkeypatch):
+        monkeypatch.setattr(wvp_cli, "_plugin_loaded", lambda name: name == "repo_view_plus")
+        texts = [text for level, text in wvp_cli.diagnose()]
+        assert "github_token is set: GitHub allows 5,000 requests an hour." in texts
+        assert not any("github_token" in text and "without" in text for text in texts)
+
+    def test_no_token_note_without_repo_views(self, monkeypatch):
+        monkeypatch.setattr(wvp_cli, "_plugin_loaded", lambda name: False)
+        assert not any("github_token" in text for _, text in wvp_cli.diagnose())
+
     def test_missing_bundle_fails(self, cli, monkeypatch):
         monkeypatch.setattr(wvp_cli, "asset_problems",
                             lambda site_url: ["https://x.example/a.js: HTTP 404"])
