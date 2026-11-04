@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-04 02:35+0000\n"
+"POT-Creation-Date: 2026-11-04 13:53+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -20,7 +20,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.15.0\n"
 
-#: ckanext/webpageviewplus/actions.py:170 ckanext/webpageviewplus/plugin.py:179
+#: ckanext/webpageviewplus/actions.py:170 ckanext/webpageviewplus/plugin.py:180
 msgid "Website"
 msgstr "ウェブサイト"
 
@@ -41,25 +41,34 @@ msgstr "このサイトではサムネイルが有効になっていません"
 msgid "Not a usable image"
 msgstr "使用できる画像ではありません"
 
-#: ckanext/webpageviewplus/plugin.py:157
+#: ckanext/webpageviewplus/plugin.py:158
 msgid "Website (Plus)"
 msgstr "ウェブサイト (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:305
+#: ckanext/webpageviewplus/plugin.py:306
 msgid "Embedded web page"
 msgstr "埋め込みウェブページ"
 
-#: ckanext/webpageviewplus/plugin.py:511
+#: ckanext/webpageviewplus/plugin.py:512
 msgid "PDF (Plus)"
 msgstr "PDF (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:524
+#: ckanext/webpageviewplus/plugin.py:525
 msgid "PDF"
 msgstr "PDF"
 
-#: ckanext/webpageviewplus/plugin.py:581
+#: ckanext/webpageviewplus/plugin.py:582
 msgid "PDF document"
 msgstr "PDF ドキュメント"
+
+#: ckanext/webpageviewplus/plugin.py:687
+msgid "Repository (Plus)"
+msgstr "リポジトリ (Plus)"
+
+#: ckanext/webpageviewplus/plugin.py:698 ckanext/webpageviewplus/plugin.py:734
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:6
+msgid "Repository"
+msgstr "リポジトリ"
 
 #: ckanext/webpageviewplus/validators.py:19
 msgid "Web Page url must be an http:// or https:// URL"
@@ -150,6 +159,10 @@ msgstr ""
 msgid "Choose an image from this dataset"
 msgstr "このデータセットの画像を選んでください"
 
+#: ckanext/webpageviewplus/validators.py:339
+msgid "Not a GitHub repository's address, such as https://github.com/ckan/ckan"
+msgstr "GitHub リポジトリのアドレスではありません（例: https://github.com/ckan/ckan）"
+
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:4
 msgid "Strict: static HTML, no scripts"
 msgstr "厳格: 静的 HTML、スクリプトなし"
@@ -180,11 +193,13 @@ msgstr "自動"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:13
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:7
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:7
 msgid "Fixed (px)"
 msgstr "固定 (px)"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:14
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:8
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:8
 msgid "Share of the window height, in percent"
 msgstr "ウィンドウの高さに対する割合 (パーセント)"
 
@@ -279,7 +294,9 @@ msgid ""
 "{service} doesn't let its pages show inside other sites, so this view "
 "would stay blank. Use the page's embed or share address if it has one, or"
 " link to it instead."
-msgstr "{service} は他のサイト内でのページ表示を許可していないため、このビューは空白のままになります。ページに埋め込み用または共有用のアドレスがあればそれを使用するか、代わりにリンクしてください。"
+msgstr ""
+"{service} "
+"は他のサイト内でのページ表示を許可していないため、このビューは空白のままになります。ページに埋め込み用または共有用のアドレスがあればそれを使用するか、代わりにリンクしてください。"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:56
 #, python-brace-format
@@ -361,6 +378,7 @@ msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:107
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:24
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:18
 msgid "Height"
 msgstr "高さ"
 
@@ -376,6 +394,7 @@ msgstr "自動は、qsv の Data Schematic のように自身の高さを通知�
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:120
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:35
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:29
 msgid "Height value"
 msgstr "高さの値"
 
@@ -438,11 +457,13 @@ msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:159
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:71
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:36
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
 msgstr "コントロールバーを隠す (新しいタブで開く、全画面、再読み込み)"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:160
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:72
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:37
 msgid ""
 "On phones and at high zoom, Open in new tab still shows, so visitors can "
 "always reach the page."
@@ -539,10 +560,12 @@ msgid "Files on other sites are shown up to {size} MB."
 msgstr "他のサイトのファイルは {size} MB まで表示されます。"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:35
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:29
 msgid "eg. 800 or 80"
 msgstr "例: 800 または 80"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:36
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:30
 msgid ""
 "Pixels for Fixed, or a number from 1 to 100 for a share of the window. "
 "Blank is 800 pixels."
@@ -587,6 +610,79 @@ msgstr "最初のページを描画できませんでした。ビューに PDF �
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:63
 msgid "Save the view, then edit it again to draw the first page."
 msgstr "ビューを保存してから、もう一度編集すると最初のページが描画されます。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:11
+msgid "Repository url"
+msgstr "リポジトリの URL"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:11
+msgid "eg. https://github.com/ckan/ckan  (if blank uses resource url)"
+msgstr "例: https://github.com/ckan/ckan  (空欄の場合はリソースの URL を使用)"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:13
+msgid ""
+"Leave blank to show the repository this resource links to, or enter "
+"another repository or branch to show instead. A public GitHub "
+"repository's name, description, files and README are fetched by this site"
+" and shown here, as GitHub's pages can't be embedded. Add /tree/<branch> "
+"for a branch other than the default."
+msgstr ""
+"空欄にすると、このリソースのリンク先のリポジトリを表示します。別のリポジトリやブランチを入力すると、代わりにそれを表示します。GitHub "
+"のページは埋め込めないため、公開 GitHub リポジトリの名前、説明、ファイル、README "
+"をこのサイトが取得してここに表示します。既定以外のブランチには /tree/<branch> を付けてください。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:16
+msgid "Archived"
+msgstr "アーカイブ済み"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:18
+msgid "{count} star"
+msgid_plural "{count} stars"
+msgstr[0] "スター {count} 件"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:19
+msgid "{count} fork"
+msgid_plural "{count} forks"
+msgstr[0] "フォーク {count} 件"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:20
+msgid "Updated {date}"
+msgstr "{date} に更新"
+
+#. the branch whose files are listed, such as "main".
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:22
+msgid "Branch: {ref}"
+msgstr "ブランチ: {ref}"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:24
+msgid "Files"
+msgstr "ファイル"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:29
+msgid "More files on {site}"
+msgstr "{site} でほかのファイルを見る"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:39
+msgid ""
+"This site has used up its requests to GitHub for now, so the repository "
+"can't be shown here. Try again later."
+msgstr "このサイトは GitHub へのリクエストの上限に達したため、現在リポジトリをここに表示できません。しばらくしてからもう一度お試しください。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:41
+msgid "This repository wasn't found, or it isn't public."
+msgstr "このリポジトリは見つからないか、公開されていません。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:43
+msgid "This address isn't a repository this view can show."
+msgstr "このアドレスは、このビューで表示できるリポジトリではありません。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:45
+msgid "The repository couldn't be loaded. Try again later."
+msgstr "リポジトリを読み込めませんでした。しばらくしてからもう一度お試しください。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:48
+msgid "Open on {site}"
+msgstr "{site} で開く"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:8
 msgid ""
@@ -738,11 +834,23 @@ msgstr "PDF を表示するにはビューを保存してください。"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:150
 msgid ""
+"There is no repository to show: only public GitHub repositories, such as "
+"https://github.com/ckan/ckan, are supported."
+msgstr ""
+"表示するリポジトリがありません。対応しているのは https://github.com/ckan/ckan のような公開 GitHub "
+"リポジトリだけです。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:152
+msgid "Save the view to see the repository."
+msgstr "リポジトリを表示するには、ビューを保存してください。"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:154
+msgid ""
 "This page can't be embedded: its host isn't on this site's list of "
 "allowed hosts."
 msgstr "このページは埋め込めません。ホストがこのサイトの許可ホスト一覧にありません。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:152
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:156
 msgid ""
 "This page cannot be embedded: only http:// and https:// URLs are "
 "supported."

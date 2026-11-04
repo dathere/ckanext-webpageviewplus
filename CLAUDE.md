@@ -122,8 +122,8 @@ order now being built:
    Uploads `pdf.source` can't read (a cloud storage extension on 2.10/2.11) are never
    offered the view (`can_view`) and `migrate-pdf` leaves their `pdf_view` views alone.
 
-11. Started (branch `repo-view`, for 0.11.0): `repo_view_plus` (spec section "Proposed:
-   Repository (Plus) view"), GitHub only; see `repos.py` below. Next: Codeberg/Gitea
+11. Done for GitHub (released in 0.11.0): `repo_view_plus` (spec section "Proposed:
+   Repository (Plus) view"); see `repos.py` below. Next: Codeberg/Gitea
    (`repo_hosts`), then GitLab and Bitbucket (raw Markdown: add cmarkgfm to `[repos]`, after
    checking it has a wheel for the 2.12 image's Python), `check-views` reporting, and the
    Website (Plus) form offering a Repository view for repository links.

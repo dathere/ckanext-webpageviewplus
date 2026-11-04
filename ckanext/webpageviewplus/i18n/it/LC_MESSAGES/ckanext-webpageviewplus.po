@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-04 02:35+0000\n"
+"POT-Creation-Date: 2026-11-04 13:53+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: it\n"
@@ -20,7 +20,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.15.0\n"
 
-#: ckanext/webpageviewplus/actions.py:170 ckanext/webpageviewplus/plugin.py:179
+#: ckanext/webpageviewplus/actions.py:170 ckanext/webpageviewplus/plugin.py:180
 msgid "Website"
 msgstr "Sito web"
 
@@ -41,25 +41,34 @@ msgstr "Le miniature non sono attive su questo sito"
 msgid "Not a usable image"
 msgstr "Non è un'immagine utilizzabile"
 
-#: ckanext/webpageviewplus/plugin.py:157
+#: ckanext/webpageviewplus/plugin.py:158
 msgid "Website (Plus)"
 msgstr "Sito web (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:305
+#: ckanext/webpageviewplus/plugin.py:306
 msgid "Embedded web page"
 msgstr "Pagina web incorporata"
 
-#: ckanext/webpageviewplus/plugin.py:511
+#: ckanext/webpageviewplus/plugin.py:512
 msgid "PDF (Plus)"
 msgstr "PDF (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:524
+#: ckanext/webpageviewplus/plugin.py:525
 msgid "PDF"
 msgstr "PDF"
 
-#: ckanext/webpageviewplus/plugin.py:581
+#: ckanext/webpageviewplus/plugin.py:582
 msgid "PDF document"
 msgstr "Documento PDF"
+
+#: ckanext/webpageviewplus/plugin.py:687
+msgid "Repository (Plus)"
+msgstr "Repository (Plus)"
+
+#: ckanext/webpageviewplus/plugin.py:698 ckanext/webpageviewplus/plugin.py:734
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:6
+msgid "Repository"
+msgstr "Repository"
 
 #: ckanext/webpageviewplus/validators.py:19
 msgid "Web Page url must be an http:// or https:// URL"
@@ -155,6 +164,12 @@ msgstr ""
 msgid "Choose an image from this dataset"
 msgstr "Scegli un'immagine di questo dataset"
 
+#: ckanext/webpageviewplus/validators.py:339
+msgid "Not a GitHub repository's address, such as https://github.com/ckan/ckan"
+msgstr ""
+"Non è l'indirizzo di un repository GitHub, come "
+"https://github.com/ckan/ckan"
+
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:4
 msgid "Strict: static HTML, no scripts"
 msgstr "Rigoroso: HTML statico, nessuno script"
@@ -187,11 +202,13 @@ msgstr "Automatica"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:13
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:7
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:7
 msgid "Fixed (px)"
 msgstr "Fissa (px)"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:14
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:8
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:8
 msgid "Share of the window height, in percent"
 msgstr "Quota dell'altezza della finestra, in percentuale"
 
@@ -296,7 +313,11 @@ msgid ""
 "{service} doesn't let its pages show inside other sites, so this view "
 "would stay blank. Use the page's embed or share address if it has one, or"
 " link to it instead."
-msgstr "{service} non consente di mostrare le sue pagine all'interno di altri siti, quindi questa vista resterebbe vuota. Usa l'indirizzo di incorporamento o di condivisione della pagina, se ne ha uno, oppure inserisci un link."
+msgstr ""
+"{service} non consente di mostrare le sue pagine all'interno di altri "
+"siti, quindi questa vista resterebbe vuota. Usa l'indirizzo di "
+"incorporamento o di condivisione della pagina, se ne ha uno, oppure "
+"inserisci un link."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:56
 #, python-brace-format
@@ -393,6 +414,7 @@ msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:107
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:24
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:18
 msgid "Height"
 msgstr "Altezza"
 
@@ -411,6 +433,7 @@ msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:120
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:35
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:29
 msgid "Height value"
 msgstr "Valore dell'altezza"
 
@@ -484,6 +507,7 @@ msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:159
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:71
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:36
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
 msgstr ""
 "Nascondi la barra dei controlli (Apri in una nuova scheda, Schermo "
@@ -491,6 +515,7 @@ msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:160
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:72
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:37
 msgid ""
 "On phones and at high zoom, Open in new tab still shows, so visitors can "
 "always reach the page."
@@ -599,10 +624,12 @@ msgid "Files on other sites are shown up to {size} MB."
 msgstr "I file di altri siti vengono mostrati fino a {size} MB."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:35
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:29
 msgid "eg. 800 or 80"
 msgstr "es. 800 o 80"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:36
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:30
 msgid ""
 "Pixels for Fixed, or a number from 1 to 100 for a share of the window. "
 "Blank is 800 pixels."
@@ -653,6 +680,86 @@ msgstr ""
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:63
 msgid "Save the view, then edit it again to draw the first page."
 msgstr "Salva la vista, poi modificala di nuovo per disegnare la prima pagina."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:11
+msgid "Repository url"
+msgstr "URL del repository"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:11
+msgid "eg. https://github.com/ckan/ckan  (if blank uses resource url)"
+msgstr "es. https://github.com/ckan/ckan  (se vuoto, usa l'URL della risorsa)"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:13
+msgid ""
+"Leave blank to show the repository this resource links to, or enter "
+"another repository or branch to show instead. A public GitHub "
+"repository's name, description, files and README are fetched by this site"
+" and shown here, as GitHub's pages can't be embedded. Add /tree/<branch> "
+"for a branch other than the default."
+msgstr ""
+"Lascia vuoto per mostrare il repository a cui rimanda questa risorsa, "
+"oppure inserisci un altro repository o branch da mostrare al suo posto. "
+"Nome, descrizione, file e README di un repository GitHub pubblico vengono"
+" recuperati da questo sito e mostrati qui, perché le pagine di GitHub non"
+" possono essere incorporate. Aggiungi /tree/<branch> per un branch "
+"diverso da quello predefinito."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:16
+msgid "Archived"
+msgstr "Archiviato"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:18
+msgid "{count} star"
+msgid_plural "{count} stars"
+msgstr[0] "{count} stella"
+msgstr[1] "{count} stelle"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:19
+msgid "{count} fork"
+msgid_plural "{count} forks"
+msgstr[0] "{count} fork"
+msgstr[1] "{count} fork"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:20
+msgid "Updated {date}"
+msgstr "Aggiornato il {date}"
+
+#. the branch whose files are listed, such as "main".
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:22
+msgid "Branch: {ref}"
+msgstr "Branch: {ref}"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:24
+msgid "Files"
+msgstr "File"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:29
+msgid "More files on {site}"
+msgstr "Altri file su {site}"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:39
+msgid ""
+"This site has used up its requests to GitHub for now, so the repository "
+"can't be shown here. Try again later."
+msgstr ""
+"Questo sito ha esaurito per ora le sue richieste a GitHub, quindi il "
+"repository non può essere mostrato qui. Riprova più tardi."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:41
+msgid "This repository wasn't found, or it isn't public."
+msgstr "Questo repository non è stato trovato o non è pubblico."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:43
+msgid "This address isn't a repository this view can show."
+msgstr "Questo indirizzo non è un repository che questa vista può mostrare."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:45
+msgid "The repository couldn't be loaded. Try again later."
+msgstr "Non è stato possibile caricare il repository. Riprova più tardi."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:48
+msgid "Open on {site}"
+msgstr "Apri su {site}"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:8
 msgid ""
@@ -814,13 +921,25 @@ msgstr "Salva la vista per vedere il PDF."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:150
 msgid ""
+"There is no repository to show: only public GitHub repositories, such as "
+"https://github.com/ckan/ckan, are supported."
+msgstr ""
+"Non c'è nessun repository da mostrare: sono supportati solo repository "
+"GitHub pubblici, come https://github.com/ckan/ckan."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:152
+msgid "Save the view to see the repository."
+msgstr "Salva la vista per vedere il repository."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:154
+msgid ""
 "This page can't be embedded: its host isn't on this site's list of "
 "allowed hosts."
 msgstr ""
 "Questa pagina non può essere incorporata: il suo host non è nell'elenco "
 "degli host consentiti di questo sito."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:152
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:156
 msgid ""
 "This page cannot be embedded: only http:// and https:// URLs are "
 "supported."

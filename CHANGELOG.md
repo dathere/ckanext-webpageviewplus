@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.11.0 (2026-11-04)
 
 ### Added
 
@@ -10,7 +10,7 @@
   (`repo_cache_seconds`, optional `github_token`); the page has no scripts, so no separate
   domain for uploads is needed. Install with the new `[repos]` extra (nh3). `doctor` notes
   when it's on without `github_token` (GitHub then allows 60 requests an hour, about 20
-  repositories).
+  repositories). Its strings are translated into all six languages.
 
 - `ckan webpageviewplus doctor` checks a site's setup and says what to fix: no isolating
   content origin (and what that costs), the plugin's tables not upgraded, the extension's
