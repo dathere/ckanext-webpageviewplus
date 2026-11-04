@@ -142,6 +142,14 @@ def pdf_cache_seconds() -> int:
     return int(_get("pdf_cache_seconds"))
 
 
+def repo_cache_seconds() -> int:
+    return int(_get("repo_cache_seconds"))
+
+
+def github_token() -> str:
+    return (_get("github_token") or "").strip()
+
+
 LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "[::1]")
 _psl = None
 

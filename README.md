@@ -147,9 +147,10 @@ needs one, and `ckan.storage_path` set to show PDFs linked from other sites.
 
        pip install ckanext-webpageviewplus
 
-   For thumbnails in the resource list, install it with Pillow instead:
+   The optional plugins need extras: `[thumbnails]` (Pillow) for thumbnails in the resource
+   list and `[repos]` (nh3) for repository views. Install the ones you'll enable, for example:
 
-       pip install "ckanext-webpageviewplus[thumbnails]"
+       pip install "ckanext-webpageviewplus[thumbnails,repos]"
 
    (or, for unreleased changes, `pip install git+https://github.com/dathere/ckanext-webpageviewplus.git`)
 
@@ -161,13 +162,15 @@ needs one, and `ckan.storage_path` set to show PDFs linked from other sites.
    | `webpage_view_plus` | the Website (Plus) view: web pages, uploaded HTML, well-known services, Office files | nothing |
    | `webpage_view_plus_thumbnails` | [thumbnails in the resource list](#thumbnails-in-the-resource-list) | `webpage_view_plus`, and Pillow (the `[thumbnails]` extra) |
    | `pdf_view_plus` | the [PDF (Plus) view](#pdf-views) | `webpage_view_plus`, a [separate domain for uploads](#a-separate-domain-for-uploads), and `ckan.storage_path` for PDFs linked from other sites |
+   | `repo_view_plus` | the [Repository (Plus) view](#repository-views) of a public GitHub repository | `webpage_view_plus`, `ckan.storage_path`, and nh3 (the `[repos]` extra) |
 
    For example:
 
        ckan.plugins = ... webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus
 
-   CKAN won't start if `webpage_view_plus` is missing or, for thumbnails, Pillow is, and says
-   which. Without a separate domain, `pdf_view_plus` loads but offers no view. Keep
+   CKAN won't start if `webpage_view_plus` is missing or, for thumbnails, Pillow is, or, for
+   repository views, nh3 is, and says which. Without a separate domain, `pdf_view_plus` loads
+   but offers no view. Keep
    `webpage_view` (and ckanext-pdfview's `pdf_view` or ckanext-officedocs' `officedocs_view`,
    if you use them) enabled until you've moved your views over: `migrate` and `migrate-pdf`
    convert the first two; Office views are added afresh.
@@ -1266,6 +1269,42 @@ docstring.
 | Resource list | the format label | with the thumbnails plugin, the PDF's first page or an image the editor picks |
 | Moving over | n/a | `ckan webpageviewplus migrate-pdf` converts existing views in place |
 
+### Repository views
+
+GitHub's pages refuse to be framed, so a Website (Plus) view of a repository stays blank. The
+**Repository (Plus)** view (plugin `repo_view_plus`) shows a public GitHub repository the way
+GitHub does at its root: its name, description, language, stars, forks and last update, the
+root's folders and files, and the README. Every link opens on GitHub in a new tab.
+
+    pip install "ckanext-webpageviewplus[repos]"
+    ckan.plugins = ... webpage_view_plus repo_view_plus
+
+It's offered for resources linking to `github.com/<owner>/<repo>` (or `.git`, or
+`/tree/<branch>`); a view's **Repository url** can name another one.
+
+- **CKAN fetches, never the visitor's browser.** The first time a view is shown, CKAN asks
+  GitHub's API for the repository, its root listing and its README (rendered by GitHub), with
+  the same guards as the frameability check, and keeps one copy per repository and branch
+  under `ckan.storage_path` for `repo_cache_seconds` (default an hour). One worker fetches at
+  a time, others serve the previous copy meanwhile, and a failure is remembered for five
+  minutes, or until GitHub's limit resets.
+- **GitHub allows 60 requests an hour per server** without a token, and a repository takes
+  three: about 20 repositories an hour on a cold cache. Set `github_token` (a fine-grained
+  token with no permissions) for 5,000. When the limit is reached, or the repository is
+  missing or private, the view shows a card with a link to it instead, and a copy already
+  made keeps being shown.
+- **A page with no scripts.** The README is cleaned with nh3 (tags and attributes from a fixed
+  list; relative links point at the files on GitHub, relative images at their raw
+  addresses), and the page is served on CKAN's host with a CSP `sandbox` and
+  `default-src 'none'`, in a frame sandboxed with `allow-popups` only. With nothing able to
+  run, it needs no separate domain for uploads. On a private dataset, the page needs the same
+  access as the dataset.
+- **Third-party content.** README images load in the visitor's browser (GitHub, its image
+  proxy, badge services), so the consent card covers these views under `privacy_profile = eu`,
+  `consent_gate` or Global Privacy Control.
+
+Not yet: GitLab, Bitbucket and Codeberg, self-hosted Git sites, and `check-views` reporting.
+
 ### Privacy and telemetry
 
 By default the extension sends no telemetry and adds no tracking. Every frame's `allow` list
@@ -1362,6 +1401,8 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.show_connections` | `false` | Show those hosts under the view |
 | `ckanext.webpageviewplus.pdf_max_size` | `25` | With `pdf_view_plus`, the largest PDF on another site CKAN fetches, in MB |
 | `ckanext.webpageviewplus.pdf_cache_seconds` | `3600` | With `pdf_view_plus`, how long CKAN (and browsers, for public datasets) keep a linked PDF before fetching it again |
+| `ckanext.webpageviewplus.repo_cache_seconds` | `3600` | With `repo_view_plus`, how long CKAN keeps its copy of a repository's page before asking GitHub again |
+| `ckanext.webpageviewplus.github_token` | (none) | With `repo_view_plus`, a GitHub token raising GitHub's limit from 60 to 5,000 requests an hour; sent only to `api.github.com`. A fine-grained token with no permissions is enough |
 
 ### Commands and API
 

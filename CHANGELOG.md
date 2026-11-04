@@ -4,6 +4,12 @@
 
 ### Added
 
+- A third plugin, `repo_view_plus`: the Repository (Plus) view shows a public GitHub
+  repository's name, description, facts, root files and README, which GitHub's own pages
+  can't be framed to show. CKAN fetches GitHub's API and keeps a copy per repository
+  (`repo_cache_seconds`, optional `github_token`); the page has no scripts, so no separate
+  domain for uploads is needed. Install with the new `[repos]` extra (nh3).
+
 - `ckan webpageviewplus doctor` checks a site's setup and says what to fix: no isolating
   content origin (and what that costs), the plugin's tables not upgraded, the extension's
   asset bundles not served by the site, `ckan.views.default_views`, and core `webpage_view`

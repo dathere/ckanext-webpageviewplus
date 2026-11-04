@@ -1,0 +1,272 @@
+import json
+import time
+
+import pytest
+from bs4 import BeautifulSoup
+
+import ckan.plugins as plugins
+from ckan.logic import ValidationError
+from ckan.tests import factories
+
+from ckanext.webpageviewplus import repos
+
+pytest.importorskip("nh3")
+
+REPO = "https://github.com/ckan/ckan"
+INFO = {
+    "full_name": "ckan/ckan", "description": "The open source data portal",
+    "language": "Python", "stargazers_count": 5150, "forks_count": 2123,
+    "pushed_at": "2026-11-03T12:57:01Z", "default_branch": "master",
+    "private": False, "archived": False,
+}
+LISTING = [
+    {"name": "setup.py", "type": "file"},
+    {"name": "ckan", "type": "dir"},
+    {"name": "README.rst", "type": "file"},
+]
+README = ('<div id="readme" class="rst" data-path="README.rst"><article>'
+          '<h1>CKAN</h1><p>See <a href="doc/index.rst">the docs</a>.</p>'
+          '<img src="doc/logo.png"><script>alert(1)</script></article></div>')
+
+
+@pytest.mark.parametrize("url,expected", [
+    (REPO, repos.Repo("ckan", "ckan")),
+    ("https://www.github.com/ckan/ckan/", repos.Repo("ckan", "ckan")),
+    ("http://GITHUB.com./ckan/ckan.git", repos.Repo("ckan", "ckan")),
+    ("https://github.com/ckan/ckan/tree/dev-v2.11", repos.Repo("ckan", "ckan", "dev-v2.11")),
+    ("https://github.com/ckan/ckan?tab=readme#top", repos.Repo("ckan", "ckan")),
+    # Not a repository's root.
+    ("https://github.com/ckan", None),
+    ("https://github.com/ckan/ckan/tree/master/doc", None),
+    ("https://github.com/ckan/ckan/blob/master/README.rst", None),
+    ("https://github.com/ckan/ckan/issues", None),
+    ("https://github.com/orgs/ckan", None),
+    ("https://github.com/settings/profile", None),
+    ("https://gist.github.com/someone/abc", None),
+    ("https://github.com/ckan/ckan/tree/..", None),
+    ("https://github.com/c%2Fk/ckan", None),
+    ("https://user@github.com/ckan/ckan", None),
+    ("https://github.com:8443/ckan/ckan", None),
+    ("https://gitlab.com/ckan/ckan", None),
+    ("", None),
+])
+def test_parse(url, expected):
+    assert repos.parse(url) == expected
+
+
+class TestCleanReadme:
+    def _clean(self, html, path="README.md"):
+        return repos.clean_readme(html, "o", "r", "main", path)
+
+    def test_relative_links_and_images_from_the_readmes_folder(self):
+        out = self._clean('<a href="guide.md">g</a><img src="img/a.png">', "docs/README.md")
+        assert 'href="https://github.com/o/r/blob/main/docs/guide.md"' in out
+        assert 'src="https://raw.githubusercontent.com/o/r/main/docs/img/a.png"' in out
+
+    def test_links_open_in_a_new_tab_but_in_page_links_scroll(self):
+        out = self._clean('<a href="https://ckan.org">a</a><a href="#install">b</a>')
+        assert '<a href="https://ckan.org" target="_blank" rel="noopener noreferrer">' in out
+        assert '<a href="#user-content-install">b</a>' in out
+
+    @pytest.mark.parametrize("html", [
+        '<a href="javascript:alert(1)">x</a>',
+        '<a href=" java&#9;script:alert(1)">x</a>',
+        '<img src="x" onerror="alert(1)">',
+        "<script>alert(1)</script>",
+        "<svg><script>alert(1)</script></svg>",
+        '<iframe src="https://x.example"></iframe>',
+        '<form action="https://x.example"><button>go</button></form>',
+        '<p style="background:url(https://x.example)">x</p>',
+    ])
+    def test_nothing_active_survives(self, html):
+        out = self._clean(html).lower()
+        for word in ("script", "onerror", "iframe", "<form", "style=", "javascript"):
+            assert word not in out
+
+    def test_task_list_checkboxes_are_disabled(self):
+        out = self._clean('<input type="checkbox" checked><input type="text">')
+        assert '<input type="checkbox" checked="" disabled="disabled">' in out
+        assert '<input disabled="disabled">' in out
+
+
+@pytest.fixture
+def api(monkeypatch):
+    """GitHub's answers by API path, counting the calls."""
+    answers = {
+        "/repos/ckan/ckan": (200, json.dumps(INFO).encode()),
+        "/repos/ckan/ckan/contents/?ref=master": (200, json.dumps(LISTING).encode()),
+        "/repos/ckan/ckan/readme?ref=master": (200, README.encode()),
+    }
+    calls = []
+
+    def fake(path, deadline, max_bytes, accept):
+        calls.append(path)
+        answer = answers.get(path, (404, b"{}"))
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    monkeypatch.setattr(repos, "_api", fake)
+    return answers, calls
+
+
+@pytest.fixture
+def storage(monkeypatch, tmp_path, ckan_config):
+    monkeypatch.setitem(ckan_config, "ckan.storage_path", str(tmp_path))
+    return tmp_path
+
+
+class TestFetch:
+    def test_page_data(self, api):
+        data = repos.fetch(repos.Repo("ckan", "ckan"), time.monotonic() + 5)
+        assert data["full_name"] == "ckan/ckan"
+        assert data["stars"] == 5150 and data["ref"] == "master"
+        assert [e["name"] for e in data["entries"]] == ["ckan", "README.rst", "setup.py"]
+        assert data["entries"][0]["url"] == "https://github.com/ckan/ckan/tree/master/ckan"
+        assert data["entries"][2]["url"] == "https://github.com/ckan/ckan/blob/master/setup.py"
+        assert "https://github.com/ckan/ckan/blob/master/doc/index.rst" in data["readme"]
+        assert "script" not in data["readme"]
+
+    def test_no_readme(self, api):
+        answers, _ = api
+        del answers["/repos/ckan/ckan/readme?ref=master"]
+        assert repos.fetch(repos.Repo("ckan", "ckan"), time.monotonic() + 5)["readme"] == ""
+
+    def test_missing(self, api):
+        with pytest.raises(repos.Unavailable) as raised:
+            repos.fetch(repos.Repo("ckan", "nope"), time.monotonic() + 5)
+        assert raised.value.kind == "missing"
+
+    def test_private_counts_as_missing(self, api):
+        answers, _ = api
+        answers["/repos/ckan/ckan"] = (200, json.dumps(dict(INFO, private=True)).encode())
+        with pytest.raises(repos.Unavailable) as raised:
+            repos.fetch(repos.Repo("ckan", "ckan"), time.monotonic() + 5)
+        assert raised.value.kind == "missing"
+
+
+@pytest.mark.usefixtures("storage")
+class TestCached:
+    def test_fetched_once_and_shared(self, api):
+        _, calls = api
+        first, problem = repos.cached(repos.Repo("ckan", "ckan"))
+        assert problem == "" and first["full_name"] == "ckan/ckan"
+        again, _ = repos.cached(repos.Repo("CKAN", "CKAN"))
+        assert again == first and len(calls) == 3
+
+    def test_failure_remembered(self, api):
+        _, calls = api
+        assert repos.cached(repos.Repo("ckan", "nope")) == (None, "missing")
+        assert repos.cached(repos.Repo("ckan", "nope")) == (None, "missing")
+        assert len(calls) == 1
+
+    def test_rate_limit_remembered_until_reset(self, api, monkeypatch):
+        answers, calls = api
+        answers["/repos/ckan/ckan"] = repos.Unavailable("rate_limited", time.time() + 3600)
+        assert repos.cached(repos.Repo("ckan", "ckan")) == (None, "rate_limited")
+        monkeypatch.setattr(repos, "FAILED_SECONDS", 0)
+        assert repos.cached(repos.Repo("ckan", "ckan")) == (None, "rate_limited")
+        assert len(calls) == 1
+
+    def test_stale_copy_served_when_a_refresh_fails(self, api, ckan_config, monkeypatch):
+        answers, _ = api
+        fresh, _ = repos.cached(repos.Repo("ckan", "ckan"))
+        monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.repo_cache_seconds", 0)
+        answers["/repos/ckan/ckan"] = repos.Unavailable("failed")
+        assert repos.cached(repos.Repo("ckan", "ckan")) == (fresh, "")
+
+    def test_no_storage_path(self, api, ckan_config, monkeypatch):
+        monkeypatch.setitem(ckan_config, "ckan.storage_path", "")
+        assert repos.cached(repos.Repo("ckan", "ckan")) == (None, "no_storage")
+
+
+def _page(view):
+    return "/webpageviewplus/repo/" + view["id"]
+
+
+def _read(dataset, resource, view):
+    return "/dataset/{}/resource/{}?view_id={}".format(dataset["name"], resource["id"], view["id"])
+
+
+def _view(resource, **fields):
+    return factories.ResourceView(resource_id=resource["id"], view_type=repos.VIEW_TYPE,
+                                  title="Repository", **fields)
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus repo_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins", "storage")
+class TestView:
+    def test_offered_for_repository_links_only(self):
+        plugin = plugins.get_plugin(repos.VIEW_TYPE)
+        assert plugin.can_view({"resource": {"url": REPO}})
+        assert not plugin.can_view({"resource": {"url": REPO + "/issues"}})
+        assert not plugin.can_view({"resource": {"url": "page.html", "url_type": "upload"}})
+
+    def test_save_refuses_a_non_repository(self):
+        resource = factories.Resource(url="https://example.com/")
+        with pytest.raises(ValidationError):
+            _view(resource)
+        assert _view(resource, repo_url=REPO)["repo_url"] == REPO
+
+    def test_page(self, app, api):
+        view = _view(factories.Resource(url=REPO))
+        response = app.get(_page(view))
+        assert response.status_code == 200
+        csp = response.headers["Content-Security-Policy"]
+        assert csp.startswith("sandbox allow-popups allow-popups-to-escape-sandbox;")
+        assert "default-src 'none'" in csp and "script-src" not in csp
+        page = BeautifulSoup(response.body, "html.parser")
+        assert page.select_one("h1").get_text(strip=True) == "ckan/ckan"
+        assert [a.get_text() for a in page.select(".repo-files a")] == [
+            "ckan", "README.rst", "setup.py"]
+        assert page.select_one(".repo-readme h1").get_text() == "CKAN"
+        assert "Updated November 3, 2026" in page.select_one(".repo-facts").get_text()
+        assert page.find("script") is None
+
+    def test_style_matches_its_hash(self, app, api):
+        import base64
+        import hashlib
+        view = _view(factories.Resource(url=REPO))
+        response = app.get(_page(view))
+        style = BeautifulSoup(response.body, "html.parser").find("style").string
+        digest = base64.b64encode(hashlib.sha256(style.encode()).digest()).decode()
+        assert "'sha256-{}'".format(digest) in response.headers["Content-Security-Policy"]
+
+    def test_card_when_it_cant_be_fetched(self, app, api):
+        view = _view(factories.Resource(url="https://github.com/ckan/nope"))
+        response = app.get(_page(view))
+        page = BeautifulSoup(response.body, "html.parser")
+        assert "wasn't found" in page.select_one(".repo-card").get_text()
+        assert page.select_one(".repo-card a")["href"] == "https://github.com/ckan/nope"
+
+    def test_private_dataset_needs_access(self, app, api):
+        org = factories.Organization()
+        dataset = factories.Dataset(private=True, owner_org=org["id"])
+        view = _view(factories.Resource(package_id=dataset["id"], url=REPO))
+        url = _page(view)
+        assert app.get(url).status_code == 404
+        sysadmin = factories.SysadminWithToken()
+        assert app.get(url, headers={"Authorization": sysadmin["token"]}).status_code == 200
+
+    def test_other_view_types_refused(self, app):
+        view = factories.ResourceView(resource_id=factories.Resource(url=REPO)["id"],
+                                      view_type="webpage_view_plus")
+        assert app.get(_page(view)).status_code == 404
+
+    def test_rendered_in_a_frame_without_scripts(self, app):
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=REPO)
+        view = _view(resource)
+        body = app.get(_read(dataset, resource, view)).body
+        iframe = BeautifulSoup(body, "html.parser").select_one(".webpageviewplus iframe")
+        assert " ".join(iframe["sandbox"]) == "allow-popups allow-popups-to-escape-sandbox"
+        assert iframe["src"].endswith("/webpageviewplus/repo/" + view["id"])
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.privacy_profile", "eu")
+    def test_consent_card_names_github(self, app):
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=REPO)
+        view = _view(resource)
+        body = app.get(_read(dataset, resource, view)).body
+        assert "github.com" in BeautifulSoup(body, "html.parser").select_one(
+            ".webpageviewplus").get_text()

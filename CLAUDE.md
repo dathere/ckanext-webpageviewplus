@@ -118,6 +118,12 @@ order now being built:
    Uploads `pdf.source` can't read (a cloud storage extension on 2.10/2.11) are never
    offered the view (`can_view`) and `migrate-pdf` leaves their `pdf_view` views alone.
 
+11. Started (branch `repo-view`, for 0.11.0): `repo_view_plus` (spec section "Proposed:
+   Repository (Plus) view"), GitHub only; see `repos.py` below. Next: Codeberg/Gitea
+   (`repo_hosts`), then GitLab and Bitbucket (raw Markdown: add cmarkgfm to `[repos]`, after
+   checking it has a wheel for the 2.12 image's Python), `check-views` reporting, and the
+   Website (Plus) form offering a Repository view for repository links.
+
 ## The security model (read before touching frame, validator, content or download code)
 
 - **Invariant:** while uploaded HTML could still run on CKAN's origin, no frame may let scripts
@@ -290,6 +296,23 @@ order now being built:
   is_upload=True)`; `view.html` is shared. The PDF.js webviewerloaded event reaches the
   viewer's own document only because the CKAN page is cross-origin;
   `browser_tests/test_pdf.py` checks the options took effect.
+- `repos.py` + `RepoViewPlusPlugin` (`plugin.py`): the `repo_view_plus` view type (a plugin
+  of its own, needing `webpage_view_plus` and nh3, the `[repos]` extra). `parse()` accepts only
+  a repository root (`github.com/<owner>/<repo>`, `.git`, `/tree/<branch>`). `cached()` is
+  `pdf.cached_pdf`'s shape keyed by owner/repo/ref (shared across views): `fetch()` makes three
+  GitHub API calls through `_api` (frameability's `_guarded`/`_address_kind`, redirects only
+  within api.github.com so `github_token` never leaves it; 403/429 with no requests left is
+  `rate_limited`, remembered until GitHub's reset), and a failed refresh keeps serving the old
+  copy. The README comes rendered by GitHub and is cleaned by `clean_readme` (nh3, fixed
+  tag/attribute lists, relative links to blob/raw addresses). The page route
+  `/webpageviewplus/repo/<view_id>` runs on CKAN's host (re-checking `resource_view_show` as the
+  visitor), with a CSP `sandbox allow-popups allow-popups-to-escape-sandbox`, `default-src
+  'none'` and its one inline stylesheet allowed by hash (`assets/repo_page.css`, so editing it
+  changes `repos.CSP` at import). The frame is `strict` with `sandbox_override=repos.SANDBOX`:
+  no scripts, so the invariant has nothing to refuse and no content origin is needed. Consent
+  applies (README images are third-party), with `consent_host` github.com. Tests fake
+  `repos._api` (`tests/test_repos.py`); don't use `with_request_context` there, or the route
+  sees an anonymous visitor.
 - `health.py`: views whose page can't be shown. **Rendering never fetches**: with
   `frameability_check` on, `resource_view_create`/`_update` are chained (`actions.py`) to probe
   the page once after the save (`health.after_save`, `SAVE_SECONDS` overall via
@@ -424,7 +447,7 @@ CKAN 2.11.5, http://localhost:5001.
   points at an empty directory and ckan-dev crash-loops with `Plugin 'webpage_view_plus' not found`.
   Fix: switch ckan-docker back to `local/dev-mounts` (or remove the plugin from `.env`), then run
   `docker compose -f docker-compose.dev.yml up -d ckan-dev`.
-- `webpage_view_plus webpage_view_plus_thumbnails` are in `CKAN__PLUGINS` in ckan-docker's `.env`
+- `webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus repo_view_plus` are in `CKAN__PLUGINS` in ckan-docker's `.env`
   (before `envvars`, which must stay last), and `CKANEXT__WEBPAGEVIEWPLUS__THUMBNAIL_FETCH=true`.
 - The dev site runs with a content origin: `CKANEXT__WEBPAGEVIEWPLUS__CONTENT_ORIGIN=http://127.0.0.1:5001`
   and a `..._SIGNING_SECRET` in ckan-docker's `.env` (read by the `envvars` plugin). Browsers
@@ -450,6 +473,10 @@ CKAN 2.11.5, http://localhost:5001.
   `docker exec ckan-docker-ckan-dev-1 python /srv/app/src_extensions/ckanext-webpageviewplus/demo/seed_features.py`.
   `demo/record_demo.py` (host, Playwright) records the README's `docs/demo.gif` from those datasets;
   its docstring has the ffmpeg step.
+- Pillow and nh3 (needed by `webpage_view_plus_thumbnails` and `repo_view_plus`) are installed
+  only in the running container, not the image, and nothing reinstalls them at start. After
+  recreating ckan-dev (`down`/`up`, a rebuild), CKAN refuses to start until you run
+  `docker exec -u root ckan-docker-ckan-dev-1 pip install -r /srv/app/src_extensions/ckanext-webpageviewplus/dev-requirements.txt`.
 - Re-run the editable install only after changing entry points / packaging:
   `docker exec -u root ckan-docker-ckan-dev-1 pip install --no-deps -e /srv/app/src_extensions/ckanext-webpageviewplus`
 - If ckan-dev crash-loops on boot, check `docker logs ckan-docker-ckan-dev-1`. A plugin that fails

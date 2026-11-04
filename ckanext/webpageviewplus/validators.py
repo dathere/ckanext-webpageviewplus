@@ -311,3 +311,30 @@ def pdf_after_validator(
             "pdf_url",
             toolkit._("This host isn't on the site's list of allowed hosts"),
         )
+
+
+def repo_after_validator(
+    key: FlattenKey,
+    data: FlattenDataDict,
+    errors: FlattenErrorDict,
+    context: Context,
+) -> None:
+    """repo_view_plus's checks across fields: the height, and that the view
+    shows a repository (its repo_url, else the resource's own URL)."""
+    from ckanext.webpageviewplus import repos
+
+    _tidy_height(data, infer_mode=False)
+    mode = _get(data, "height_mode")
+    value = _get(data, "height_value")
+    if mode and value and not errors.get(("height_mode",)):
+        if not frame.height_value_valid(mode, value):
+            _add_error(errors, "height_value", _height_error(mode))
+    if errors.get(("repo_url",)):
+        return
+    url = _get(data, "repo_url")
+    if not url:
+        resource = model.Resource.get(_get(data, "resource_id") or "")
+        url = resource.url if resource is not None and resource.url_type != "upload" else ""
+    if not repos.is_repo_link(url or ""):
+        _add_error(errors, "repo_url", toolkit._(
+            "Not a GitHub repository's address, such as https://github.com/ckan/ckan"))
