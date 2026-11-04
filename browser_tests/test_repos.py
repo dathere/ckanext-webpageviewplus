@@ -2,7 +2,7 @@
 into CKAN's cache (GitHub is never asked). The page runs no scripts, so
 Playwright reads and clicks it from its own world. Checked: the frame's
 sandbox and the route's CSP, the inline stylesheet allowed by its hash,
-links opening a new tab while in-page links scroll, Reload staying on
+links opening a new tab (example.com answered by the test) while in-page links scroll, Reload staying on
 CKAN, the card for a missing repository, and the consent card naming
 github.com.
 """
@@ -54,10 +54,14 @@ def test_stylesheet_allowed_by_its_hash(page, repo_urls):
 
 
 def test_links_open_in_a_new_tab(page, repo_urls):
+    # Answered here, so the test never needs example.com to load.
+    page.context.route("https://example.com/**", lambda route: route.fulfill(
+        content_type="text/html", body="<!doctype html><title>Example</title>"))
     _, child = _open(page, repo_urls[TITLE])
     with page.context.expect_page() as popup:
         child.get_by_role("link", name="example.com").click()
     popup.value.wait_for_url("https://example.com/**")
+    expect(popup.value).to_have_title("Example")
     assert page.url == repo_urls[TITLE]
 
 
