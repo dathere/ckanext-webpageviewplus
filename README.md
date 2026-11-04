@@ -417,14 +417,28 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   [Keeping your site safe](#keeping-your-site-safe).
 
 - **Q: Do I need a separate domain for uploads?**<br>
-  A: Not to install it. Without one, every view and upload is sandboxed so it can't use your
-  visitors' logins, and that's already safer than `webpage_view`. What you lose:
-  - An uploaded page still opens on your site's own address, so it can show a convincing fake
-    sign-in form there.
-  - `external` and `data-schematic` run as `interactive`, so third-party apps lose their logins
-    and saved settings, and qsv Data Schematics lose their maps.
+  A: Not to install it or to keep your site safe. However, without one, every view and upload
+  stays sandboxed, which keeps your visitors' logins out of reach (already safer than
+  `webpage_view`) but holds some things back:
+  - **Services that need their own origin.** YouTube, Vimeo, Tableau Public and the other
+    services that need `external` won't play or load, as `external` runs as `interactive`.
+    Third-party apps (Streamlit, Hugging Face Spaces and the like) lose their logins and saved
+    settings.
+  - **Uploaded apps.** `data-schematic` runs as `interactive` too, so qsv Data Schematics lose
+    their maps and uploaded pages can't keep saved data.
+  - **PDF (Plus).** It's never offered: its viewer runs only from that domain.
+  - **Fake sign-in forms.** An uploaded page still opens on your site's own address, so it can
+    show a convincing one there.
 
-  See [A separate domain for uploads](#a-separate-domain-for-uploads).
+  Not affected: services that work in `interactive` (Datawrapper, Flourish, Power BI, Google
+  Sheets, Docs and Slides, Our World in Data...) and Repository (Plus) views, which run no
+  scripts.
+
+  It takes a second, separately registered domain (not a subdomain of your site's) pointed at
+  the same CKAN through your web server, and two settings, `content_origin` and
+  `signing_secret`. `ckan webpageviewplus doctor` tells you whether your site has one. See
+  [A separate domain for uploads](#a-separate-domain-for-uploads) and
+  [Deploying a content origin](#deploying-a-content-origin).
 
 - **Q: Why won't YouTube videos play on my site?**<br>
   A: Your site probably has no separate domain for uploads (`content_origin`). YouTube's player
