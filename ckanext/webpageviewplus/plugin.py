@@ -49,13 +49,19 @@ def vary_held_back(response: Response) -> Response:
     return response
 
 
-def _needs_content_origin(url: str, private: bool) -> dict[str, str] | None:
-    """The service and preset to name when a well-known service's page
-    won't play until the site has a content origin, else None."""
-    found = services.suggest(url or "")
-    if found is None or actions.suggestion_problem(found, private) != "needs_content_origin":
+def _service_hint(url: str, private: bool) -> dict[str, str] | None:
+    """The problem the form's service region names for a page URL (a
+    service's settings that won't work here, a site that refuses framing),
+    with the service, preset and embed host it names, else None."""
+    answer = actions.service_answer(url or "", private)
+    if answer is None or not answer["problem"]:
         return None
-    return {"service": found.service, "preset": found.preset}
+    return {
+        "problem": answer["problem"],
+        "service": answer["service"],
+        "preset": answer["preset"],
+        "host": frame.url_host(answer["embed_url"]) if answer["embed_url"] else "",
+    }
 
 
 @toolkit.blanket.config_declarations
@@ -227,7 +233,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             "service_names": services.NAMES,
             # Shown without the form's script too, so a site whose asset
             # bundles fail to load still tells the editor why.
-            "needs_content_origin": _needs_content_origin(
+            "service_hint": _service_hint(
                 url, bool((data_dict.get("package") or {}).get("private"))),
             "view_counting": settings.view_counting(),
             # The images this view may use, when thumbnails are on.

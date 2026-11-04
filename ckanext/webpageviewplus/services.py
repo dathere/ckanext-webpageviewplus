@@ -774,3 +774,57 @@ def is_office_viewer(url: str) -> bool:
     found = suggest(url)
     return found is not None and found.service == OFFICE \
         and (urlsplit(url.strip()).hostname or "").rstrip(".") == _OFFICE_VIEWER
+
+
+# Sites whose ordinary pages refuse to be framed (X-Frame-Options or CSP
+# frame-ancestors), checked 2026-11-03, by exact host or its www. form. Only
+# consulted when suggest() finds nothing, so the embeddable pages some of
+# them have (GitHub notebooks, Tableau Public /views/, Power BI Publish to
+# web, Hugging Face Spaces) still get their suggestion. Their embed
+# addresses on the same host (_EMBED_PATH) frame fine and are never flagged.
+REFUSE_FRAMING = {
+    "github.com": "GitHub",
+    "gitlab.com": "GitLab",
+    "bitbucket.org": "Bitbucket",
+    "codeberg.org": "Codeberg",
+    "huggingface.co": "Hugging Face",
+    "google.com": "Google",
+    "x.com": "X",
+    "twitter.com": "X",
+    "facebook.com": "Facebook",
+    "instagram.com": "Instagram",
+    "linkedin.com": "LinkedIn",
+    "reddit.com": "Reddit",
+    "medium.com": "Medium",
+    "stackoverflow.com": "Stack Overflow",
+    "notion.so": "Notion",
+    "dropbox.com": "Dropbox",
+    "data.gov": "Data.gov",
+    "catalog.data.gov": "Data.gov",
+    "app.powerbi.com": "Power BI",
+    "public.tableau.com": "Tableau Public",
+}
+
+
+# Embed addresses on those hosts, checked 2026-11-03: a path segment ending
+# in "embed", with or without an extension (LinkedIn /embed/, Instagram /p/<id>/embed, Power BI
+# reportEmbed, Hugging Face's dataset /embed/viewer, Google Maps /maps/embed
+# and My Maps /maps/d/embed), Facebook's /plugins/ and X's /i/videos/.
+_EMBED_PATH = re.compile(r"(^|/)[^/]*embed(\.\w+)?(/|$)|^/plugins/|^/i/videos/",
+                         re.IGNORECASE)
+
+
+def refuses_framing(url: str) -> Optional[str]:
+    """The name of a well-known site whose pages never show in a frame, when
+    ``url`` is on it and suggest() has nothing for it, else None."""
+    try:
+        parts = urlsplit((url or "").strip())
+    except ValueError:
+        return None
+    if parts.scheme.lower() not in ("http", "https") or not parts.hostname:
+        return None
+    host = parts.hostname.lower().rstrip(".")
+    name = REFUSE_FRAMING.get(host.removeprefix("www."))
+    if name is None or _EMBED_PATH.search(parts.path) or suggest(url) is not None:
+        return None
+    return name

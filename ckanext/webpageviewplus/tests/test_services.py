@@ -543,3 +543,72 @@ def test_thumbnail_address(url, expected):
 
 def test_thumbnail_services_are_named():
     assert set(services._THUMBNAILS) <= set(services.NAMES)
+
+
+@pytest.mark.parametrize("url,expected", [
+    ("https://github.com/ckan/ckan", "GitHub"),
+    ("https://www.github.com/ckan/ckan", "GitHub"),
+    ("https://GITHUB.COM./ckan/ckan", "GitHub"),
+    ("https://gitlab.com/gitlab-org/gitlab", "GitLab"),
+    ("https://bitbucket.org/atlassian/python-bitbucket", "Bitbucket"),
+    ("https://public.tableau.com/app/discover", "Tableau Public"),
+    ("http://www.linkedin.com/in/someone", "LinkedIn"),
+    # Pages these sites do let others frame keep their suggestion.
+    ("https://github.com/" + NB_PATH, None),
+    ("https://gist.github.com/someone/abc", None),
+    ("https://public.tableau.com/views/A/B", None),
+    ("https://huggingface.co/spaces/NimaBoscarino/hotdog-gradio", None),
+    # Their embed addresses frame fine.
+    ("https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Fx", None),
+    ("https://www.linkedin.com/embed/feed/update/urn:li:share:7000000000000000000", None),
+    ("https://www.instagram.com/p/C0000000000/embed/captioned/", None),
+    ("https://app.powerbi.com/reportEmbed?reportId=00000000-0000-0000-0000-000000000000", None),
+    ("https://x.com/i/videos/tweet/20", None),
+    ("https://huggingface.co/datasets/rajpurkar/squad/embed/viewer/plain_text/train", None),
+    ("https://www.google.com/maps/d/embed?mid=1", None),
+    ("https://www.facebook.com/someone", "Facebook"),
+    ("https://www.linkedin.com/in/embedded-systems-person", "LinkedIn"),
+    # Other hosts, even close ones, aren't on the list.
+    ("https://ckan.github.io/", None),
+    ("https://raw.githubusercontent.com/ckan/ckan/master/README.rst", None),
+    ("https://notgithub.com/", None),
+    ("ftp://github.com/", None),
+    ("", None),
+])
+def test_refuses_framing(url, expected):
+    assert services.refuses_framing(url) == expected
+
+
+def test_service_answer_for_a_site_that_refuses_framing():
+    from ckanext.webpageviewplus import actions
+    assert actions.service_answer("https://github.com/ckan/ckan", False) == {
+        "service": "GitHub", "embed_url": "", "preset": "", "height_mode": "",
+        "height_value": "", "problem": "refuses_framing"}
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestFormProblemHints:
+    """Every problem is rendered by the server, not only the content origin's."""
+
+    def test_refuses_framing(self, app):
+        region = _service_region(app, "https://github.com/ckan/ckan")
+        assert "alert-warning" in region["class"]
+        assert region.get_text(strip=True) == (
+            "GitHub doesn't let its pages show inside other sites, so this view "
+            "would stay blank. Use the page's embed or share address if it has "
+            "one, or link to it instead.")
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.allowed_hosts", "pages.example.com")
+    def test_host_not_allowed_names_the_host(self, app):
+        region = _service_region(app, "https://datawrapper.dwcdn.net/XSj9X/")
+        assert region.get_text(strip=True) == (
+            "Datawrapper embeds come from datawrapper.dwcdn.net, which isn't on "
+            "this site's list of allowed hosts.")
+
+    def test_every_problem_has_its_text_for_the_script(self, app):
+        region = _service_region(app, "https://x.example/")
+        for problem in ("needs-content-origin", "preset-not-allowed", "host-not-allowed",
+                        "private-dataset", "refuses-framing"):
+            assert "{service}" in region["data-" + problem]
+        assert region.get_text(strip=True) == ""

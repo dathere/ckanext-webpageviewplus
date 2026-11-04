@@ -37,11 +37,17 @@
   <div class="alert alert-info">{{ _('This resource is a PDF: the PDF (Plus) view shows it better, on phones too.') }}</div>
 {% endif %}
 
-{% set needs_content_origin_text = _('{service} only works with the {preset} preset, which this site runs as Interactive until it has a separate domain for uploads, so it won\'t play here yet. Ask your site administrator.') %}
+{% set problem_texts = {
+  'needs_content_origin': _('{service} only works with the {preset} preset, which this site runs as Interactive until it has a separate domain for uploads, so it won\'t play here yet. Ask your site administrator.'),
+  'preset_not_allowed': _('{service} only works with the {preset} preset, which this site doesn\'t allow.'),
+  'host_not_allowed': _('{service} embeds come from {host}, which isn\'t on this site\'s list of allowed hosts.'),
+  'private_dataset': _('{service}\'s viewer fetches the file from its own servers, so it can\'t show a file in a private dataset.'),
+  'refuses_framing': _('{service} doesn\'t let its pages show inside other sites, so this view would stay blank. Use the page\'s embed or share address if it has one, or link to it instead.'),
+} %}
 {# Well-known services (YouTube, Datawrapper...): offers the embed address
-   and the settings the embed needs. Filled in by the script, except the
-   content origin warning, rendered here too so it shows without the script. #}
-<div class="webpageviewplus-service{% if needs_content_origin %} alert alert-warning{% endif %}" role="status" aria-live="polite"
+   and the settings the embed needs. Filled in by the script; a problem is
+   rendered here too, so it shows without the script. #}
+<div class="webpageviewplus-service{% if service_hint %} alert alert-warning{% endif %}" role="status" aria-live="polite"
      data-webpageviewplus-service
      data-api="{{ h.url_for('api.action', ver=3, logic_function='webpageviewplus_service_suggest') }}"
      data-resource-id="{{ resource.id }}"
@@ -51,12 +57,11 @@
      {# TRANSLATORS: a button accepting the suggested embed address and settings. #}
      data-apply="{{ _('Use them') }}"
      data-applied="{{ _('Using the embed address and settings for {service}. Save the view to keep them.') }}"
-     data-needs-content-origin="{{ needs_content_origin_text }}"
-     data-preset-not-allowed="{{ _('{service} only works with the {preset} preset, which this site doesn\'t allow.') }}"
-     data-host-not-allowed="{{ _('{service} embeds come from {host}, which isn\'t on this site\'s list of allowed hosts.') }}"
-     data-private-dataset="{{ _('{service}\'s viewer fetches the file from its own servers, so it can\'t show a file in a private dataset.') }}">
-  {%- if needs_content_origin -%}
-    {{ needs_content_origin_text.format(service=needs_content_origin.service, preset=preset_names.get(needs_content_origin.preset, needs_content_origin.preset)) }}
+     {%- for problem, text in problem_texts.items() %}
+     data-{{ problem | replace('_', '-') }}="{{ text }}"
+     {%- endfor %}>
+  {%- if service_hint -%}
+    {{ problem_texts[service_hint.problem].format(service=service_hint.service, preset=preset_names.get(service_hint.preset, service_hint.preset), host=service_hint.host) }}
   {%- endif -%}
 </div>
 {% if frameability_check %}

@@ -81,16 +81,28 @@ def webpageviewplus_service_suggest(
         ``""`` or why the settings won't work on this site:
         ``"private_dataset"`` (Microsoft's Office viewer fetches the file
         itself, so it can't show a private dataset's), ``"preset_not_allowed"``,
-        ``"needs_content_origin"`` or ``"host_not_allowed"``.
+        ``"needs_content_origin"`` or ``"host_not_allowed"``. A page on a
+        site that never allows framing (GitHub, LinkedIn...) gets problem
+        ``"refuses_framing"`` and empty settings.
     """
     toolkit.check_access("webpageviewplus_service_suggest", context, data_dict)
-    found = services.suggest(toolkit.get_or_bust(data_dict, "url"))
-    if found is None:
-        return None
     resource = model.Resource.get(data_dict.get("resource_id") or "")
     private = bool(resource is not None and resource.package is not None
                    and resource.package.private)
-    return dict(dataclasses.asdict(found), problem=suggestion_problem(found, private))
+    return service_answer(toolkit.get_or_bust(data_dict, "url"), private)
+
+
+def service_answer(url: str, private: bool) -> Optional[dict[str, Any]]:
+    """What the view form says about a page URL: a well-known service's
+    settings and any problem with them, or a site that refuses framing."""
+    found = services.suggest(url or "")
+    if found is not None:
+        return dict(dataclasses.asdict(found), problem=suggestion_problem(found, private))
+    name = services.refuses_framing(url or "")
+    if name is None:
+        return None
+    return {"service": name, "embed_url": "", "preset": "", "height_mode": "",
+            "height_value": "", "problem": "refuses_framing"}
 
 
 def suggestion_problem(found: services.Suggestion, private: bool) -> str:

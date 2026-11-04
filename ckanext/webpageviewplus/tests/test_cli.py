@@ -280,3 +280,68 @@ def test_migrate_pdf_needs_the_plugin(cli):
     result = cli.invoke(ckan, ["webpageviewplus", "migrate-pdf"])
     assert result.exit_code != 0
     assert "pdf_view_plus" in result.output
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestDoctor:
+    @pytest.fixture(autouse=True)
+    def tables(self, monkeypatch):
+        import ckan.cli.db
+        monkeypatch.setattr(ckan.cli.db, "current_revision", lambda plugin: "abc (head)")
+
+    def _levels(self):
+        return {level for level, _ in wvp_cli.diagnose()}
+
+    def test_warns_without_isolation(self):
+        found = dict((text.split(" (")[0], level) for level, text in wvp_cli.diagnose())
+        assert found["No isolating content origin"] == "warn"
+
+    @pytest.mark.usefixtures("content_origin")
+    def test_isolated(self):
+        texts = [text for level, text in wvp_cli.diagnose() if level == "ok"]
+        assert any(text.startswith("Uploads are isolated") for text in texts)
+
+    def test_tables_out_of_date_fail(self, monkeypatch):
+        import ckan.cli.db
+        monkeypatch.setattr(ckan.cli.db, "current_revision", lambda plugin: "abc")
+        assert ("fail", "The plugin's tables are missing or out of date. Run: "
+                "ckan db upgrade -p webpage_view_plus") in wvp_cli.diagnose()
+
+    def test_core_views_are_counted(self):
+        _stock_view(factories.Resource(url="https://x.example/"))
+        assert any(level == "note" and "core Website views remain" in text
+                   for level, text in wvp_cli.diagnose())
+
+    def test_missing_bundle_fails(self, cli, monkeypatch):
+        monkeypatch.setattr(wvp_cli, "asset_problems",
+                            lambda site_url: ["https://x.example/a.js: HTTP 404"])
+        result = cli.invoke(ckan, ["webpageviewplus", "doctor"])
+        assert result.exit_code == 1
+        assert "https://x.example/a.js: HTTP 404" in result.output
+
+    def test_unreachable_site_is_only_a_note(self, cli, monkeypatch):
+        import requests
+
+        def unreachable(site_url):
+            raise requests.ConnectionError()
+        monkeypatch.setattr(wvp_cli, "asset_problems", unreachable)
+        result = cli.invoke(ckan, ["webpageviewplus", "doctor",
+                                   "--site-url", "http://nowhere.invalid"])
+        assert result.exit_code == 0, result.output
+        assert "Couldn't reach http://nowhere.invalid" in result.output
+
+    def test_bundles_are_fetched_from_the_site(self, monkeypatch):
+        import requests
+        fetched = []
+
+        class Response:
+            status_code = 404
+        # Only around the call: CKAN's own teardown talks to Solr by requests.
+        with monkeypatch.context() as patched:
+            patched.setattr(requests, "get",
+                            lambda url, timeout: fetched.append(url) or Response())
+            problems = wvp_cli.asset_problems("https://ckan.example/")
+        assert len(problems) == len(fetched) == 2
+        assert all(url.startswith("https://ckan.example/") and "/ckanext-webpageviewplus/" in url
+                   for url in fetched)

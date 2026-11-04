@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Added
+
+- `ckan webpageviewplus doctor` checks a site's setup and says what to fix: no isolating
+  content origin (and what that costs), the plugin's tables not upgraded, the extension's
+  asset bundles not served by the site, `ckan.views.default_views`, and core `webpage_view`
+  views left to migrate. It exits 1 when something is broken.
+- The view form warns at once when a page is on a well-known site that doesn't let its pages
+  be framed (GitHub, GitLab, Bitbucket, Codeberg, Hugging Face, LinkedIn, X, Facebook,
+  Instagram, Reddit, Medium, Stack Overflow, Notion, Dropbox, Data.gov, Google, Power BI's and
+  Tableau Public's own sites), so the view would stay blank. No setting or fetch needed.
+  Their embed addresses (Facebook's `/plugins/`, LinkedIn's `/embed/`, Instagram's
+  `/p/<id>/embed`, Power BI's `reportEmbed`...) aren't flagged, and the embeddable pages some
+  of them have (GitHub notebooks, Tableau Public views, Power BI Publish to web, Hugging Face
+  Spaces) still get their suggestion.
+
+### Changed
+
+- Every problem the view form names for a well-known service's page (preset not allowed,
+  host not allowed, private dataset, no content origin, refuses framing) is now rendered by
+  the server too, so it shows even when the form's script doesn't load.
+
 ### Fixed
 
 - In a private dataset, a view of a link to an Office file itself (`.docx`, `.xlsx`, ...) was

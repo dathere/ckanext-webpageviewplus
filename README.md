@@ -786,6 +786,15 @@ CARTO maps need the viewer's login or an access token (as do private Plotly Clou
 Plotly's Chart Studio closed on 31 October 2025. A Plotly chart saved as HTML (`fig.write_html`)
 can be uploaded and shown with `interactive` or `data-schematic`, like a qsv Data Schematic.
 
+**Sites that don't allow framing.** Ordinary pages on GitHub, GitLab, Bitbucket, Codeberg,
+Hugging Face, LinkedIn, X, Facebook, Instagram, Reddit, Medium, Stack Overflow, Notion, Dropbox,
+Data.gov, Google, and Power BI's and Tableau Public's own sites refuse to be framed, so a view of
+one stays blank. The form says so as soon as such a link is pasted, with no setting and without
+fetching it (`services.REFUSE_FRAMING`). Their embed addresses (a path ending in `embed`, such as
+LinkedIn's `/embed/` or Instagram's `/p/<id>/embed`, Facebook's `/plugins/`, X's `/i/videos/`)
+aren't flagged, and the embeddable pages in the table above are suggested as usual. For any other page, turn on the
+[Frameability check](#frameability-check).
+
 #### Views made automatically
 
 CKAN can make a Website (Plus) view by itself for a resource whose link is a recognised service's
@@ -1320,6 +1329,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 
 | Command | Does |
 | --- | --- |
+| `ckan webpageviewplus doctor [--no-http] [--site-url URL]` | Check the site's setup and say what to fix: no isolating content origin, the plugin's tables not upgraded, asset bundles the site doesn't serve (fetched from `ckan.site_url`, or `--site-url` inside a container), `default_views`, core views left to migrate. Exits 1 when something is broken. Run it after installing or upgrading |
 | `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME] [--dataset NAME]` | Convert `webpage_view` views, see [Migrating from webpage_view](#migrating-from-webpage_view) |
 | `ckan webpageviewplus migrate-pdf [--dry-run]` | Convert ckanext-pdfview's `pdf_view` views to PDF (Plus), see [PDF views](#pdf-views) |
 | `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails, except with `--no-store`. Run it weekly from cron |
@@ -1328,7 +1338,8 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckan webpageviewplus connections [--limit N]` | Hosts uploaded pages were seen contacting, site-wide |
 
 API actions: `webpageviewplus_frameability` and `webpageviewplus_service_suggest` (`url`,
-`resource_id`; for those who may add views; the second fetches nothing),
+`resource_id`; for those who may add views; the second fetches nothing, and answers
+`problem: "refuses_framing"` for pages on sites that never allow framing, such as GitHub),
 `webpageviewplus_view_stats_show` (`id` of a view, optional `days`) and
 `webpageviewplus_connections_show` (`id` of a resource), both for those who may update the
 resource, and with `pdf_view_plus` and thumbnails, `webpageviewplus_pdf_thumbnail` (`id` of a PDF

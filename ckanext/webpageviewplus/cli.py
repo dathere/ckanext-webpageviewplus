@@ -463,5 +463,110 @@ def check_views(
         raise SystemExit(1)
 
 
+BUNDLES = ("webpageviewplus/webpageviewplus-js", "webpageviewplus/webpageviewplus-css")
+
+
+def diagnose() -> list[tuple[str, str]]:
+    """What ``doctor`` reports without fetching anything: ``(level, text)``
+    pairs, level ``ok``, ``note``, ``warn`` or ``fail``."""
+    from ckan.plugins import toolkit
+
+    found: list[tuple[str, str]] = []
+    origin = settings.isolating_content_origin()
+    if origin:
+        found.append(("ok", "Uploads are isolated on " + origin
+                      + ": every preset runs as itself."))
+    else:
+        missing = [name for name, ok in (
+            ("ckanext.webpageviewplus.content_origin", settings.content_origin()),
+            ("ckanext.webpageviewplus.harden_downloads", settings.harden_downloads()),
+        ) if not ok]
+        found.append(("warn", "No isolating content origin (missing: " + ", ".join(missing)
+                      + "). External and Data schematic run as Interactive, so YouTube, "
+                      "Vimeo, Tableau Public and other services needing External won't "
+                      "play, and PDF (Plus) is never offered. See the README's "
+                      "'A separate domain for uploads'."))
+    try:
+        from ckan.cli.db import current_revision
+        revision = current_revision("webpage_view_plus") or ""
+    except Exception as error:  # an older CKAN, or no database to ask
+        found.append(("note", "Couldn't check the plugin's tables: {}".format(error)))
+    else:
+        if revision.endswith("(head)"):
+            found.append(("ok", "The plugin's tables are up to date."))
+        else:
+            found.append(("fail", "The plugin's tables are missing or out of date. Run: "
+                          "ckan db upgrade -p webpage_view_plus"))
+    default_views = toolkit.aslist(toolkit.config.get("ckan.views.default_views"))
+    if "webpage_view_plus" not in default_views:
+        found.append(("note", "webpage_view_plus isn't in ckan.views.default_views, so "
+                      "new links to well-known services don't get a view by themselves."))
+    if "webpage_view" in default_views:
+        found.append(("warn", "ckan.views.default_views still has core webpage_view: "
+                      "replace it with webpage_view_plus."))
+    core_views = model.Session.query(model.ResourceView).filter(
+        model.ResourceView.view_type == "webpage_view").count()
+    if core_views:
+        found.append(("note", "{} core Website views remain. Run: ckan webpageviewplus "
+                      "migrate --dry-run".format(core_views)))
+    if not settings.frameability_check():
+        found.append(("note", "frameability_check is off: the view form only warns about "
+                      "pages on well-known sites that refuse framing, not any page."))
+    return found
+
+
+def asset_problems(site_url: str, timeout: float = 10) -> list[str]:
+    """The extension's script and style bundles that CKAN's pages link to but
+    the site doesn't serve. Without the script the form offers no
+    suggestions and views don't size themselves. Raises
+    ``requests.RequestException`` when the site can't be reached."""
+    import requests
+    from ckan.lib.webassets_tools import env
+
+    problems = []
+    for name in BUNDLES:
+        for path in env[name].urls():
+            url = site_url.rstrip("/") + path
+            status = requests.get(url, timeout=timeout).status_code
+            if status != 200:
+                problems.append("{}: HTTP {}".format(url, status))
+    return problems
+
+
+@webpageviewplus.command()
+@click.option("--no-http", is_flag=True,
+              help="Skip fetching the asset bundles from the site.")
+@click.option("--site-url", default="",
+              help="Fetch the bundles from here instead of ckan.site_url "
+                   "(e.g. http://localhost:5000 inside a container).")
+def doctor(no_http: bool, site_url: str):
+    """Check this site's setup for the extension and say what to fix.
+    Exits 1 when something is broken."""
+    found = diagnose()
+    if not no_http:
+        import requests
+        site_url = site_url or settings.site_url()
+        try:
+            problems = asset_problems(site_url)
+        except requests.RequestException as error:
+            found.append(("note", "Couldn't reach {} to check the asset bundles ({}). "
+                          "Pass --site-url with an address this machine can reach."
+                          .format(site_url, type(error).__name__)))
+        else:
+            if problems:
+                found.append(("fail", "The site doesn't serve the extension's bundles, so "
+                              "its script never runs:\n    " + "\n    ".join(problems)
+                              + "\n  Check ckan.webassets.path is writable and the same for "
+                              "every CKAN process, then clear any CDN or proxy cache."))
+            else:
+                found.append(("ok", "The asset bundles load from " + site_url + "."))
+    colours = {"ok": "green", "note": None, "warn": "yellow", "fail": "red"}
+    for level, text in found:
+        click.echo(click.style(level.upper().ljust(4), fg=colours[level], bold=True)
+                   + " " + text)
+    if any(level == "fail" for level, _ in found):
+        raise SystemExit(1)
+
+
 def get_commands():
     return [webpageviewplus]
