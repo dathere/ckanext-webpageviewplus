@@ -19,6 +19,7 @@
 
 ### Changed
 
+- The README starts with a Quickstart: install, tables, `doctor`, then the optional steps.
 - Every problem the view form names for a well-known service's page (preset not allowed,
   host not allowed, private dataset, no content origin, refuses framing) is now rendered by
   the server too, so it shows even when the form's script doesn't load.

@@ -90,6 +90,33 @@ loading third-party pages, and opt in to anonymous view counts.
 and the PDF (Plus) view with [ckanext-pdfview](https://github.com/ckan/ckanext-pdfview) under
 [PDF (Plus) compared with ckanext-pdfview](#pdf-plus-compared-with-ckanext-pdfview).
 
+## Quickstart
+
+On CKAN 2.10, 2.11 or 2.12, in CKAN's virtual environment:
+
+    pip install ckanext-webpageviewplus
+
+Add `webpage_view_plus` to `ckan.plugins` in your CKAN config file, then create its tables,
+restart CKAN and check the setup:
+
+    ckan -c /etc/ckan/default/ckan.ini db upgrade -p webpage_view_plus
+    ckan -c /etc/ckan/default/ckan.ini webpageviewplus doctor
+
+Now open a resource's Manage page, go to its Views tab, add a **Website (Plus)** view and paste a
+link. For YouTube, Datawrapper, Power BI and the rest of the
+[30 well-known services](#well-known-services-recognised-links), the form suggests the embed
+address and settings. Optional next steps, each a section below:
+
+- Give new links a view by themselves: add `webpage_view_plus` to `ckan.views.default_views`
+  ([Views made automatically](#views-made-automatically)).
+- Move existing core Website views over: `ckan webpageviewplus migrate --dry-run`
+  ([Migrating from webpage_view](#migrating-from-webpage_view)).
+- Let YouTube, Vimeo, Tableau Public and uploaded qsv Data Schematics run fully, and turn on
+  PDF (Plus): set up [a separate domain for uploads](#a-separate-domain-for-uploads).
+  `doctor` says when that's missing.
+- Thumbnails in the resource list and PDF (Plus): the other two plugins, in
+  [Installation](#installation).
+
 ## Requirements
 
 | CKAN version    | Compatible? |
@@ -154,6 +181,14 @@ needs one, and `ckan.storage_path` set to show PDFs linked from other sites.
 
 5. Restart CKAN. Settings are checked at startup, and an unsafe combination stops CKAN with a
    message naming the setting.
+
+6. Check the setup. `doctor` reports what's missing or broken (no separate domain for uploads,
+   tables not upgraded, the extension's script and styles not served) and how to fix it:
+
+       ckan -c /etc/ckan/default/ckan.ini webpageviewplus doctor
+
+   It fetches the script and styles from `ckan.site_url`; where that address doesn't resolve
+   (inside a container), add `--site-url http://localhost:5000`, or `--no-http` to skip it.
 
 All settings are optional; they're listed under [Config settings](#config-settings).
 
