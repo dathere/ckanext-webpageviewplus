@@ -10,7 +10,7 @@
 
 {% call form.input('repo_url', id='field-repo_url', label=_('Repository url'), placeholder=_('eg. https://github.com/ckan/ckan  (if blank uses resource url)'), value=data.repo_url, error=errors.repo_url, classes=['control-full', 'control-large'], attrs={'class': 'form-control', 'aria-describedby': 'help-repo_url'}) %}
   <p class="form-text" id="help-repo_url">
-    {{ _("Leave blank to show the repository this resource links to. A public GitHub repository's name, description, files and README are fetched by this site and shown here, as GitHub's pages can't be embedded. Add /tree/<branch> for a branch other than the default.") }}
+    {{ _("Leave blank to show the repository this resource links to, or enter another repository or branch to show instead. A public GitHub repository's name, description, files and README are fetched by this site and shown here, as GitHub's pages can't be embedded. Add /tree/<branch> for a branch other than the default.") }}
   </p>
 {% endcall %}
 

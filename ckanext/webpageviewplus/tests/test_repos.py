@@ -1,5 +1,7 @@
 import json
+import sys
 import time
+from types import SimpleNamespace
 
 import pytest
 from bs4 import BeautifulSoup
@@ -9,7 +11,7 @@ from ckan.exceptions import CkanConfigurationException
 from ckan.logic import ValidationError
 from ckan.tests import factories
 
-from ckanext.webpageviewplus import repos, settings
+from ckanext.webpageviewplus import frameability, plugin, repos, settings
 
 pytest.importorskip("nh3")
 
@@ -289,3 +291,162 @@ def test_negative_cache_seconds_stop_startup(key, ckan_config, monkeypatch):
     monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus." + key, "-1")
     with pytest.raises(CkanConfigurationException, match=key):
         settings.check()
+
+
+class _Response:
+    def __init__(self, status=200, body=b"{}", headers=None):
+        self.status_code = status
+        self.headers = headers or {}
+        self.is_redirect = status in (301, 302, 307, 308)
+        self._body = body
+
+    def iter_content(self, size):
+        for start in range(0, len(self._body), size):
+            yield self._body[start:start + size]
+
+    def close(self):
+        pass
+
+
+@pytest.fixture
+def http(monkeypatch):
+    """The real repos._api over faked HTTP: answers by URL, in order of
+    request, recording each request's URL and headers."""
+    answers: dict = {}
+    requests_made: list = []
+
+    def get(url, stream, timeout, allow_redirects, headers):
+        requests_made.append((url, dict(headers)))
+        answer = answers.get(url, _Response(404))
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    monkeypatch.setattr(frameability, "_address_kind", lambda url, deadline: "public")
+    monkeypatch.setattr(frameability, "_http_get", get)
+    return answers, requests_made
+
+
+def _call(path="/repos/o/r", max_bytes=1000):
+    return repos._api(path, time.monotonic() + 10, max_bytes, "application/json")
+
+
+class TestApi:
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.github_token", "github_pat_x")
+    def test_token_sent_and_renamed_repository_followed(self, http):
+        answers, made = http
+        answers[repos.GITHUB_API + "/repos/o/r"] = _Response(
+            301, headers={"Location": repos.GITHUB_API + "/repositories/42"})
+        answers[repos.GITHUB_API + "/repositories/42"] = _Response(200, b'{"ok": 1}')
+        assert _call() == (200, b'{"ok": 1}')
+        assert [url for url, _ in made] == [repos.GITHUB_API + "/repos/o/r",
+                                            repos.GITHUB_API + "/repositories/42"]
+        assert all(h["Authorization"] == "Bearer github_pat_x" for _, h in made)
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.github_token", "github_pat_x")
+    @pytest.mark.parametrize("location", [
+        "https://evil.example/steal",
+        "https://api.github.com.evil.example/x",
+        "http://api.github.com/repos/o/r",
+        "//evil.example/x",
+    ])
+    def test_redirect_off_the_api_is_refused_before_the_token_leaves(self, http, location):
+        answers, made = http
+        answers[repos.GITHUB_API + "/repos/o/r"] = _Response(302, headers={"Location": location})
+        with pytest.raises(repos.Unavailable) as raised:
+            _call()
+        assert raised.value.kind == "failed"
+        assert len(made) == 1
+
+    def test_too_many_redirects(self, http):
+        answers, made = http
+        answers[repos.GITHUB_API + "/repos/o/r"] = _Response(
+            302, headers={"Location": repos.GITHUB_API + "/repos/o/r"})
+        with pytest.raises(repos.Unavailable):
+            _call()
+        assert len(made) == frameability.MAX_REDIRECTS + 1
+
+    @pytest.mark.parametrize("status, headers", [
+        (403, {"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1900000000"}),
+        (429, {"X-RateLimit-Reset": "1900000000"}),
+    ])
+    def test_rate_limited_until_reset(self, http, status, headers):
+        answers, _ = http
+        answers[repos.GITHUB_API + "/repos/o/r"] = _Response(status, headers=headers)
+        with pytest.raises(repos.Unavailable) as raised:
+            _call()
+        assert (raised.value.kind, raised.value.until) == ("rate_limited", 1900000000.0)
+
+    def test_rate_limit_with_a_bad_reset_header(self, http):
+        answers, _ = http
+        answers[repos.GITHUB_API + "/repos/o/r"] = _Response(
+            429, headers={"X-RateLimit-Reset": "soon"})
+        with pytest.raises(repos.Unavailable) as raised:
+            _call()
+        assert (raised.value.kind, raised.value.until) == ("rate_limited", 0.0)
+
+    def test_other_403_is_not_a_rate_limit(self, http):
+        answers, _ = http
+        answers[repos.GITHUB_API + "/repos/o/r"] = _Response(
+            403, headers={"X-RateLimit-Remaining": "12"})
+        assert _call()[0] == 403
+        with pytest.raises(repos.Unavailable) as raised:
+            repos._json("/repos/o/r", time.monotonic() + 10)
+        assert raised.value.kind == "failed"
+
+    def test_body_over_the_cap(self, http):
+        answers, _ = http
+        answers[repos.GITHUB_API + "/repos/o/r"] = _Response(200, b"x" * 1001)
+        with pytest.raises(repos.Unavailable):
+            _call(max_bytes=1000)
+
+    def test_private_address_never_requested(self, http, monkeypatch):
+        _, made = http
+        monkeypatch.setattr(frameability, "_address_kind", lambda url, deadline: "private")
+        with pytest.raises(repos.Unavailable):
+            _call()
+        assert made == []
+
+    def test_connection_error_is_failed(self, http):
+        import requests
+        answers, _ = http
+        answers[repos.GITHUB_API + "/repos/o/r"] = requests.ConnectionError()
+        with pytest.raises(repos.Unavailable) as raised:
+            _call()
+        assert raised.value.kind == "failed"
+
+    @pytest.mark.parametrize("status, body, kind", [
+        (404, b"{}", "missing"),
+        (451, b"{}", "missing"),
+        (500, b"{}", "failed"),
+        (200, b"<html>not json", "failed"),
+    ])
+    def test_json_answers(self, http, status, body, kind):
+        answers, _ = http
+        answers[repos.GITHUB_API + "/repos/o/r"] = _Response(status, body)
+        with pytest.raises(repos.Unavailable) as raised:
+            repos._json("/repos/o/r", time.monotonic() + 10)
+        assert raised.value.kind == kind
+
+
+class TestStartup:
+    def _plugins(self, monkeypatch, loaded):
+        # Patches plugin.py's own name only, as test_pdf.test_needs_main_plugin
+        # explains: patching ckan.plugins.plugin_loaded fools with_plugins.
+        monkeypatch.setattr(plugin, "plugins", SimpleNamespace(
+            plugin_loaded=lambda name: loaded, SingletonPlugin=plugin.plugins.SingletonPlugin))
+
+    def test_needs_main_plugin(self, monkeypatch):
+        self._plugins(monkeypatch, False)
+        with pytest.raises(CkanConfigurationException, match="webpage_view_plus"):
+            plugin.RepoViewPlusPlugin().configure({})
+
+    def test_needs_nh3(self, monkeypatch):
+        self._plugins(monkeypatch, True)
+        monkeypatch.setitem(sys.modules, "nh3", None)
+        with pytest.raises(CkanConfigurationException, match="nh3"):
+            plugin.RepoViewPlusPlugin().configure({})
+
+    def test_starts_with_both(self, monkeypatch):
+        self._plugins(monkeypatch, True)
+        plugin.RepoViewPlusPlugin().configure({})
