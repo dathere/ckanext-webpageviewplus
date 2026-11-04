@@ -1218,7 +1218,10 @@ on any version. Then remove `pdf_view` from
   reading it in the view never contact the other site (Open in new tab opens the original
   file there). The fetch has the same guards as the frameability check:
   public addresses only, redirects checked, a 30-second deadline, at most `pdf_max_size` MB
-  (default 25), and the file must really be a PDF. CKAN keeps one copy under
+  (default 25), and the file must really be a PDF. A GitHub file page
+  (`github.com/<owner>/<repo>/blob/<branch>/<path>.pdf`) works too: CKAN fetches the file
+  from `raw.githubusercontent.com`, while Open in new tab still opens the GitHub page. A file
+  kept in Git LFS isn't: its raw address holds a pointer, not the PDF. CKAN keeps one copy under
   `ckan.storage_path` for `pdf_cache_seconds` (default an hour) and serves every visitor from
   it, so a popular view doesn't make CKAN download the file again and again. `allowed_hosts`
   applies to these links too, and they need `ckan.storage_path` set. A linked PDF in a private

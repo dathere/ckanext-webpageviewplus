@@ -200,6 +200,18 @@ class TestLinks:
         assert _get(app, _file_url(view, resource)).status_code == 200
         assert calls == ["https://b.org/other.pdf"]
 
+    def test_github_file_page_fetches_the_file(self, app, fetches):
+        bodies, calls = fetches
+        page = "https://github.com/mozilla/pdf.js/blob/master/test/pdfs/tracemonkey.pdf"
+        raw = "https://raw.githubusercontent.com/mozilla/pdf.js/master/test/pdfs/tracemonkey.pdf"
+        bodies[raw] = PDF
+        resource = _upload(factories.Dataset())
+        view = _view(resource, pdf_url=page)
+        response = _get(app, _file_url(view, resource))
+        assert response.status_code == 200
+        assert response.data == PDF
+        assert calls == [raw]
+
     @pytest.mark.ckan_config("ckanext.webpageviewplus.pdf_cache_seconds", "0")
     def test_cache_seconds_zero_fetches_every_time(self, app, fetches):
         _, calls = fetches

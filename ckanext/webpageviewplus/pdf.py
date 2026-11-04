@@ -29,7 +29,7 @@ from flask import Blueprint, Response, abort, redirect, request, send_file, send
 import ckan.model as model
 import ckan.plugins.toolkit as toolkit
 
-from ckanext.webpageviewplus import content, events, frame, frameability, settings
+from ckanext.webpageviewplus import content, events, frame, frameability, services, settings
 
 log = logging.getLogger(__name__)
 
@@ -162,8 +162,10 @@ def cached_pdf(url: str, view_id: str = "") -> Optional[str]:
     if not _lock(base + ".lock"):
         return path if os.path.exists(path) else None
     try:
+        # A GitHub file page is HTML: fetch the file it shows.
         body = frameability.fetch_body(
-            url, time.monotonic() + FETCH_SECONDS, settings.pdf_max_size(), USER_AGENT)
+            services.github_raw(url) or url, time.monotonic() + FETCH_SECONDS,
+            settings.pdf_max_size(), USER_AGENT)
         if body is None or not looks_like_pdf(body.data):
             # The stale copy stays on disk (never served; _prune drops it).
             _touch(base + ".failed")

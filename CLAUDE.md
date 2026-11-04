@@ -279,8 +279,9 @@ order now being built:
   Download/Print/Open/editor buttons. Never serve it on CKAN's origin. Routes, content host
   only: `/webpageviewplus/pdfjs/<version>/...` (allow-listed types, `immutable`, its own CSP)
   and `/webpageviewplus/pdf/<view_id>/<file>` (signed per view as `pdf:<view_id>` for private
-  datasets; uploads via `content.file_response`, links via `cached_pdf`: `fetch_body`, `%PDF-`
-  in the first 1024 bytes, a copy under `ckan.storage_path` for `pdf_cache_seconds`; a failed
+  datasets; uploads via `content.file_response`, links via `cached_pdf`: `fetch_body` (a GitHub `/blob/`
+  page's file from raw.githubusercontent.com, `services.github_raw`; the cache key and Open
+  link stay the page), `%PDF-` in the first 1024 bytes, a copy under `ckan.storage_path` for `pdf_cache_seconds`; a failed
   fetch remembered for `FAILED_SECONDS`, one fetch per URL at a time by a lock file, and other
   workers serve the copy being refreshed rather than wait). On
   CKAN's host, `/webpageviewplus/pdf-view/<view_id>` re-checks `resource_view_show` and

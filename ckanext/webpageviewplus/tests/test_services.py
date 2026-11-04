@@ -612,3 +612,26 @@ class TestFormProblemHints:
                         "private-dataset", "refuses-framing"):
             assert "{service}" in region["data-" + problem]
         assert region.get_text(strip=True) == ""
+
+
+@pytest.mark.parametrize("url,expected", [
+    ("https://github.com/mozilla/pdf.js/blob/master/test/pdfs/tracemonkey.pdf",
+     "https://raw.githubusercontent.com/mozilla/pdf.js/master/test/pdfs/tracemonkey.pdf"),
+    # A branch with a slash, a query and fragment dropped, www. and case.
+    ("https://WWW.GitHub.com/o/r/blob/feature/x/docs/a%20b.pdf?raw=true#page=2",
+     "https://raw.githubusercontent.com/o/r/feature/x/docs/a%20b.pdf"),
+    # Not a file page: /raw/ already redirects, and other pages aren't files.
+    ("https://github.com/o/r/raw/main/a.pdf", None),
+    ("https://github.com/o/r/tree/main/docs", None),
+    ("https://github.com/o/r/blob/main", None),
+    ("https://github.com/o/r/blob/main/../a.pdf", None),
+    ("https://github.com/o/r/blob/main//a.pdf", None),
+    ("https://github.com/o%2F/r/blob/main/a.pdf", None),
+    ("https://user@github.com/o/r/blob/main/a.pdf", None),
+    ("https://github.com:8443/o/r/blob/main/a.pdf", None),
+    ("https://gitlab.com/o/r/blob/main/a.pdf", None),
+    ("ftp://github.com/o/r/blob/main/a.pdf", None),
+    ("", None),
+])
+def test_github_raw(url, expected):
+    assert services.github_raw(url) == expected

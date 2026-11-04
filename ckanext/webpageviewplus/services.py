@@ -828,3 +828,32 @@ def refuses_framing(url: str) -> Optional[str]:
     if name is None or _EMBED_PATH.search(parts.path) or suggest(url) is not None:
         return None
     return name
+
+
+_GITHUB_NAME = re.compile(r"[A-Za-z0-9._-]+")
+
+
+def github_raw(url: str) -> Optional[str]:
+    """The file itself for a GitHub file page
+    (``github.com/<owner>/<repo>/blob/<ref>/<path>``), which is an HTML page:
+    ``raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>``. None for
+    anything else. Its /raw/ links already redirect to the file."""
+    try:
+        parts = urlsplit((url or "").strip())
+        port = parts.port
+    except ValueError:
+        return None
+    if parts.scheme.lower() not in ("http", "https") or parts.username or parts.password \
+            or port not in (None, 80, 443):
+        return None
+    if (parts.hostname or "").lower().rstrip(".").removeprefix("www.") != "github.com":
+        return None
+    segments = parts.path.split("/")
+    if len(segments) < 6 or segments[0] or segments[3] != "blob" \
+            or not all(segments[4:]) or any(s in (".", "..") for s in segments[4:]):
+        return None
+    owner, repo = segments[1], segments[2]
+    if not (_GITHUB_NAME.fullmatch(owner) and _GITHUB_NAME.fullmatch(repo)):
+        return None
+    return "https://raw.githubusercontent.com/{}/{}/{}".format(
+        owner, repo, "/".join(segments[4:]))

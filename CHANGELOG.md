@@ -17,6 +17,10 @@
   of them have (GitHub notebooks, Tableau Public views, Power BI Publish to web, Hugging Face
   Spaces) still get their suggestion.
 
+- PDF (Plus) shows a PDF linked by its GitHub file page (`github.com/.../blob/...`): CKAN
+  fetches the file from `raw.githubusercontent.com` (the page itself is HTML), and Open in new
+  tab still opens the GitHub page.
+
 ### Changed
 
 - The README starts with a Quickstart: install, tables, `doctor`, then the optional steps.
