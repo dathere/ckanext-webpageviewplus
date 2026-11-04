@@ -119,7 +119,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install -r requirements.txt
-        pip install -e ".[thumbnails]"
+        pip install -e ".[thumbnails,repos]"
         pip install -r browser_tests/requirements.txt
         python -m playwright install --with-deps chromium firefox webkit
     - name: Start CKAN with seeded data

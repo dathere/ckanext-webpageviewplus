@@ -1,0 +1,40 @@
+{% import 'macros/form.html' as form %}
+{% asset 'webpageviewplus/webpageviewplus-css' %}
+{% asset 'webpageviewplus/webpageviewplus-js' %}
+<div class="webpageviewplus-form">
+
+{% set height_labels = {
+  'fixed': _('Fixed (px)'),
+  'viewport': _('Share of the window height, in percent'),
+} %}
+
+{% call form.input('repo_url', id='field-repo_url', label=_('Repository url'), placeholder=_('eg. https://github.com/ckan/ckan  (if blank uses resource url)'), value=data.repo_url, error=errors.repo_url, classes=['control-full', 'control-large'], attrs={'class': 'form-control', 'aria-describedby': 'help-repo_url'}) %}
+  <p class="form-text" id="help-repo_url">
+    {{ _("Leave blank to show the repository this resource links to, or enter another repository or branch to show instead. A public GitHub repository's name, description, files and README are fetched by this site and shown here, as GitHub's pages can't be embedded. Add /tree/<branch> for a branch other than the default.") }}
+  </p>
+{% endcall %}
+
+<div class="form-group control-medium">
+  <label class="form-label" for="field-height_mode">{{ _('Height') }}</label>
+  <div class="controls">
+    <select id="field-height_mode" name="height_mode" class="form-control form-select">
+      {% for mode in height_modes %}
+        <option value="{{ mode }}" {% if data.height_mode == mode %}selected{% endif %}>{{ height_labels.get(mode, mode) }}</option>
+      {% endfor %}
+    </select>
+    {% if errors.height_mode %}<span class="error-block">{{ errors.height_mode | join(', ') }}</span>{% endif %}
+  </div>
+</div>
+
+{% call form.input('height_value', id='field-height_value', label=_('Height value'), placeholder=_('eg. 800 or 80'), value=data.height_value, error=errors.height_value, classes=['control-medium'], attrs={'class': 'form-control', 'aria-describedby': 'help-height_value'}) %}
+  <p class="form-text" id="help-height_value">{{ _('Pixels for Fixed, or a number from 1 to 100 for a share of the window. Blank is 800 pixels.') }}</p>
+{% endcall %}
+
+<div class="form-group">
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="field-hide_controls" name="hide_controls" value="true" aria-describedby="help-hide_controls" {% if data.hide_controls in (true, 'true', 'True') %}checked{% endif %}>
+    <label class="form-check-label" for="field-hide_controls">{{ _('Hide the control bar (Open in new tab, Fullscreen, Reload)') }}</label>
+    <p class="form-text" id="help-hide_controls">{{ _('On phones and at high zoom, Open in new tab still shows, so visitors can always reach the page.') }}</p>
+  </div>
+</div>
+</div>

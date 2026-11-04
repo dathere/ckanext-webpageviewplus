@@ -512,6 +512,14 @@ def diagnose() -> list[tuple[str, str]]:
     if not settings.frameability_check():
         found.append(("note", "frameability_check is off: the view form only warns about "
                       "pages on well-known sites that refuse framing, not any page."))
+    if _plugin_loaded("repo_view_plus"):
+        if settings.github_token():
+            found.append(("ok", "github_token is set: GitHub allows 5,000 requests an hour."))
+        else:
+            found.append(("note", "repo_view_plus is on without github_token: GitHub allows "
+                          "this server 60 requests an hour, about 20 repositories, shared by "
+                          "every visitor. Set ckanext.webpageviewplus.github_token (a "
+                          "fine-grained token with no permissions) for 5,000."))
     return found
 
 

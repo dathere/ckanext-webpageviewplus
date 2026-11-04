@@ -20,7 +20,7 @@ from ckan.config.middleware import make_app
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as tk
 
-from ckanext.webpageviewplus import pdf, services
+from ckanext.webpageviewplus import pdf, repos, services
 
 DATASET = "wvp-features"
 ORG = "wvp-demo-org"
@@ -459,6 +459,23 @@ def main():
                     "title": title, "description": description})
                 print("{}\n  {}/dataset/{}/resource/{}?view_id={}".format(
                     title, site, DATASET, res["id"], view["id"]))
+
+        # repo_view_plus, where it's enabled: a GitHub repository's root,
+        # fetched by CKAN and shown as a page with no scripts.
+        if plugins.plugin_loaded(repos.VIEW_TYPE):
+            title = "A GitHub repository"
+            res = act("resource_create")(ctx(), {
+                "package_id": pkg["id"], "name": title,
+                "url": "https://github.com/dathere/ckanext-webpageviewplus"})
+            for v in act("resource_view_list")(ctx(), {"id": res["id"]}):
+                act("resource_view_delete")(ctx(), {"id": v["id"]})
+            view = act("resource_view_create")(ctx(), {
+                "resource_id": res["id"], "view_type": repos.VIEW_TYPE, "title": title,
+                "description": "GitHub's pages can't be framed, so CKAN fetches the "
+                               "repository's name, files and README from GitHub's API and "
+                               "shows them as a page with no scripts. Links open on GitHub."})
+            print("{}\n  {}/dataset/{}/resource/{}?view_id={}".format(
+                title, site, DATASET, res["id"], view["id"]))
 
 
 if __name__ == "__main__":

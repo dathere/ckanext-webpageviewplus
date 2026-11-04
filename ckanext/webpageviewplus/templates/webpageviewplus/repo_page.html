@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ repo.full_name if repo else _('Repository') }}</title>
+<style>{{ style | safe }}</style>
+</head>
+<body>
+{% if repo %}
+  <header class="repo-head">
+    <h1><a href="{{ repo.html_url }}" target="_blank" rel="noopener noreferrer">{{ repo.full_name }}</a></h1>
+    {% if repo.description %}<p>{{ repo.description }}</p>{% endif %}
+  </header>
+  <ul class="repo-facts">
+    {% if repo.archived %}<li>{{ _('Archived') }}</li>{% endif %}
+    {% if repo.language %}<li>{{ repo.language }}</li>{% endif %}
+    <li>{{ ungettext('{count} star', '{count} stars', repo.stars).format(count=h.localised_number(repo.stars)) }}</li>
+    <li>{{ ungettext('{count} fork', '{count} forks', repo.forks).format(count=h.localised_number(repo.forks)) }}</li>
+    {% if updated %}<li>{{ _('Updated {date}').format(date=h.render_datetime(updated)) }}</li>{% endif %}
+    {# TRANSLATORS: the branch whose files are listed, such as "main". #}
+    <li>{{ _('Branch: {ref}').format(ref=repo.ref) }}</li>
+  </ul>
+  <ul class="repo-files" aria-label="{{ _('Files') }}">
+    {% for entry in repo.entries %}
+      <li class="{{ entry.type }}"><a href="{{ entry.url }}" target="_blank" rel="noopener noreferrer">{{ entry.name }}</a></li>
+    {% endfor %}
+    {% if repo.truncated %}
+      <li><a href="{{ repo.html_url }}" target="_blank" rel="noopener noreferrer">{{ _('More files on {site}').format(site=repo.site) }}</a></li>
+    {% endif %}
+  </ul>
+  {% if repo.readme %}
+    <article class="repo-readme">{{ repo.readme | safe }}</article>
+  {% endif %}
+{% else %}
+  <div class="repo-card">
+    <p>
+      {%- if problem == 'rate_limited' -%}
+        {{ _('This site has used up its requests to GitHub for now, so the repository can\'t be shown here. Try again later.') }}
+      {%- elif problem == 'missing' -%}
+        {{ _('This repository wasn\'t found, or it isn\'t public.') }}
+      {%- elif problem == 'not_a_repo' -%}
+        {{ _('This address isn\'t a repository this view can show.') }}
+      {%- else -%}
+        {{ _('The repository couldn\'t be loaded. Try again later.') }}
+      {%- endif -%}
+    </p>
+    <p><a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ _('Open on {site}').format(site='GitHub') }}</a></p>
+  </div>
+{% endif %}
+</body>
+</html>

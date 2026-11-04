@@ -285,3 +285,21 @@ groups:
           so there's nothing to revoke; uploads are revalidated on every use
           as before.
           Linked PDFs need ckan.storage_path, where the copies are kept.
+
+      - key: ckanext.webpageviewplus.repo_cache_seconds
+        default: 3600
+        type: int
+        description: |
+          repo_view_plus: how long CKAN keeps its copy of a repository's page
+          (under ckan.storage_path, shared by every view of that repository
+          and branch) before asking GitHub again. GitHub allows 60 requests
+          an hour per server without github_token, and a repository takes
+          three.
+
+      - key: ckanext.webpageviewplus.github_token
+        default: ""
+        description: |
+          repo_view_plus: an optional GitHub token, sent only to
+          api.github.com, raising GitHub's limit from 60 to 5,000 requests an
+          hour. A fine-grained token with no permissions is enough: it only
+          reads public repositories.

@@ -20,6 +20,7 @@ from ckanext.webpageviewplus import (
     events,
     health,
     pdf,
+    repos,
     stats,
     frame,
     services,
@@ -650,3 +651,134 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
 
     def form_template(self, context: Context, data_dict: dict[str, Any]) -> str:
         return "webpageviewplus/pdf_form.html"
+
+
+class RepoViewPlusPlugin(plugins.SingletonPlugin):
+    """A public GitHub repository's root (repos.py): fetched by CKAN, shown
+    as a static page with no scripts, so no content origin is needed."""
+
+    plugins.implements(plugins.IConfigurable)
+    plugins.implements(plugins.IBlueprint)
+    plugins.implements(plugins.IResourceView, inherit=True)
+
+    # IConfigurable
+
+    def configure(self, config_: CKANConfig):
+        if not plugins.plugin_loaded("webpage_view_plus"):
+            raise CkanConfigurationException(
+                "repo_view_plus needs the webpage_view_plus plugin: "
+                "add it to ckan.plugins before repo_view_plus")
+        try:
+            import nh3  # noqa: F401
+        except ImportError:
+            raise CkanConfigurationException(
+                "repo_view_plus needs nh3: pip install \"ckanext-webpageviewplus[repos]\"")
+
+    # IBlueprint
+
+    def get_blueprint(self):
+        return [repos.repo]
+
+    # IResourceView
+
+    def info(self) -> dict[str, Any]:
+        return {
+            "name": repos.VIEW_TYPE,
+            "title": toolkit._("Repository (Plus)"),
+            "schema": {
+                "repo_url": [ignore_empty, unicode_safe, v.http_url_validator],
+                "height_mode": [ignore_empty, unicode_safe, v.pdf_height_mode_validator],
+                "height_value": [ignore_empty, unicode_safe],
+                "hide_controls": [ignore_missing, boolean_validator],
+                "__after": [v.repo_after_validator],
+            },
+            "iframed": False,
+            "icon": "code-branch",
+            "always_available": False,
+            "default_title": toolkit._("Repository"),
+        }
+
+    def can_view(self, data_dict: dict[str, Any]) -> bool:
+        resource = data_dict["resource"]
+        return resource.get("url_type") != "upload" \
+            and repos.is_repo_link(resource.get("url") or "")
+
+    def setup_template_variables(
+        self, context: Context, data_dict: dict[str, Any]
+    ) -> dict[str, Any]:
+        resource_view = data_dict.get("resource_view") or {}
+        resource = data_dict["resource"]
+        form_vars = {"height_modes": repos.HEIGHT_MODES}
+        url = repos.repo_url(resource_view, resource)
+        found = repos.parse(url) if frame.is_http_url(url) else None
+        if found is None:
+            return dict(form_vars, frame=None, frame_error="repo_url")
+        view_id = resource_view.get("id")
+        if not view_id:
+            return dict(form_vars, frame=None, frame_error="repo_unsaved")
+        mode = resource_view.get("height_mode") or repos.DEFAULT_HEIGHT[0]
+        value = resource_view.get("height_value") or (
+            repos.DEFAULT_HEIGHT[1] if mode == repos.DEFAULT_HEIGHT[0] else "80")
+        page = toolkit.url_for("webpageviewplus_repo.page", view_id=view_id, qualified=True)
+        built = frame.build_frame(
+            page,
+            "strict",
+            ckan_hosts=settings.ckan_hosts(),
+            content_origin=settings.isolating_content_origin(),
+            sandbox_override=repos.SANDBOX,
+            referrer_policy=settings.referrer_policy(),
+            height_mode=mode,
+            height_value=value,
+            min_height=settings.min_height(),
+            max_height=settings.max_height(),
+            title=resource_view.get("title") or toolkit._("Repository"),
+        )
+        save_data = gpc = False
+        endpoint = None
+        if has_request_context():
+            save_data = request.headers.get("Save-Data", "").strip().lower() == "on"
+            gpc = request.headers.get("Sec-GPC", "").strip() == "1"
+            endpoint = request.endpoint
+            g.webpageviewplus_vary_held_back = True
+        # CKAN fetches the repository, but the README's images load in the
+        # visitor's browser from GitHub and other hosts: third-party content.
+        consent = gpc or settings.consent_gate() or settings.privacy_profile() == "eu"
+        events.emit("view_rendered", preset=built.preset, requested_preset=repos.VIEW_TYPE,
+                    notices=",".join(built.notices) or "-", endpoint=endpoint)
+        package = data_dict.get("package") or {}
+        share_url = toolkit.url_for(
+            "{}_resource.read".format(package.get("type") or "dataset"),
+            id=package.get("name") or resource.get("package_id"),
+            resource_id=resource.get("id"),
+            view_id=view_id,
+            qualified=True,
+        )
+        return dict(
+            form_vars,
+            frame=built,
+            share_url=share_url,
+            held_back="consent" if consent else ("save-data" if save_data else None),
+            save_data=save_data,
+            count_url=None,
+            privacy_policy_url=settings.privacy_policy_url(),
+            connections=[],
+            consent_host="github.com",
+            deferred_src=built.src,
+            load_size=None,
+            frame_error=None,
+            refused=None,
+            refused_host=None,
+            open_url=found.html_url,
+            reload_url=built.src,
+            controls=settings.controls(),
+            show_controls=not toolkit.asbool(resource_view.get("hide_controls")),
+            color_scheme=settings.color_scheme(),
+            narrow_width=settings.narrow_width(),
+            preconnect=None,
+        )
+
+    def view_template(self, context: Context, data_dict: dict[str, Any]) -> str:
+        return "webpageviewplus/view.html"
+
+    def form_template(self, context: Context, data_dict: dict[str, Any]) -> str:
+        return "webpageviewplus/repo_form.html"
