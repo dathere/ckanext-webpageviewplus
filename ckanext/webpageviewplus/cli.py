@@ -545,11 +545,90 @@ def asset_problems(site_url: str, timeout: float = 10) -> list[str]:
     return problems
 
 
+def _probe_upload() -> Optional[model.Resource]:
+    """A public upload a browser could run as a page, to check its download."""
+    found = (
+        model.Session.query(model.Resource)
+        .join(model.Package, model.Package.id == model.Resource.package_id)
+        .filter(model.Resource.url_type == "upload",
+                model.Resource.state == "active",
+                model.Package.state == "active",
+                model.Package.private.is_(False))
+        .order_by(model.Resource.created)
+    )
+    return next((r for r in found.yield_per(100) if _active_content(r)), None)
+
+
+def _sandboxes(policies: list[str]) -> list[str]:
+    """The ``sandbox`` directives in a response's CSP headers."""
+    found = []
+    for policy in policies:
+        for directive in policy.split(";"):
+            words = directive.split()
+            if words and words[0].lower() == "sandbox":
+                found.append(" ".join(words))
+    return found
+
+
+def download_finding(site_url: str, timeout: float = 10) -> tuple[str, str]:
+    """Whether an HTML upload's download reaches this machine still unable to
+    run as CKAN: CSP-sandboxed (no allow-same-origin) with nosniff, or sent
+    off CKAN's host (the content origin, or a storage's own link). A proxy or
+    CDN rule stripping the header would undo the protection the external
+    preset relies on without a content origin. Raises
+    ``requests.RequestException`` when the site can't be reached."""
+    import requests
+    from ckanext.webpageviewplus import downloads
+
+    resource = _probe_upload()
+    if resource is None:
+        return ("note", "No public HTML upload to check the download header with. After "
+                "adding one, run doctor again, or check by hand with curl -sI on its "
+                "download URL (see the README's 'Uploaded HTML downloads are sandboxed').")
+    package = resource.package
+    filename = (resource.url or "").rpartition("/")[2] or "file"
+    url = "{}/{}/{}/resource/{}/download/{}".format(
+        site_url.rstrip("/"), package.type or "dataset", package.id, resource.id, filename)
+    response = requests.get(url, timeout=timeout, allow_redirects=False, stream=True)
+    response.close()
+    status = response.status_code
+    if status in (301, 302, 303, 307, 308):
+        location = response.headers.get("Location", "")
+        host = frame.url_host(location)
+        if host and not frame.is_ckan_host(location, settings.ckan_hosts()):
+            return ("ok", "An HTML upload's download is sent off CKAN's host, to {} ({})."
+                    .format(host, url))
+        return ("fail", "An HTML upload's download redirects to CKAN's own host ({} -> {}), "
+                "where it isn't sandboxed.".format(url, location or "no Location"))
+    if status != 200:
+        return ("note", "Couldn't check the download header: {} answered HTTP {}."
+                .format(url, status))
+    if downloads.is_passive_type(response.headers.get("Content-Type", "")):
+        return ("note", "Couldn't check the download header: {} was sent as {}, which "
+                "browsers never run.".format(url, response.headers.get("Content-Type")))
+    # requests joins repeated headers with commas, which also separate CSP
+    # policies, so every policy the response carries is checked.
+    sandboxes = _sandboxes(response.headers.get("Content-Security-Policy", "").split(","))
+    safe = [s for s in sandboxes if "allow-same-origin" not in s.lower().split()]
+    nosniff = response.headers.get("X-Content-Type-Options", "").strip().lower() == "nosniff"
+    if safe and nosniff:
+        return ("ok", "HTML upload downloads reach this machine sandboxed ({}).".format(url))
+    missing = [name for name, ok in (
+        ("Content-Security-Policy: sandbox without allow-same-origin", bool(safe)),
+        ("X-Content-Type-Options: nosniff", nosniff),
+    ) if not ok]
+    return ("fail", "An HTML upload's download arrives without " + " or ".join(missing)
+            + " ({}). Something between CKAN and this machine (a proxy or CDN rule) "
+            "strips it, so uploaded pages could run as CKAN, and External frames "
+            "aren't safe without a content origin.".format(url))
+
+
 @webpageviewplus.command()
 @click.option("--no-http", is_flag=True,
-              help="Skip fetching the asset bundles from the site.")
+              help="Skip fetching from the site (the asset bundles, an HTML "
+                   "upload's download headers).")
 @click.option("--site-url", default="",
-              help="Fetch the bundles from here instead of ckan.site_url "
+              help="Fetch from here instead of ckan.site_url "
                    "(e.g. http://localhost:5000 inside a container).")
 def doctor(no_http: bool, site_url: str):
     """Check this site's setup for the extension and say what to fix.
@@ -572,6 +651,12 @@ def doctor(no_http: bool, site_url: str):
                               "every CKAN process, then clear any CDN or proxy cache."))
             else:
                 found.append(("ok", "The asset bundles load from " + site_url + "."))
+        if settings.harden_downloads():
+            try:
+                found.append(download_finding(site_url))
+            except requests.RequestException as error:
+                found.append(("note", "Couldn't reach {} to check the download header ({})."
+                              .format(site_url, type(error).__name__)))
     colours = {"ok": "green", "note": None, "warn": "yellow", "fail": "red"}
     for level, text in found:
         click.echo(click.style(level.upper().ljust(4), fg=colours[level], bold=True)

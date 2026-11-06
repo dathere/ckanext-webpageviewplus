@@ -739,8 +739,11 @@ there instead, and work fully. Turn the header off with `ckanext.webpageviewplus
 
 Without a content origin, this header is what lets `external` run unsandboxed safely, so it
 must reach the browser: a proxy or CDN rule (Cloudflare's Transform Rules, for example) that
-strips `Content-Security-Policy` from responses would undo it. Check through your site's real
-address that an HTML upload's download URL still sends it:
+strips `Content-Security-Policy` from responses would undo it. `ckan webpageviewplus doctor`
+checks this: it fetches a public HTML upload's download through `ckan.site_url` (or
+`--site-url`) and fails if the header or `nosniff` is missing. Run it from outside your CDN or
+proxy, with `--site-url` set to the site's public address, for the check to cover them. By
+hand:
 
     curl -sI https://data.example.org/dataset/<id>/resource/<id>/download/page.html | grep -i content-security-policy
 
@@ -1479,7 +1482,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 
 | Command | Does |
 | --- | --- |
-| `ckan webpageviewplus doctor [--no-http] [--site-url URL]` | Check the site's setup and say what to fix: no content origin or sandboxed downloads, the plugin's tables not upgraded, asset bundles the site doesn't serve (fetched from `ckan.site_url`, or `--site-url` inside a container), `default_views`, core views left to migrate. Exits 1 when something is broken. Run it after installing or upgrading |
+| `ckan webpageviewplus doctor [--no-http] [--site-url URL]` | Check the site's setup and say what to fix: no content origin or sandboxed downloads, an HTML upload's download arriving without its sandbox header, the plugin's tables not upgraded, asset bundles the site doesn't serve (fetched from `ckan.site_url`, or `--site-url` inside a container), `default_views`, core views left to migrate. Exits 1 when something is broken. Run it after installing or upgrading |
 | `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME] [--dataset NAME]` | Convert `webpage_view` views, see [Migrating from webpage_view](#migrating-from-webpage_view) |
 | `ckan webpageviewplus migrate-pdf [--dry-run]` | Convert ckanext-pdfview's `pdf_view` views to PDF (Plus), see [PDF views](#pdf-views) |
 | `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails, except with `--no-store`. Run it weekly from cron |
