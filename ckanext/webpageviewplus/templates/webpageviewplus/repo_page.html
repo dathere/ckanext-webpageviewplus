@@ -15,8 +15,8 @@
   <ul class="repo-facts">
     {% if repo.archived %}<li>{{ _('Archived') }}</li>{% endif %}
     {% if repo.language %}<li>{{ repo.language }}</li>{% endif %}
-    <li>{{ ungettext('{count} star', '{count} stars', repo.stars).format(count=h.localised_number(repo.stars)) }}</li>
-    <li>{{ ungettext('{count} fork', '{count} forks', repo.forks).format(count=h.localised_number(repo.forks)) }}</li>
+    {% if repo.stars is not none %}<li>{{ ungettext('{count} star', '{count} stars', repo.stars).format(count=h.localised_number(repo.stars)) }}</li>{% endif %}
+    {% if repo.forks is not none %}<li>{{ ungettext('{count} fork', '{count} forks', repo.forks).format(count=h.localised_number(repo.forks)) }}</li>{% endif %}
     {% if updated %}<li>{{ _('Updated {date}').format(date=h.render_datetime(updated)) }}</li>{% endif %}
     {# TRANSLATORS: the branch whose files are listed, such as "main". #}
     <li>{{ _('Branch: {ref}').format(ref=repo.ref) }}</li>
@@ -36,7 +36,8 @@
   <div class="repo-card">
     <p>
       {%- if problem == 'rate_limited' -%}
-        {{ _('This site has used up its requests to GitHub for now, so the repository can\'t be shown here. Try again later.') }}
+        {# TRANSLATORS: {site} is a code hosting site, such as GitHub or GitLab. #}
+        {{ _('This site has used up its requests to {site} for now, so the repository can\'t be shown here. Try again later.').format(site=site) }}
       {%- elif problem == 'missing' -%}
         {{ _('This repository wasn\'t found, or it isn\'t public.') }}
       {%- elif problem == 'not_a_repo' -%}
@@ -45,7 +46,7 @@
         {{ _('The repository couldn\'t be loaded. Try again later.') }}
       {%- endif -%}
     </p>
-    <p><a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ _('Open on {site}').format(site='GitHub') }}</a></p>
+    <p><a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ _('Open on {site}').format(site=site) if site else _('Open in new tab') }}</a></p>
   </div>
 {% endif %}
 </body>

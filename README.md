@@ -162,7 +162,7 @@ needs one, and `ckan.storage_path` set to show PDFs linked from other sites.
    | `webpage_view_plus` | the Website (Plus) view: web pages, uploaded HTML, well-known services, Office files | nothing |
    | `webpage_view_plus_thumbnails` | [thumbnails in the resource list](#thumbnails-in-the-resource-list) | `webpage_view_plus`, and Pillow (the `[thumbnails]` extra) |
    | `pdf_view_plus` | the [PDF (Plus) view](#pdf-views) | `webpage_view_plus`, a [separate domain for uploads](#a-separate-domain-for-uploads), and `ckan.storage_path` for PDFs linked from other sites |
-   | `repo_view_plus` | the [Repository (Plus) view](#repository-views) of a public GitHub repository | `webpage_view_plus`, `ckan.storage_path`, and nh3 (the `[repos]` extra); beyond a handful of repositories, a `github_token` ([why](#repository-views)) |
+   | `repo_view_plus` | the [Repository (Plus) view](#repository-views) of a public repository on GitHub, GitLab, Codeberg or Bitbucket | `webpage_view_plus`, `ckan.storage_path`, and nh3 and cmarkgfm (the `[repos]` extra); beyond a handful of GitHub repositories, a `github_token` ([why](#repository-views)) |
 
    For example:
 
@@ -466,8 +466,8 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   [frameability check](#frameability-check) and `thumbnail_fetch`, both off by default. And the
   [PDF (Plus) view](#pdf-views), if you enable it, fetches a PDF linked from another site the
   first time it's viewed, then serves its copy for `pdf_cache_seconds`, and the
-  [Repository (Plus) view](#repository-views) fetches a repository's details from GitHub's API
-  the same way, for `repo_cache_seconds`. All of them reach public addresses only.
+  [Repository (Plus) view](#repository-views) fetches a repository's details from its site's
+  API the same way, for `repo_cache_seconds`. All of them reach public addresses only.
 
 - **Q: We keep uploads in S3 or other cloud storage. Does it work?**<br>
   A: On CKAN 2.12, yes: uploads in any `ckan.files` storage that can stream, S3 included, are
@@ -561,8 +561,8 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   until GitHub's hour resets; ones with a copy keep showing it. Set
   `ckanext.webpageviewplus.github_token` to a fine-grained token with no permissions (it only
   reads public repositories, and is sent only to `api.github.com`) for 5,000 an hour. `ckan
-  webpageviewplus doctor` reminds you when it's missing. See
-  [Repository views](#repository-views).
+  webpageviewplus doctor` reminds you when it's missing. GitLab (500 requests a minute) and
+  Codeberg (2,000 every ten minutes) need no token. See [Repository views](#repository-views).
 
 ### For editors
 
@@ -1306,39 +1306,64 @@ docstring.
 
 ### Repository views
 
-GitHub's pages refuse to be framed, so a Website (Plus) view of a repository stays blank. The
-**Repository (Plus)** view (plugin `repo_view_plus`) shows a public GitHub repository the way
-GitHub does at its root: its name, description, language, stars, forks and last update, the
-root's folders and files, and the README. Every link opens on GitHub in a new tab.
+The pages of GitHub, GitLab, Codeberg and Bitbucket refuse to be framed, so a Website (Plus)
+view of a repository stays blank. The **Repository (Plus)** view (plugin `repo_view_plus`)
+shows a public repository the way its site does at its root: its name, description, language,
+stars, forks and last update (as far as the site says), the root's folders and files, and the
+README. Every link opens on the repository's site in a new tab.
 
     pip install "ckanext-webpageviewplus[repos]"
     ckan.plugins = ... webpage_view_plus repo_view_plus
 
-It's offered for resources linking to `github.com/<owner>/<repo>` (or `.git`, or
-`/tree/<branch>`); a view's **Repository url** can name another one.
+It's offered for resources linking to a repository's root, or a branch's, on these sites; a
+view's **Repository url** can name another one. Links ending `.git` work too.
+
+| Site | Repository | A branch | Shown |
+| --- | --- | --- | --- |
+| [GitHub](https://github.com) | `github.com/<owner>/<repo>` | `/tree/<branch>` | everything; README rendered by GitHub |
+| [Codeberg](https://codeberg.org) (Forgejo) | `codeberg.org/<owner>/<repo>` | `/src/branch/<branch>` | everything |
+| [GitLab](https://gitlab.com) | `gitlab.com/<group>/.../<project>` | `/-/tree/<branch>` | no language; the root's first 100 entries |
+| [Bitbucket](https://bitbucket.org) | `bitbucket.org/<workspace>/<repo>` | `/src/<branch>/` | no stars or forks; the root's first 100 entries |
+
+A link to a GitLab group, not a project, shows the "wasn't found" card. Codeberg, GitLab and
+Bitbucket send their READMEs as raw Markdown, which CKAN renders with
+[cmarkgfm](https://github.com/theacodes/cmarkgfm) (GitHub's own cmark-gfm: tables, task lists,
+autolinks, strikethrough, heading anchors); a README in another format is shown as plain text.
+
+**Self-hosted sites.** GitHub Enterprise, Gitea or Forgejo, and GitLab servers of your own are
+named in `ckanext.webpageviewplus.repo_hosts`, as a host and its kind:
+
+    ckanext.webpageviewplus.repo_hosts = git.example.org gitea gitlab.example.org gitlab
+
+CKAN refuses to start if an entry isn't a bare host name, names an unknown kind (`github`,
+`gitea` or `gitlab`), a site that's already supported, or one of CKAN's own hosts. Their APIs
+are asked over https with no token, and only at public addresses, like every fetch here: a
+server reachable only inside your network shows the "couldn't be loaded" card.
 
 - **CKAN fetches, never the visitor's browser.** The first time a view is shown, CKAN asks
-  GitHub's API for the repository, its root listing and its README (rendered by GitHub), with
-  the same guards as the frameability check, and keeps one copy per repository and branch
-  under `ckan.storage_path` for `repo_cache_seconds` (default an hour). One worker fetches at
-  a time, others serve the previous copy meanwhile, and a failure is remembered for five
-  minutes, or until GitHub's limit resets.
+  the site's API for the repository, its root listing and its README, with the same guards
+  as the frameability check (and follows redirects only within that site's API), and keeps
+  one copy per repository and branch under `ckan.storage_path` for `repo_cache_seconds`
+  (default an hour). One worker fetches at a time, others serve the previous copy meanwhile,
+  and a failure is remembered for five minutes, or until the site's limit resets.
 - **GitHub allows 60 requests an hour per server** without a token, and a repository takes
   three: about 20 repositories an hour on a cold cache. Set `github_token` (a fine-grained
-  token with no permissions) for 5,000. When the limit is reached, or the repository is
-  missing or private, the view shows a card with a link to it instead, and a copy already
-  made keeps being shown.
+  token with no permissions) for 5,000; it's sent only to `api.github.com`, never to the other
+  sites or GitHub Enterprise. GitLab allows 500 requests a minute and Codeberg 2,000 every ten
+  minutes without one. When a limit is reached, or the repository is missing or private, the
+  view shows a card with a link to it instead, and a copy already made keeps being shown.
 - **A page with no scripts.** The README is cleaned with nh3 (tags and attributes from a fixed
-  list; relative links point at the files on GitHub, relative images at their raw
-  addresses), and the page is served on CKAN's host with a CSP `sandbox` and
+  list; relative links point at the files on the repository's site, relative images at their
+  raw addresses), and the page is served on CKAN's host with a CSP `sandbox` and
   `default-src 'none'`, in a frame sandboxed with `allow-popups` only. With nothing able to
   run, it needs no separate domain for uploads. On a private dataset, the page needs the same
   access as the dataset.
-- **Third-party content.** README images load in the visitor's browser (GitHub, its image
-  proxy, badge services), so the consent card covers these views under `privacy_profile = eu`,
-  `consent_gate` or Global Privacy Control.
+- **Third-party content.** README images load in the visitor's browser (the repository's site,
+  image proxies, badge services), so the consent card covers these views, naming the
+  repository's host, under `privacy_profile = eu`, `consent_gate` or Global Privacy Control.
 
-Not yet: GitLab, Bitbucket and Codeberg, self-hosted Git sites, and `check-views` reporting.
+Not yet: `check-views` reporting, and the Website (Plus) form offering a Repository view for
+repository links.
 
 ### Privacy and telemetry
 
@@ -1436,8 +1461,9 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.show_connections` | `false` | Show those hosts under the view |
 | `ckanext.webpageviewplus.pdf_max_size` | `25` | With `pdf_view_plus`, the largest PDF on another site CKAN fetches, in MB |
 | `ckanext.webpageviewplus.pdf_cache_seconds` | `3600` | With `pdf_view_plus`, how long CKAN (and browsers, for public datasets) keep a linked PDF before fetching it again |
-| `ckanext.webpageviewplus.repo_cache_seconds` | `3600` | With `repo_view_plus`, how long CKAN keeps its copy of a repository's page before asking GitHub again |
+| `ckanext.webpageviewplus.repo_cache_seconds` | `3600` | With `repo_view_plus`, how long CKAN keeps its copy of a repository's page before asking its site again |
 | `ckanext.webpageviewplus.github_token` | (none) | With `repo_view_plus`, a GitHub token raising GitHub's limit from 60 to 5,000 requests an hour; sent only to `api.github.com`. A fine-grained token with no permissions is enough |
+| `ckanext.webpageviewplus.repo_hosts` | (none) | With `repo_view_plus`, self-hosted GitHub Enterprise, Gitea/Forgejo and GitLab sites, as `host kind` pairs ([details](#repository-views)) |
 
 ### Commands and API
 

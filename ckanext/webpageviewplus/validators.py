@@ -337,4 +337,5 @@ def repo_after_validator(
         url = resource.url if resource is not None and resource.url_type != "upload" else ""
     if not repos.is_repo_link(url or ""):
         _add_error(errors, "repo_url", toolkit._(
-            "Not a GitHub repository's address, such as https://github.com/ckan/ckan"))
+            "Not the address of a repository on GitHub, GitLab, Codeberg or Bitbucket, "
+            "such as https://github.com/ckan/ckan"))

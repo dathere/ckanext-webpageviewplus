@@ -654,8 +654,9 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
 
 
 class RepoViewPlusPlugin(plugins.SingletonPlugin):
-    """A public GitHub repository's root (repos.py): fetched by CKAN, shown
-    as a static page with no scripts, so no content origin is needed."""
+    """A public repository's root on GitHub, Codeberg, GitLab, Bitbucket or
+    a repo_hosts site (repos.py): fetched by CKAN, shown as a static page with
+    no scripts, so no content origin is needed."""
 
     plugins.implements(plugins.IConfigurable)
     plugins.implements(plugins.IBlueprint)
@@ -669,10 +670,12 @@ class RepoViewPlusPlugin(plugins.SingletonPlugin):
                 "repo_view_plus needs the webpage_view_plus plugin: "
                 "add it to ckan.plugins before repo_view_plus")
         try:
+            import cmarkgfm  # noqa: F401
             import nh3  # noqa: F401
         except ImportError:
             raise CkanConfigurationException(
-                "repo_view_plus needs nh3: pip install \"ckanext-webpageviewplus[repos]\"")
+                "repo_view_plus needs nh3 and cmarkgfm: "
+                "pip install \"ckanext-webpageviewplus[repos]\"")
 
     # IBlueprint
 
@@ -741,7 +744,8 @@ class RepoViewPlusPlugin(plugins.SingletonPlugin):
             endpoint = request.endpoint
             g.webpageviewplus_vary_held_back = True
         # CKAN fetches the repository, but the README's images load in the
-        # visitor's browser from GitHub and other hosts: third-party content.
+        # visitor's browser from the repository's site and others:
+        # third-party content.
         consent = gpc or settings.consent_gate() or settings.privacy_profile() == "eu"
         events.emit("view_rendered", preset=built.preset, requested_preset=repos.VIEW_TYPE,
                     notices=",".join(built.notices) or "-", endpoint=endpoint)
@@ -762,7 +766,7 @@ class RepoViewPlusPlugin(plugins.SingletonPlugin):
             count_url=None,
             privacy_policy_url=settings.privacy_policy_url(),
             connections=[],
-            consent_host="github.com",
+            consent_host=found.host.host,
             deferred_src=built.src,
             load_size=None,
             frame_error=None,

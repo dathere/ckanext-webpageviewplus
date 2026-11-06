@@ -1,10 +1,12 @@
-"""repo_view_plus: seed.py's Repository views, whose GitHub answers it writes
-into CKAN's cache (GitHub is never asked). The page runs no scripts, so
+"""repo_view_plus: seed.py's Repository views, whose answers it writes into
+CKAN's cache (no site is ever asked). The page runs no scripts, so
 Playwright reads and clicks it from its own world. Checked: the frame's
 sandbox and the route's CSP, the inline stylesheet allowed by its hash,
 links opening a new tab (example.com answered by the test) while in-page links scroll, Reload staying on
 CKAN, the card for a missing repository, and the consent card naming
-github.com.
+github.com. For Codeberg, GitLab and Bitbucket: the page, its Markdown
+README's in-page link, relative links on that site, and no stars on
+Bitbucket.
 """
 import re
 
@@ -110,3 +112,41 @@ def test_axe(page, repo_urls):
         "resultTypes": ["violations"], "iframes": False,
     })
     assert results.violations_count == 0, results.generate_report()
+
+
+OTHER_SITES = [
+    ("Codeberg repository", "wvp-browser/example",
+     "https://codeberg.org/wvp-browser/example/src/branch/main/docs/guide.md", True),
+    ("GitLab repository", "wvp-browser/group/example",
+     "https://gitlab.com/wvp-browser/group/example/-/blob/main/docs/guide.md", True),
+    ("Bitbucket repository", "wvp-browser/example",
+     "https://bitbucket.org/wvp-browser/example/src/master/docs/guide.md", False),
+]
+
+
+@pytest.mark.parametrize("title, name, guide, counts", OTHER_SITES)
+def test_other_sites(page, repo_urls, title, name, guide, counts):
+    if title not in repo_urls:
+        pytest.skip("seed.py predates the other sites")
+    _, child = _open(page, repo_urls[title])
+    expect(child.locator(".repo-head h1")).to_have_text(name)
+    expect(child.locator(".repo-readme li input[type=checkbox]")).to_be_checked()
+    assert child.get_by_role("link", name="the guide").get_attribute("href") == guide
+    facts = child.locator(".repo-facts")
+    if counts:
+        expect(facts).to_contain_text("stars")
+    else:
+        expect(facts).not_to_contain_text("star")
+    child.get_by_role("link", name="Usage").click()
+    expect(child.locator("h2", has_text="Usage")).to_be_in_viewport()
+    assert child.locator("body").evaluate("b => location.hash") == "#user-content-usage"
+    assert len(page.context.pages) == 1
+
+
+def test_consent_card_names_the_repositorys_host(page, repo_urls):
+    if "GitLab repository" not in repo_urls:
+        pytest.skip("seed.py predates the other sites")
+    page.set_extra_http_headers({"Sec-GPC": "1"})
+    page.goto(repo_urls["GitLab repository"])
+    expect(page.locator("[data-webpageviewplus-card]")).to_contain_text(
+        "This view loads content from gitlab.com.")

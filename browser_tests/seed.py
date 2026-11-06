@@ -3,9 +3,10 @@ two uploaded fixtures (the qsv protocol, and the generic resize message) and
 one view per case. View titles are unique across both. For the thumbnails
 plugin, an image, a page whose view picks it, and links to two well-known
 services (one with a logo, one without); nothing is fetched, as the
-browser CI runs without thumbnail_fetch. With repo_view_plus, two
-Repository views whose GitHub answers are written into CKAN's cache, so
-GitHub is never asked. Idempotent: the
+browser CI runs without thumbnail_fetch. With repo_view_plus, Repository
+views (a GitHub repository, a missing one, and one each on Codeberg, GitLab
+and Bitbucket) whose answers are written into CKAN's cache, so the sites are
+never asked. Idempotent: the
 dataset is purged and recreated. Run inside the CKAN container, with
 CKAN_INI pointing at the site's config:
 
@@ -86,9 +87,22 @@ SERVICE_LINKS = [
 PICKED_PAGE = b"<!doctype html><title>Picked thumbnail</title><p>Its view picks an image.</p>"
 
 # repo_view_plus: a copy of each repository's page is written where CKAN
-# keeps it, so the views never ask GitHub (ci.ini keeps copies for a year).
+# keeps it, so the views never ask the sites (ci.ini keeps copies for a year).
 REPO = "https://github.com/wvp-browser/example"
 MISSING_REPO = "https://github.com/wvp-browser/missing"
+# One per other kind of site, each with a Markdown README rendered here as
+# CKAN renders a fetched one: (title, link, site, branch, stars and forks).
+OTHER_REPOS = (
+    ("Codeberg repository", "https://codeberg.org/wvp-browser/example", "Codeberg", "main", 12),
+    ("GitLab repository", "https://gitlab.com/wvp-browser/group/example", "GitLab", "main", 34),
+    ("Bitbucket repository", "https://bitbucket.org/wvp-browser/example", "Bitbucket", "master",
+     None),
+)
+OTHER_README = (
+    "# Example\n\nJump to [Usage](#usage), or read [the guide](docs/guide.md).\n\n"
+    + "".join("Filler paragraph {}.\n\n".format(i) for i in range(60))
+    + "## Usage\n\n- [x] Rendered from Markdown\n\n| Site | Kind |\n|---|---|\n| here | test |\n"
+)
 REPO_README = (
     '<div id="readme" data-path="README.md"><article>'
     '<h1>Example</h1><p>Jump to <a href="#usage">Usage</a>, or see '
@@ -210,8 +224,9 @@ def _seed_repos(act, ctx, pkg):
     def base(url):
         return os.path.join(folder, hashlib.sha256(repos.parse(url).key.encode()).hexdigest())
 
+    others = [url for _, url, _, _, _ in OTHER_REPOS]
     for suffix in (".json", ".failed", ".lock"):
-        for url in (REPO, MISSING_REPO):
+        for url in [REPO, MISSING_REPO] + others:
             if os.path.exists(base(url) + suffix):
                 os.remove(base(url) + suffix)
     repos._write(base(REPO) + ".json", {
@@ -224,14 +239,35 @@ def _seed_repos(act, ctx, pkg):
             {"name": "README.md", "type": "file", "url": REPO + "/blob/main/README.md"},
         ],
         "truncated": False,
-        "readme": repos.clean_readme(REPO_README, "wvp-browser", "example", "main",
-                                     "README.md"),
+        "readme": repos.clean_readme(REPO_README, *repos._readme_bases(
+            repos.BUILT_IN["github.com"], "wvp-browser", "example", "main", "README.md")),
     })
+    for _, url, site, ref, count in OTHER_REPOS:
+        found = repos.parse(url)
+        repos._write(base(url) + ".json", {
+            "site": site, "full_name": "{}/{}".format(found.owner, found.name),
+            "html_url": url, "description": "A {} repository the browser tests show".format(site),
+            "language": "", "stars": count, "forks": count,
+            "pushed_at": "2026-11-01T12:00:00Z", "archived": False, "ref": ref,
+            "entries": [
+                {"name": "docs", "type": "dir",
+                 "url": repos._site_url(found.host, found.owner, found.name, ref, "docs", "dir")},
+                {"name": "README.md", "type": "file",
+                 "url": repos._site_url(found.host, found.owner, found.name, ref, "README.md",
+                                        "file")},
+            ],
+            "truncated": False,
+            "readme": repos.clean_readme(
+                repos.render_readme(OTHER_README, "README.md"),
+                *repos._readme_bases(found.host, found.owner, found.name, ref, "README.md")),
+        })
     # GitHub's 404, remembered for a year: the view shows its card.
     repos._write(base(MISSING_REPO) + ".failed",
                  {"kind": "missing", "until": time.time() + 365 * 86400})
-    for name, url, title in (("Repository link", REPO, "Repository"),
-                             ("Missing repository link", MISSING_REPO, "Missing repository")):
+    views = [("Repository link", REPO, "Repository"),
+             ("Missing repository link", MISSING_REPO, "Missing repository")]
+    views += [(title + " link", url, title) for title, url, _, _, _ in OTHER_REPOS]
+    for name, url, title in views:
         resource = act("resource_create")(ctx(), {
             "package_id": pkg["id"], "name": name, "url": url})
         for v in act("resource_view_list")(ctx(), {"id": resource["id"]}):

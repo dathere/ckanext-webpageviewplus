@@ -122,11 +122,10 @@ order now being built:
    Uploads `pdf.source` can't read (a cloud storage extension on 2.10/2.11) are never
    offered the view (`can_view`) and `migrate-pdf` leaves their `pdf_view` views alone.
 
-11. Done for GitHub (released in 0.11.0): `repo_view_plus` (spec section "Proposed:
-   Repository (Plus) view"); see `repos.py` below. Next: Codeberg/Gitea
-   (`repo_hosts`), then GitLab and Bitbucket (raw Markdown: add cmarkgfm to `[repos]`, after
-   checking it has a wheel for the 2.12 image's Python), `check-views` reporting, and the
-   Website (Plus) form offering a Repository view for repository links.
+11. Done: `repo_view_plus` (spec section "Proposed: Repository (Plus) view"; GitHub released
+   in 0.11.0; Codeberg/Gitea/Forgejo, GitLab, Bitbucket and `repo_hosts` unreleased, issue
+   #3); see `repos.py` below. Next: `check-views` reporting, and the Website (Plus) form
+   offering a Repository view for repository links (separate issues).
 
 ## The security model (read before touching frame, validator, content or download code)
 
@@ -301,23 +300,37 @@ order now being built:
   viewer's own document only because the CKAN page is cross-origin;
   `browser_tests/test_pdf.py` checks the options took effect.
 - `repos.py` + `RepoViewPlusPlugin` (`plugin.py`): the `repo_view_plus` view type (a plugin
-  of its own, needing `webpage_view_plus` and nh3, the `[repos]` extra). `parse()` accepts only
-  a repository root (`github.com/<owner>/<repo>`, `.git`, `/tree/<branch>`). `cached()` is
-  `pdf.cached_pdf`'s shape keyed by owner/repo/ref (shared across views): `fetch()` makes three
-  GitHub API calls through `_api` (frameability's `_guarded`/`_address_kind`, redirects only
-  within api.github.com so `github_token` never leaves it; 403/429 with no requests left is
-  `rate_limited`, remembered until GitHub's reset), and a failed refresh keeps serving the old
-  copy. The README comes rendered by GitHub and is cleaned by `clean_readme` (nh3, fixed
-  tag/attribute lists, relative links to blob/raw addresses). The page route
+  of its own, needing `webpage_view_plus`, nh3 and cmarkgfm, the `[repos]` extra). A `Host`
+  (kind `github`/`gitea`/`gitlab`/`bitbucket`, web host, API base, site name) comes from
+  `host_for()`: `BUILT_IN` (github.com, codeberg.org, gitlab.com, bitbucket.org; keep it in
+  step with `settings.REPO_BUILT_IN_HOSTS`) or `settings.repo_hosts()` (self-hosted
+  `github`/`gitea`/`gitlab`, API at `_SELF_HOSTED_API`, checked by `settings.check()`).
+  `parse()` accepts only a repository root, in each site's own form (`_shape`: GitHub
+  `/tree/<b>`, Gitea `/src/branch/<b>` (it has no `/tree/`), GitLab nested groups and
+  `/-/tree/<b>`, Bitbucket `/src/<b>/`; `.git`; `_RESERVED` per kind). `cached()` is
+  `pdf.cached_pdf`'s shape keyed by `Repo.key` (host/owner/repo@ref; GitHub's unchanged from
+  0.11.0). `fetch()` dispatches to `_FETCHERS` (one per kind, all returning `_page_data`'s
+  dict; stars/forks None where a site doesn't count them) through `_api(path, ..., api=)`
+  (frameability's `_guarded`/`_address_kind`, redirects only within that API's base, and
+  `github_token` only when the base is `GITHUB_API`, never GitHub Enterprise); `_rate_limit`
+  reads every site's headers (a 429, or a 403 with none left) into `rate_limited` until the
+  reset, and a failed refresh keeps serving the old copy. GitHub's README comes rendered; the
+  others are picked from the listing (`_pick_readme`), fetched raw, and rendered by
+  `render_readme` (cmarkgfm with `CMARK_OPT_UNSAFE` so raw HTML reaches nh3, plus GitHub-style
+  `user-content-` heading ids; non-Markdown as `<pre>`). `clean_readme(html, blob, raw)` takes
+  the folder bases `_readme_bases` gives per kind (nh3, fixed tag/attribute lists). GitLab
+  and Bitbucket list the root's first `PAGE_ENTRIES` (100) only. The page route
   `/webpageviewplus/repo/<view_id>` runs on CKAN's host (re-checking `resource_view_show` as the
   visitor), with a CSP `sandbox allow-popups allow-popups-to-escape-sandbox`, `default-src
   'none'` and its one inline stylesheet allowed by hash (`assets/repo_page.css`, so editing it
   changes `repos.CSP` at import). The frame is `strict` with `sandbox_override=repos.SANDBOX`:
   no scripts, so the invariant has nothing to refuse and no content origin is needed. Consent
-  applies (README images are third-party), with `consent_host` github.com. Tests fake
+  applies (README images are third-party), with `consent_host` the repository's host. Tests fake
   `repos._api` (`tests/test_repos.py`); don't use `with_request_context` there, or the route
-  sees an anonymous visitor. Browser tests: `browser_tests/test_repos.py` (sandbox and CSP,
-  the style hash, new-tab and in-page links, Reload, the missing card, consent).
+  sees an anonymous visitor. The `api` fixture keys GitHub's answers by path and other sites'
+  by their whole address. Browser tests: `browser_tests/test_repos.py` (sandbox and CSP, the
+  style hash, new-tab and in-page links, Reload, the missing card, consent, and a seeded
+  Markdown copy each on Codeberg, GitLab and Bitbucket).
 - `health.py`: views whose page can't be shown. **Rendering never fetches**: with
   `frameability_check` on, `resource_view_create`/`_update` are chained (`actions.py`) to probe
   the page once after the save (`health.after_save`, `SAVE_SECONDS` overall via
@@ -478,7 +491,7 @@ CKAN 2.11.5, http://localhost:5001.
   `docker exec ckan-docker-ckan-dev-1 python /srv/app/src_extensions/ckanext-webpageviewplus/demo/seed_features.py`.
   `demo/record_demo.py` (host, Playwright) records the README's `docs/demo.gif` from those datasets;
   its docstring has the ffmpeg step.
-- Pillow and nh3 (needed by `webpage_view_plus_thumbnails` and `repo_view_plus`) are installed
+- Pillow, nh3 and cmarkgfm (needed by `webpage_view_plus_thumbnails` and `repo_view_plus`) are installed
   only in the running container, not the image, and nothing reinstalls them at start. After
   recreating ckan-dev (`down`/`up`, a rebuild), CKAN refuses to start until you run
   `docker exec -u root ckan-docker-ckan-dev-1 pip install -r /srv/app/src_extensions/ckanext-webpageviewplus/dev-requirements.txt`.
