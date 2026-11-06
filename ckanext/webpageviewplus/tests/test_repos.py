@@ -751,6 +751,7 @@ def test_raw_html_ids_match_the_rewritten_links():
 @pytest.mark.parametrize("heading", [
     "<h1>" * (repos.MAX_README // 4),  # unclosed: none may rescan the rest
     "<h2>x</h2>" * (repos.MAX_README // 10),  # all the same slug
+    "<h2>" + "<" * repos.MAX_README + "</h2>",  # no tag ever closes inside
 ])
 def test_heading_ids_stay_linear(heading):
     start = time.monotonic()

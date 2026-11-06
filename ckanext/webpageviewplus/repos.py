@@ -565,7 +565,8 @@ def render_readme(text: str, path: str) -> str:
 
 
 _HEADING_TAG = re.compile(r"<(/?)h([1-6])>")
-_TAG = re.compile(r"<[^>]*>")
+# Stops at the next "<", so a heading full of unmatched "<" is still one pass.
+_TAG = re.compile(r"<[^<>]*>")
 _SLUG_DROP = re.compile(r"[^\w\- ]")
 
 
