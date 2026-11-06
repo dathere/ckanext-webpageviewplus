@@ -16,6 +16,11 @@
   API.
 - Each site's rate limit is read from its own headers (GitHub's and GitLab's reset times,
   Codeberg's `RateLimit`, `Retry-After`), so a view waits for the right moment.
+- `ckan webpageviewplus doctor` fetches a public HTML upload's download through the site's
+  address and fails if it arrives without its CSP sandbox (or with `allow-same-origin`) or
+  without `nosniff`, as when a proxy or CDN rule strips them. A redirect off CKAN's host
+  (the content origin, a storage's own link) passes. Skipped with `harden_downloads` off
+  and with `--no-http`. (#6)
 
 ### Changed
 

@@ -1,4 +1,5 @@
 import io
+from types import SimpleNamespace
 
 import pytest
 from werkzeug.datastructures import FileStorage
@@ -369,3 +370,154 @@ class TestDoctor:
         assert len(problems) == len(fetched) == 2
         assert all(url.startswith("https://ckan.example/") and "/ckanext-webpageviewplus/" in url
                    for url in fetched)
+
+
+SANDBOX = "sandbox allow-scripts allow-popups allow-forms"
+
+
+class TestDownloadFinding:
+    """doctor's check that downloads reach the machine still sandboxed."""
+
+    @pytest.fixture(autouse=True)
+    def tables(self, monkeypatch):
+        import ckan.cli.db
+        monkeypatch.setattr(ckan.cli.db, "current_revision", lambda plugin: "abc (head)")
+
+    @pytest.fixture
+    def answer(self, monkeypatch):
+        import requests
+        from requests.structures import CaseInsensitiveDict
+        monkeypatch.setattr(wvp_cli, "_probe_upload", lambda: SimpleNamespace(
+            id="r1", url="page.html", url_type="upload",
+            package=SimpleNamespace(id="p1", type="dataset")))
+        fetched = []
+
+        def answer(status, **headers):
+            class Response:
+                status_code = status
+
+                def close(self):
+                    pass
+            Response.headers = CaseInsensitiveDict(
+                {k.replace("_", "-"): v for k, v in headers.items()})
+
+            def get(url, **kw):
+                fetched.append((url, kw))
+                return Response()
+            # Only around the call: CKAN's own teardown talks to Solr by requests.
+            with monkeypatch.context() as patched:
+                patched.setattr(requests, "get", get)
+                return wvp_cli.download_finding("https://ckan.example/")
+        answer.fetched = fetched
+        return answer
+
+    def test_sandboxed(self, answer):
+        level, text = answer(200, Content_Type="text/html", X_Content_Type_Options="nosniff",
+                             Content_Security_Policy=SANDBOX)
+        assert level == "ok"
+        url, kw = answer.fetched[0]
+        assert url == "https://ckan.example/dataset/p1/resource/r1/download/page.html"
+        assert kw["allow_redirects"] is False
+
+    def test_one_of_several_policies_sandboxes(self, answer):
+        level, _ = answer(200, Content_Type="text/html", X_Content_Type_Options="nosniff",
+                          Content_Security_Policy="default-src 'self', " + SANDBOX)
+        assert level == "ok"
+
+    @pytest.mark.parametrize("headers, says", [
+        ({"X_Content_Type_Options": "nosniff"}, "without Content-Security-Policy: sandbox"),
+        ({"X_Content_Type_Options": "nosniff",
+          "Content_Security_Policy": "default-src 'self'"}, "Content-Security-Policy: sandbox"),
+        ({"X_Content_Type_Options": "nosniff",
+          "Content_Security_Policy": SANDBOX + " allow-same-origin"}, "allow-same-origin"),
+        ({"Content_Security_Policy": SANDBOX}, "X-Content-Type-Options: nosniff"),
+    ])
+    def test_stripped_or_loosened_fails(self, answer, headers, says):
+        level, text = answer(200, Content_Type="text/html", **headers)
+        assert level == "fail"
+        assert says in text
+
+    def test_redirect_off_ckan_host(self, answer):
+        level, text = answer(302, Location="https://usercontent.example.net/x/page.html")
+        assert level == "ok"
+        assert "usercontent.example.net" in text
+
+    def test_redirect_to_ckan_host_fails(self, answer, monkeypatch):
+        from ckanext.webpageviewplus import settings
+        monkeypatch.setattr(settings, "ckan_hosts", lambda: ["ckan.example"])
+        level, _ = answer(302, Location="https://ckan.example/elsewhere/page.html")
+        assert level == "fail"
+
+    def test_redirect_to_the_probed_host_fails(self, answer, monkeypatch):
+        # --site-url http://localhost:5000 isn't in ckan.site_url or site_aliases.
+        import requests
+        from requests.structures import CaseInsensitiveDict
+        from ckanext.webpageviewplus import settings
+        monkeypatch.setattr(settings, "ckan_hosts", lambda: ["ckan.example"])
+
+        class Response:
+            status_code = 302
+            headers = CaseInsensitiveDict({"Location": "http://localhost:5000/other/page.html"})
+
+            def close(self):
+                pass
+        with pytest.MonkeyPatch.context() as patched:
+            patched.setattr(requests, "get", lambda url, **kw: Response())
+            level, _ = wvp_cli.download_finding("http://localhost:5000")
+        assert level == "fail"
+
+    def test_only_a_policys_first_sandbox_counts(self, answer):
+        # Browsers ignore a repeated directive within one policy.
+        level, _ = answer(200, Content_Type="text/html", X_Content_Type_Options="nosniff",
+                          Content_Security_Policy="sandbox allow-scripts allow-same-origin; "
+                                                  + SANDBOX)
+        assert level == "fail"
+
+    @pytest.mark.parametrize("status, headers", [
+        (403, {}),
+        (200, {"Content_Type": "text/plain"}),
+    ])
+    def test_cannot_judge_is_a_note(self, answer, status, headers):
+        level, _ = answer(status, **headers)
+        assert level == "note"
+
+    def test_no_public_upload_is_a_note(self, monkeypatch):
+        monkeypatch.setattr(wvp_cli, "_probe_upload", lambda: None)
+        level, text = wvp_cli.download_finding("https://ckan.example/")
+        assert level == "note"
+        assert "curl" in text
+
+    @pytest.mark.usefixtures("non_clean_db")
+    def test_probe_is_a_public_page_upload(self):
+        private = factories.Dataset(private=True, owner_org=factories.Organization()["id"])
+        public = factories.Dataset()
+        factories.Resource(package_id=private["id"], url_type="upload", url="a.html",
+                           format="HTML")
+        factories.Resource(package_id=public["id"], url_type="upload", url="b.csv",
+                           format="CSV")
+        factories.Resource(package_id=public["id"], url_type="upload", url="c.html",
+                           format="HTML")
+        found = wvp_cli._probe_upload()
+        assert found is not None
+        assert not found.package.private
+        assert found.package.state == "active"
+        assert found.url_type == "upload" and wvp_cli._active_content(found)
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.harden_downloads", "false")
+    def test_skipped_with_harden_downloads_off(self, cli, monkeypatch):
+        # diagnose() already warns; a "stripped header" failure would mislead.
+        monkeypatch.setattr(wvp_cli, "asset_problems", lambda site_url: [])
+        called = []
+        monkeypatch.setattr(wvp_cli, "download_finding",
+                            lambda site_url: called.append(site_url) or ("ok", "x"))
+        result = cli.invoke(ckan, ["webpageviewplus", "doctor", "--site-url", "https://x"])
+        assert result.exit_code == 0, result.output
+        assert called == []
+
+    def test_doctor_fails_on_a_stripped_header(self, cli, monkeypatch):
+        monkeypatch.setattr(wvp_cli, "asset_problems", lambda site_url: [])
+        monkeypatch.setattr(wvp_cli, "download_finding",
+                            lambda site_url: ("fail", "stripped at " + site_url))
+        result = cli.invoke(ckan, ["webpageviewplus", "doctor", "--site-url", "https://x"])
+        assert result.exit_code == 1
+        assert "stripped at https://x" in result.output
