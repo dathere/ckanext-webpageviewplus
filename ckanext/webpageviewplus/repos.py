@@ -564,27 +564,51 @@ def render_readme(text: str, path: str) -> str:
     return _heading_ids(rendered)
 
 
-_HEADING = re.compile(r"<h([1-6])>(.*?)</h\1>", re.DOTALL)
+_HEADING_TAG = re.compile(r"<(/?)h([1-6])>")
 _TAG = re.compile(r"<[^>]*>")
 _SLUG_DROP = re.compile(r"[^\w\- ]")
 
 
 def _heading_ids(rendered: str) -> str:
     """GitHub's heading ids (``user-content-`` and a slug, ``-1`` and so on
-    for repeats), so the README's ``#`` links scroll as on GitHub."""
-    seen: dict[str, int] = {}
+    for repeats), so the README's ``#`` links scroll as on GitHub.
 
-    def add(match: "re.Match[str]") -> str:
-        text = html_lib.unescape(_TAG.sub("", match.group(2)))
-        slug = _SLUG_DROP.sub("", text.strip().lower()).replace(" ", "-")
-        count = seen.get(slug, 0)
-        seen[slug] = count + 1
-        if count:
-            slug = "{}-{}".format(slug, count)
-        return '<h{0} id="user-content-{1}">{2}</h{0}>'.format(
-            match.group(1), html_lib.escape(slug), match.group(2))
+    One pass over the heading tags: a heading is a bare opening tag whose
+    next heading tag closes it. A README's raw HTML can hold any number of
+    unclosed headings, so nothing here rescans the text after them."""
+    used: set[str] = set()
+    counters: dict[str, int] = {}
+    parts = []
+    last = 0
+    opened: Optional["re.Match[str]"] = None
+    for tag in _HEADING_TAG.finditer(rendered):
+        if not tag.group(1):
+            opened = tag
+            continue
+        if opened is not None and opened.group(2) == tag.group(2):
+            inner = rendered[opened.end():tag.start()]
+            text = html_lib.unescape(_TAG.sub("", inner))
+            slug = _unused(_SLUG_DROP.sub("", text.strip().lower()).replace(" ", "-"),
+                           used, counters)
+            parts.append(rendered[last:opened.start()])
+            parts.append('<h{0} id="user-content-{1}">{2}</h{0}>'.format(
+                tag.group(2), html_lib.escape(slug), inner))
+            last = tag.end()
+        opened = None
+    parts.append(rendered[last:])
+    return "".join(parts)
 
-    return _HEADING.sub(add, rendered)
+
+def _unused(base: str, used: set[str], counters: dict[str, int]) -> str:
+    """``base``, or the first ``base-<n>`` not given out yet: a heading
+    titled "Foo-1" may already have taken one."""
+    slug, n = base, counters.get(base, 0)
+    while slug in used:
+        n += 1
+        slug = "{}-{}".format(base, n)
+    counters[base] = n
+    used.add(slug)
+    return slug
 
 
 # Cleaning the README
@@ -614,12 +638,16 @@ def clean_readme(html: str, blob: str, raw: str) -> str:
     """A rendered README, cleaned with nh3 to a fixed list of tags and
     attributes. Relative links resolve against ``blob`` (the README's folder
     on the site) and relative images against ``raw`` (its raw files); in-page
-    links point at ``user-content-`` ids, as GitHub's headings have."""
+    links, ids and names all carry ``user-content-``, as GitHub's do."""
     import nh3
 
     def rewrite(tag: str, attribute: str, value: str) -> Optional[str]:
         if tag == "input" and attribute == "type":
             return value if value == "checkbox" else None
+        if attribute in ("id", "name"):
+            # As GitHub does, so a raw <h2 id="install"> is where the
+            # rewritten #install link below points.
+            return value if value.startswith("user-content-") else "user-content-" + value
         if attribute not in ("href", "src"):
             return value
         value = value.strip()

@@ -734,6 +734,30 @@ def test_heading_ids_like_githubs():
     assert '<h1 id="user-content-code--more">' in out
 
 
+def test_heading_ids_never_repeat():
+    out = repos.render_readme("# Foo\n\n# Foo-1\n\n# Foo\n\n# Foo\n", "README.md")
+    assert [h["id"] for h in BeautifulSoup(out, "html.parser").find_all("h1")] == [
+        "user-content-foo", "user-content-foo-1", "user-content-foo-2", "user-content-foo-3"]
+
+
+def test_raw_html_ids_match_the_rewritten_links():
+    html = repos.render_readme('<h2 id="install">Install</h2>\n\n[go](#install) '
+                               '<a name="top"></a>\n', "README.md")
+    out = repos.clean_readme(html, "https://x.example/b/", "https://x.example/r/")
+    assert 'id="user-content-install"' in out and 'href="#user-content-install"' in out
+    assert 'name="user-content-top"' in out
+
+
+@pytest.mark.parametrize("heading", [
+    "<h1>" * (repos.MAX_README // 4),  # unclosed: none may rescan the rest
+    "<h2>x</h2>" * (repos.MAX_README // 10),  # all the same slug
+])
+def test_heading_ids_stay_linear(heading):
+    start = time.monotonic()
+    repos._heading_ids(heading)
+    assert time.monotonic() - start < 2
+
+
 class TestRateLimits:
     NOW = 1_800_000_000.0
 
