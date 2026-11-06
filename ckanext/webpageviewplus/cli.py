@@ -560,13 +560,15 @@ def _probe_upload() -> Optional[model.Resource]:
 
 
 def _sandboxes(policies: list[str]) -> list[str]:
-    """The ``sandbox`` directives in a response's CSP headers."""
+    """The ``sandbox`` directive browsers enforce in each of a response's CSP
+    policies: within one policy, only the first directive of a name counts."""
     found = []
     for policy in policies:
         for directive in policy.split(";"):
             words = directive.split()
             if words and words[0].lower() == "sandbox":
                 found.append(" ".join(words))
+                break
     return found
 
 
@@ -595,7 +597,10 @@ def download_finding(site_url: str, timeout: float = 10) -> tuple[str, str]:
     if status in (301, 302, 303, 307, 308):
         location = response.headers.get("Location", "")
         host = frame.url_host(location)
-        if host and not frame.is_ckan_host(location, settings.ckan_hosts()):
+        # The address probed counts as CKAN's too (--site-url may name one
+        # that isn't in ckan.site_url or site_aliases).
+        hosts = settings.ckan_hosts() + [frame.url_host(site_url)]
+        if host and not frame.is_ckan_host(location, [h for h in hosts if h]):
             return ("ok", "An HTML upload's download is sent off CKAN's host, to {} ({})."
                     .format(host, url))
         return ("fail", "An HTML upload's download redirects to CKAN's own host ({} -> {}), "

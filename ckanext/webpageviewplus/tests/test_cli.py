@@ -448,6 +448,31 @@ class TestDownloadFinding:
         level, _ = answer(302, Location="https://ckan.example/elsewhere/page.html")
         assert level == "fail"
 
+    def test_redirect_to_the_probed_host_fails(self, answer, monkeypatch):
+        # --site-url http://localhost:5000 isn't in ckan.site_url or site_aliases.
+        import requests
+        from requests.structures import CaseInsensitiveDict
+        from ckanext.webpageviewplus import settings
+        monkeypatch.setattr(settings, "ckan_hosts", lambda: ["ckan.example"])
+
+        class Response:
+            status_code = 302
+            headers = CaseInsensitiveDict({"Location": "http://localhost:5000/other/page.html"})
+
+            def close(self):
+                pass
+        with pytest.MonkeyPatch.context() as patched:
+            patched.setattr(requests, "get", lambda url, **kw: Response())
+            level, _ = wvp_cli.download_finding("http://localhost:5000")
+        assert level == "fail"
+
+    def test_only_a_policys_first_sandbox_counts(self, answer):
+        # Browsers ignore a repeated directive within one policy.
+        level, _ = answer(200, Content_Type="text/html", X_Content_Type_Options="nosniff",
+                          Content_Security_Policy="sandbox allow-scripts allow-same-origin; "
+                                                  + SANDBOX)
+        assert level == "fail"
+
     @pytest.mark.parametrize("status, headers", [
         (403, {}),
         (200, {"Content_Type": "text/plain"}),
