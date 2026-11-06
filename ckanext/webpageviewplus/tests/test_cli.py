@@ -293,9 +293,17 @@ class TestDoctor:
     def _levels(self):
         return {level for level, _ in wvp_cli.diagnose()}
 
-    def test_warns_without_isolation(self):
-        found = dict((text.split(" (")[0], level) for level, text in wvp_cli.diagnose())
-        assert found["No isolating content origin"] == "warn"
+    def test_notes_without_content_origin(self):
+        found = [(level, text) for level, text in wvp_cli.diagnose()
+                 if text.startswith("No content origin")]
+        assert [level for level, _ in found] == ["note"]
+        assert "External included" in found[0][1]
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.harden_downloads", False)
+    def test_warns_without_sandboxed_downloads(self):
+        found = [level for level, text in wvp_cli.diagnose()
+                 if text.startswith("harden_downloads is off")]
+        assert found == ["warn"]
 
     @pytest.mark.usefixtures("content_origin")
     def test_isolated(self):

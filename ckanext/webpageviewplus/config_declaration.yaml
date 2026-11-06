@@ -52,7 +52,8 @@ groups:
           as CKAN with the viewer's session. Changes core behaviour: such a
           page opened from its download link loses storage and a real origin
           (e.g. a qsv Data Schematic's maps), until a content origin serves
-          it instead.
+          it instead. Turning it off also makes the external and
+          data-schematic presets run as interactive.
 
       - key: ckanext.webpageviewplus.frameability_check
         default: false

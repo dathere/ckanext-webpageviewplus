@@ -228,8 +228,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             "referrer_policies": frame.REFERRER_POLICIES,
             "can_set_advanced": v.can_set_advanced(context),
             "frameability_check": settings.frameability_check(),
-            # `external` runs as `interactive` until uploads are isolated.
-            "isolated": settings.isolating_content_origin(),
+            # `external` runs as `interactive` unless downloads are sandboxed.
+            "isolated": settings.harden_downloads(),
             "allowed_hosts": settings.allowed_hosts(),
             "service_names": services.NAMES,
             # Shown without the form's script too, so a site whose asset
@@ -294,6 +294,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             ckan_hosts=ckan_hosts,
             is_upload=is_upload,
             content_origin=settings.isolating_content_origin(),
+            downloads_sandboxed=settings.harden_downloads(),
             sandbox_override=resource_view.get("sandbox") or "",
             allow_override=resource_view.get("allow") or "",
             referrer_policy=(

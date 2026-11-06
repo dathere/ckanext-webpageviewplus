@@ -419,11 +419,18 @@ class TestAction:
         assert self._call(factories.Sysadmin(), resource_id=self._resource()["id"],
                           url="https://pages.example.com/") is None
 
-    def test_needs_content_origin_without_isolation(self):
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.harden_downloads", "false")
+    def test_needs_sandboxed_downloads(self):
         result = self._call(factories.Sysadmin(), resource_id=self._resource()["id"],
                             url="https://youtu.be/dQw4w9WgXcQ")
         assert result["embed_url"] == YT
-        assert result["problem"] == "needs_content_origin"
+        assert result["problem"] == "needs_sandboxed_downloads"
+
+    def test_external_without_a_content_origin(self):
+        result = self._call(factories.Sysadmin(), resource_id=self._resource()["id"],
+                            url="https://youtu.be/dQw4w9WgXcQ")
+        assert result["preset"] == "external"
+        assert result["problem"] == ""
 
     def test_sandboxed_services_work_anywhere(self):
         result = self._call(factories.Sysadmin(), resource_id=self._resource()["id"],
@@ -460,7 +467,7 @@ class TestAction:
         resource = factories.Resource(url="https://x.example/a.docx")
         result = self._call(factories.Sysadmin(), resource_id=resource["id"],
                             url="https://x.example/a.docx")
-        assert result["problem"] == "needs_content_origin"
+        assert result["problem"] == ""
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.allowed_hosts", "pages.example.com")
     def test_host_not_allowed(self):
@@ -499,13 +506,19 @@ class TestFormContentOriginHint:
     """Rendered by the server, so it shows even when the form's script
     doesn't load."""
 
-    def test_shown_without_isolation(self, app):
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.harden_downloads", "false")
+    def test_shown_without_sandboxed_downloads(self, app):
         region = _service_region(app, "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
         assert "alert-warning" in region["class"]
         assert region.get_text(strip=True) == (
             "YouTube only works with the External preset, which this site runs as "
-            "Interactive until it has a separate domain for uploads, so it won't "
-            "play here yet. Ask your site administrator.")
+            "Interactive while it doesn't sandbox downloads, so it won't play here. "
+            "Ask your site administrator.")
+
+    def test_not_shown_without_a_content_origin(self, app):
+        region = _service_region(app, "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        assert "alert-warning" not in region["class"]
+        assert region.get_text(strip=True) == ""
 
     def test_not_shown_with_isolation(self, app, monkeypatch):
         from ckanext.webpageviewplus import settings

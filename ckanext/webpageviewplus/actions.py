@@ -81,7 +81,8 @@ def webpageviewplus_service_suggest(
         ``""`` or why the settings won't work on this site:
         ``"private_dataset"`` (Microsoft's Office viewer fetches the file
         itself, so it can't show a private dataset's), ``"preset_not_allowed"``,
-        ``"needs_content_origin"`` or ``"host_not_allowed"``. A page on a
+        ``"needs_content_origin"``, ``"needs_sandboxed_downloads"`` or
+        ``"host_not_allowed"``. A page on a
         site that never allows framing (GitHub, LinkedIn...) gets problem
         ``"refuses_framing"`` and empty settings.
     """
@@ -115,6 +116,9 @@ def suggestion_problem(found: services.Suggestion, private: bool) -> str:
     if frame.PRESETS[found.preset].needs_content_origin \
             and not settings.isolating_content_origin():
         return "needs_content_origin"
+    if frame.PRESETS[found.preset].needs_sandboxed_downloads \
+            and not settings.harden_downloads():
+        return "needs_sandboxed_downloads"
     if allowed and frame.url_host(found.embed_url) not in allowed:
         return "host_not_allowed"
     return ""

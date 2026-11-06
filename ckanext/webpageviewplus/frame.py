@@ -72,6 +72,7 @@ class Preset:
     height_mode: str
     height_value: str = ""
     needs_content_origin: bool = False
+    needs_sandboxed_downloads: bool = False
 
 
 PRESETS: dict[str, Preset] = {
@@ -88,10 +89,10 @@ PRESETS: dict[str, Preset] = {
         height_mode="auto",
     ),
     # Unsandboxed, so the page could navigate itself to HTML uploaded to
-    # CKAN and run it as CKAN: only safe once uploads have their own origin.
+    # CKAN and run it as CKAN: only safe once uploads can't run as CKAN.
     "external": Preset(
         sandbox=None, allow=("fullscreen",), height_mode="fixed",
-        height_value=str(FALLBACK_HEIGHT), needs_content_origin=True,
+        height_value=str(FALLBACK_HEIGHT), needs_sandboxed_downloads=True,
     ),
     "data-schematic": Preset(
         sandbox=(
@@ -256,16 +257,17 @@ def parse_allow(value: str) -> tuple[list[str], list[str]]:
     return ok, bad
 
 
-def must_isolate(on_ckan_host: bool, content_origin: Optional[str]) -> bool:
+def must_isolate(on_ckan_host: bool, downloads_sandboxed: bool) -> bool:
     """Whether the frame must not let scripts keep a real origin.
 
-    Always for a page on CKAN's own host. Without a content origin, for every
-    frame: uploaded HTML is then served from CKAN's origin, and a frame whose
-    scripts keep their origin can navigate (or be redirected) to an upload,
-    which would then run as CKAN inside the CKAN page. Checking the URL only
-    when the view is saved or rendered can't catch that.
+    Always for a page on CKAN's own host. Unless CKAN sandboxes the uploads
+    it serves (harden_downloads, or a content origin, which implies it), for
+    every frame: a frame whose scripts keep their origin could navigate (or
+    be redirected) to uploaded HTML on CKAN's origin, which would then run
+    as CKAN inside the CKAN page. Checking the URL only when the view is
+    saved or rendered can't catch that.
     """
-    return on_ckan_host or not content_origin
+    return on_ckan_host or not downloads_sandboxed
 
 
 def violates_same_origin_rule(
@@ -309,13 +311,18 @@ def preset_for_upload(name: str) -> str:
     return "interactive" if name == "external" else name
 
 
-def effective_preset_name(name: str, content_origin: Optional[str]) -> str:
-    """Resolve presets that can't run as configured. Without a content origin
-    (always, before phase 3) data-schematic and external degrade to
-    interactive."""
+def effective_preset_name(
+    name: str, content_origin: Optional[str], downloads_sandboxed: bool = False
+) -> str:
+    """Resolve presets that can't run as configured: without a content
+    origin, data-schematic (the upload preset) degrades to interactive, and
+    so does external unless CKAN sandboxes the uploads it serves."""
     if name not in PRESETS:
         return "strict"
     if PRESETS[name].needs_content_origin and not content_origin:
+        return "interactive"
+    if PRESETS[name].needs_sandboxed_downloads and not (
+            downloads_sandboxed or content_origin):
         return "interactive"
     return name
 
@@ -389,6 +396,7 @@ def build_frame(
     ckan_hosts: list[str],
     is_upload: bool = False,
     content_origin: Optional[str] = None,
+    downloads_sandboxed: bool = False,
     sandbox_override: str = "",
     allow_override: str = "",
     referrer_policy: str = "strict-origin-when-cross-origin",
@@ -404,10 +412,13 @@ def build_frame(
     Order matters: first resolve presets that can't run here (data-schematic
     without a content origin), then apply overrides, then enforce the
     same-origin rule, falling back to ``strict`` if it fails.
+    ``content_origin`` is the isolating one, which implies
+    ``downloads_sandboxed``.
     """
     notices: list[str] = []
+    downloads_sandboxed = downloads_sandboxed or bool(content_origin)
     is_upload = is_upload or on_content_origin(url, content_origin)
-    name = effective_preset_name(preset_name, content_origin)
+    name = effective_preset_name(preset_name, content_origin, downloads_sandboxed)
     if name != preset_name and preset_name in PRESETS:
         notices.append("degraded")
     if is_upload and preset_for_upload(name) != name:
@@ -423,7 +434,7 @@ def build_frame(
         allow = parse_allow(allow_override)[0]
 
     on_ckan_host = frame_on_ckan_host(url, ckan_hosts, is_upload, content_origin)
-    same_origin = must_isolate(on_ckan_host, content_origin)
+    same_origin = must_isolate(on_ckan_host, downloads_sandboxed)
     if violates_same_origin_rule(sandbox, same_origin):
         name = "strict"
         sandbox = PRESETS["strict"].sandbox

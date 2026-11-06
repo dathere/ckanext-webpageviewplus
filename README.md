@@ -204,7 +204,7 @@ Add a "Website (Plus)" view to an HTML resource and pick a security preset:
 | --- | --- | --- |
 | `strict` | show its HTML, with no scripts | static HTML: reports, notebooks without JavaScript |
 | `interactive` (the default) | run scripts, submit forms, open popups and downloads, but keep no logins or saved data | charts and other scripted pages |
-| `external` | everything it could do on its own site | third-party sites you trust (dashboards, apps, videos). Needs a [separate domain for uploads](#a-separate-domain-for-uploads); without one it runs as `interactive`. Never used for uploads or CKAN's own pages |
+| `external` | everything it could do on its own site | third-party sites you trust (dashboards, apps, videos). Needs [sandboxed downloads](#uploaded-html-downloads-are-sandboxed) (on by default); with `harden_downloads` off it runs as `interactive`. Never used for uploads or CKAN's own pages |
 | `data-schematic` | what `interactive` allows, plus saved data and popups | qsv Data Schematics (maps, Tour, Explore). Needs a separate domain for uploads; without one it runs as `interactive` and maps stay blank |
 
 Editors pick the preset and the height. Sysadmins can also fine-tune a view's sandbox and
@@ -229,8 +229,8 @@ the embed address, preset and height that service needs:
 - **Video and collections:** YouTube, Vimeo, Internet Archive, Sketchfab
 
 Click "Use them" to accept; nothing changes until you do. Only public embeds work. More than half
-of these need the `external` preset, and so a separate domain for uploads; on a site without
-one, the form says so. The links recognised for
+of these need the `external` preset, which works out of the box; on a site that turns
+`harden_downloads` off, the form says they won't play. The links recognised for
 each service, and notes on self-hosted Superset and Dash dashboards, are under
 [Well-known services: recognised links](#well-known-services-recognised-links).
 
@@ -300,8 +300,9 @@ uploads, downloads go there instead and work fully. See
 A **content origin** serves uploaded HTML from a second domain, such as
 `https://example-usercontent.org` for a CKAN at `https://data.example.org`, the way GitHub uses
 `githubusercontent.com`. Pages there run in full (maps, saved data and all), and the browser
-keeps them apart from CKAN's pages, logins and API. It's what lets the `external` and
-`data-schematic` presets run as themselves.
+keeps them apart from CKAN's pages, logins and API. It's what lets uploads and the
+`data-schematic` preset run as themselves. Third-party pages, `external` ones included, don't
+need it.
 
 It must be a separately registered domain, not a subdomain of CKAN's, pointed at the same CKAN
 through your web server, and it takes two settings. The steps are under
@@ -374,11 +375,12 @@ skips the view and says so. Back up the database first, and start with a dry run
     ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate --dry-run
     ckan -c /etc/ckan/default/ckan.ini webpageviewplus migrate [--uploads-only] [--preset NAME] [--dataset NAME]
 
-**Without a content origin, if your site embeds third-party apps or dashboards, use
-`--uploads-only`.** Stock `webpage_view` runs embedded pages unsandboxed, and a migrated
-third-party app (running as `interactive`) would lose its own logins and saved settings.
-`--uploads-only` converts just the views of uploaded HTML, which gain the most. Linked pages
-stay on `webpage_view` until you set up a content origin.
+**If your site embeds third-party apps or dashboards, migrate with `--preset external`, or
+use `--uploads-only`.** Stock `webpage_view` runs embedded pages unsandboxed, and a third-party
+app migrated as `interactive` (the default) would lose its own logins and saved settings.
+With `--preset external`, uploads still fall back to a preset that sandboxes them.
+`--uploads-only` converts just the views of uploaded HTML, which gain the most, and leaves
+linked pages on `webpage_view`.
 
 On a large site, `--dataset NAME` migrates one dataset's views at a time, so you can check a
 few before converting the rest.
@@ -417,22 +419,19 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   [Keeping your site safe](#keeping-your-site-safe).
 
 - **Q: Do I need a separate domain for uploads?**<br>
-  A: Not to install it or to keep your site safe. However, without one, every view and upload
-  stays sandboxed, which keeps your visitors' logins out of reach (already safer than
+  A: Not to install it, to keep your site safe, or to embed third-party pages: YouTube, Vimeo,
+  Tableau Public, Streamlit and the other services that need `external` play without one, as
+  CKAN sandboxes the uploads it serves (`harden_downloads`, on by default). Without one, every
+  upload stays sandboxed, which keeps your visitors' logins out of reach (already safer than
   `webpage_view`) but holds some things back:
-  - **Services that need their own origin.** YouTube, Vimeo, Tableau Public and the other
-    services that need `external` won't play or load, as `external` runs as `interactive`.
-    Third-party apps (Streamlit, Hugging Face Spaces and the like) lose their logins and saved
-    settings.
   - **Uploaded apps.** `data-schematic` runs as `interactive` too, so qsv Data Schematics lose
     their maps and uploaded pages can't keep saved data.
   - **PDF (Plus).** It's never offered: its viewer runs only from that domain.
   - **Fake sign-in forms.** An uploaded page still opens on your site's own address, so it can
     show a convincing one there.
 
-  Not affected: services that work in `interactive` (Datawrapper, Flourish, Power BI, Google
-  Sheets, Docs and Slides, Our World in Data...) and Repository (Plus) views, which run no
-  scripts.
+  Not affected: linked pages and services, whatever their preset, and Repository (Plus)
+  views, which run no scripts.
 
   It takes a second, separately registered domain (not a subdomain of your site's) pointed at
   the same CKAN through your web server, and two settings, `content_origin` and
@@ -441,18 +440,18 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   [Deploying a content origin](#deploying-a-content-origin).
 
 - **Q: Why won't YouTube videos play on my site?**<br>
-  A: Your site probably has no separate domain for uploads (`content_origin`). YouTube's player
-  only works with `allow-same-origin`, i.e. the `external` preset, and so do Vimeo, Tableau
-  Public, ArcGIS, Looker Studio, Microsoft Office and others (see [Well-known services:
-  recognised links](#well-known-services-recognised-links)). Until uploads have their own domain,
+  A: Your site probably has `harden_downloads` turned off. YouTube's player only works with
+  `allow-same-origin`, i.e. the `external` preset, and so do Vimeo, Tableau Public, ArcGIS,
+  Looker Studio, Microsoft Office and others (see [Well-known services: recognised
+  links](#well-known-services-recognised-links)). Unless CKAN sandboxes the uploads it serves,
   `external` runs as `interactive`: a frame whose scripts keep a real origin could open an
   uploaded HTML file on your site's own address, and that file's code would then have the
   visitor's login, able to read their private datasets and change data in their name. So the
   view form warns that the video won't play, and [views made
-  automatically](#views-made-automatically) skip these links. Set `content_origin` and
-  `signing_secret` (see [Deploying a content origin](#deploying-a-content-origin)) and restart:
-  views already saved with `external` then play with no edits, and `ckan views create
-  webpage_view_plus` adds views for links that had none.
+  automatically](#views-made-automatically) skip these links. Turn `harden_downloads` back on
+  (it's the default) and restart: views already saved with `external` then play with no edits,
+  and `ckan views create webpage_view_plus` adds views for links that had none. No separate
+  domain is needed.
 
 - **Q: Is it safe to switch on a live site?**<br>
   A: Yes. It runs beside `webpage_view`, and nothing changes until editors add "Website (Plus)"
@@ -704,9 +703,11 @@ sandboxes:
 
 **The rule behind the presets:** no frame may let scripts keep a real origin while uploaded
 HTML could still run on CKAN's origin. Such a page could navigate itself to an upload and run
-it as CKAN. Without a content origin, `external` and `data-schematic` therefore run as
-`interactive`, and a sandbox combining `allow-scripts` with `allow-same-origin` is refused.
-Uploads and pages on CKAN's own host are always sandboxed. The rule is enforced when a view is
+it as CKAN. [Sandboxed downloads](#uploaded-html-downloads-are-sandboxed) stop that: an upload
+CKAN serves then runs in an isolated origin, whatever frame opens it. With `harden_downloads`
+off, `external` and `data-schematic` therefore run as `interactive`, and a sandbox combining
+`allow-scripts` with `allow-same-origin` is refused. Uploads and pages on CKAN's own host are
+always sandboxed, and `data-schematic` (the upload preset) needs a content origin. The rule is enforced when a view is
 saved and again when it's shown.
 
 Every frame gets `loading="lazy"`, a `referrerpolicy`, the view's title as its accessible
@@ -733,8 +734,8 @@ render and run scripts, but in an isolated origin. **This changes core behaviour
 from its download link, a page that needs storage or a real origin (for example a qsv Data
 Schematic's maps) loses those features. With a content origin, HTML upload downloads redirect
 there instead, and work fully. Turn the header off with `ckanext.webpageviewplus.harden_downloads
-= false` only if you trust everyone who can upload. Doing so also keeps `external` and
-`data-schematic` degraded.
+= false` only if you trust everyone who can upload. Doing so also makes `external` and
+`data-schematic` run as `interactive`.
 
 ### Browser support
 
@@ -824,8 +825,8 @@ Services marked `external` in the table fail inside a sandbox without `allow-sam
 ways a screenshot can miss: OpenStreetMap's map tiles lose their Referer and its tile servers
 block them, a Google Form shows but its inputs stay disabled, and Microsoft's Office viewer goes
 blank as soon as you scroll. Hugging Face Spaces get `external` too, as apps that call their own
-server. `external` needs a content origin; on a site without one, the form says so instead of
-offering settings that won't play.
+server. `external` needs sandboxed downloads; on a site with `harden_downloads` off, the form
+says so instead of offering settings that won't play.
 
 YouTube links become `www.youtube-nocookie.com` embeds, YouTube's privacy-enhanced mode, in
 which YouTube says it stores nothing about visitors until they play the video. It's still
@@ -1003,7 +1004,7 @@ workers work, and the browser keeps them apart from CKAN's pages, cookies and AP
        ckanext.webpageviewplus.url_ttl = 300
 
 4. **Restart CKAN.** Views of HTML uploads now load from the content origin, and
-   `external`/`data-schematic` stop degrading.
+   `data-schematic` stops degrading.
 
 How content is served:
 
@@ -1469,7 +1470,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 
 | Command | Does |
 | --- | --- |
-| `ckan webpageviewplus doctor [--no-http] [--site-url URL]` | Check the site's setup and say what to fix: no isolating content origin, the plugin's tables not upgraded, asset bundles the site doesn't serve (fetched from `ckan.site_url`, or `--site-url` inside a container), `default_views`, core views left to migrate. Exits 1 when something is broken. Run it after installing or upgrading |
+| `ckan webpageviewplus doctor [--no-http] [--site-url URL]` | Check the site's setup and say what to fix: no content origin or sandboxed downloads, the plugin's tables not upgraded, asset bundles the site doesn't serve (fetched from `ckan.site_url`, or `--site-url` inside a container), `default_views`, core views left to migrate. Exits 1 when something is broken. Run it after installing or upgrading |
 | `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME] [--dataset NAME]` | Convert `webpage_view` views, see [Migrating from webpage_view](#migrating-from-webpage_view) |
 | `ckan webpageviewplus migrate-pdf [--dry-run]` | Convert ckanext-pdfview's `pdf_view` views to PDF (Plus), see [PDF views](#pdf-views) |
 | `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails, except with `--no-store`. Run it weekly from cron |

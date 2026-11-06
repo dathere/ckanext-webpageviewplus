@@ -185,12 +185,15 @@ def test_external_offered_for_uploads(app, local_storage):
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
 @pytest.mark.usefixtures("non_clean_db", "with_plugins")
-@pytest.mark.parametrize("isolated", [False, True])
-def test_form_says_external_runs_as_interactive_only_without_isolation(
-    app, request, isolated
+@pytest.mark.parametrize("hardened", [
+    pytest.param(False, marks=pytest.mark.ckan_config(
+        "ckanext.webpageviewplus.harden_downloads", "false")),
+    True,
+])
+def test_form_says_external_runs_as_interactive_only_without_sandboxed_downloads(
+    app, hardened
 ):
-    if isolated:
-        request.getfixturevalue("content_origin")
+    # No content origin either way: sandboxed downloads are enough.
     sysadmin = factories.SysadminWithToken()
     dataset = factories.Dataset()
     resource = factories.Resource(package_id=dataset["id"], url="https://pages.example.com/a")
@@ -202,7 +205,7 @@ def test_form_says_external_runs_as_interactive_only_without_isolation(
     )
     body = app.get(url, headers={"Authorization": sysadmin["token"]}).body
     assert "External: a trusted third-party site, no sandbox" in body
-    assert ("runs as Interactive for now" in body) is not isolated
+    assert ("runs as Interactive for now" in body) is not hardened
 
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
@@ -263,12 +266,19 @@ class TestDefaultViews:
         assert (view["height_mode"], view["height_value"]) == ("aspect", "16/9")
         assert view["title"] == "YouTube"
 
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.harden_downloads", "false")
     def test_none_where_the_settings_would_not_play(self):
-        # No content origin: external would run as interactive, and YouTube
-        # needs allow-same-origin.
+        # Downloads not sandboxed: external would run as interactive, and
+        # YouTube needs allow-same-origin.
         dataset = factories.Dataset()
         resource = factories.Resource(package_id=dataset["id"], url=WATCH, format="")
         assert _views(resource) == []
+
+    def test_made_without_a_content_origin(self):
+        # Sandboxed downloads are enough for external on a third-party page.
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=WATCH, format="")
+        assert [v["view_type"] for v in _views(resource)] == ["webpage_view_plus"]
 
     def test_interactive_service_needs_no_content_origin(self):
         dataset = factories.Dataset()
@@ -494,7 +504,8 @@ class TestViewValidation:
         view = _view(factories.Sysadmin(), resource["id"], preset="data-schematic")
         assert view["preset"] == "data-schematic"
 
-    def test_scripts_and_same_origin_refused_for_any_page_without_content_origin(self):
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.harden_downloads", "false")
+    def test_scripts_and_same_origin_refused_for_any_page_without_sandboxed_downloads(self):
         resource = factories.Resource(url="https://pages.example.com/a.html")
         with pytest.raises(ValidationError) as e:
             _view(
@@ -503,6 +514,20 @@ class TestViewValidation:
                 sandbox="allow-scripts allow-same-origin",
             )
         assert "sandbox" in e.value.error_dict
+
+    def test_scripts_and_same_origin_allowed_for_third_party_without_content_origin(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        view = _view(
+            factories.Sysadmin(),
+            resource["id"],
+            sandbox="allow-scripts allow-same-origin",
+        )
+        assert view["sandbox"] == "allow-scripts allow-same-origin"
+
+    def test_external_saved_for_third_party_without_content_origin(self):
+        resource = factories.Resource(url="https://pages.example.com/a.html")
+        view = _view(factories.Sysadmin(), resource["id"], preset="external")
+        assert view["preset"] == "external"
 
     def test_external_allowed_for_third_party(self):
         resource = factories.Resource(url="https://pages.example.com/a.html")
