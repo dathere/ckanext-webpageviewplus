@@ -104,9 +104,9 @@ RESOURCES = [
          "You know the song. It is never going to give you up, and it is never going "
          "to run as CKAN either. "
          "YouTube needs its own origin to play, so this view uses `external`: no "
-         "sandbox. That's safe only because uploads live on a separate content origin; "
-         "without one, the view falls back to `interactive` and the player shows an "
-         "error. It frames the privacy-enhanced youtube-nocookie.com player and keeps "
+         "sandbox. That's safe because CKAN sandboxes the uploads it serves, so no "
+         "frame can run one as CKAN; with that turned off (harden_downloads), the view "
+         "falls back to `interactive` and the player shows an error. It frames the privacy-enhanced youtube-nocookie.com player and keeps "
          "a 16:9 shape at any width."),
         ("Ask before loading",
          {"page_url": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
@@ -167,6 +167,18 @@ TYPEFORM = os.environ.get("WVP_DEMO_TYPEFORM", "https://form.typeform.com/to/zdK
 # Well-known services, one resource each (YouTube and Datawrapper are above).
 # The resource URL is the page link an editor would paste; the view takes the
 # embed address, preset and height the view form would suggest for it.
+REPOSITORIES = [
+    ("A GitHub repository", "https://github.com/dathere/ckanext-webpageviewplus",
+     "GitHub's pages can't be framed, so CKAN fetches the repository's name, files and "
+     "README from GitHub's API and shows them as a page with no scripts. Links open on "
+     "GitHub."),
+    ("A Codeberg repository", "https://codeberg.org/forgejo/forgejo",
+     "Forgejo's own repository on Codeberg. Codeberg's API sends the README as raw "
+     "Markdown, which CKAN renders and cleans the way GitHub's is, heading links "
+     "included. GitLab and Bitbucket repositories work the same way, and so do a "
+     "site's own servers listed in repo_hosts. Links open on Codeberg."),
+]
+
 SERVICE_PAGES = [
     ("Vimeo", "https://vimeo.com/76979871",
      "Vimeo's player needs its own origin to play, so the form suggests `external` and "
@@ -177,7 +189,7 @@ SERVICE_PAGES = [
      "mouse, but the frame has no origin, so it can't read anything of yours."),
     ("Observable", "https://observablehq.com/@observablehq/plot-vertical-bar-chart",
      "A notebook from the Observable Plot gallery. Observable's runtime needs its own "
-     "origin, so this one is `external`, which a site gets only with a content origin."),
+     "origin, so this one is `external`."),
     ("Tableau Public", "https://public.tableau.com/views/RegionalSampleWorkbook/Storms",
      "Tableau's sample storms workbook. Tableau Public needs its own origin to run, so "
      "`external` at 800 px; hover the map for each storm's track."),
@@ -460,22 +472,19 @@ def main():
                 print("{}\n  {}/dataset/{}/resource/{}?view_id={}".format(
                     title, site, DATASET, res["id"], view["id"]))
 
-        # repo_view_plus, where it's enabled: a GitHub repository's root,
-        # fetched by CKAN and shown as a page with no scripts.
+        # repo_view_plus, where it's enabled: repositories' roots, fetched by
+        # CKAN and shown as a page with no scripts.
         if plugins.plugin_loaded(repos.VIEW_TYPE):
-            title = "A GitHub repository"
-            res = act("resource_create")(ctx(), {
-                "package_id": pkg["id"], "name": title,
-                "url": "https://github.com/dathere/ckanext-webpageviewplus"})
-            for v in act("resource_view_list")(ctx(), {"id": res["id"]}):
-                act("resource_view_delete")(ctx(), {"id": v["id"]})
-            view = act("resource_view_create")(ctx(), {
-                "resource_id": res["id"], "view_type": repos.VIEW_TYPE, "title": title,
-                "description": "GitHub's pages can't be framed, so CKAN fetches the "
-                               "repository's name, files and README from GitHub's API and "
-                               "shows them as a page with no scripts. Links open on GitHub."})
-            print("{}\n  {}/dataset/{}/resource/{}?view_id={}".format(
-                title, site, DATASET, res["id"], view["id"]))
+            for title, url, description in REPOSITORIES:
+                res = act("resource_create")(ctx(), {
+                    "package_id": pkg["id"], "name": title, "url": url})
+                for v in act("resource_view_list")(ctx(), {"id": res["id"]}):
+                    act("resource_view_delete")(ctx(), {"id": v["id"]})
+                view = act("resource_view_create")(ctx(), {
+                    "resource_id": res["id"], "view_type": repos.VIEW_TYPE, "title": title,
+                    "description": description})
+                print("{}\n  {}/dataset/{}/resource/{}?view_id={}".format(
+                    title, site, DATASET, res["id"], view["id"]))
 
 
 if __name__ == "__main__":
