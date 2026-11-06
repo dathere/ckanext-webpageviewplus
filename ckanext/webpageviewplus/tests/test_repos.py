@@ -885,3 +885,35 @@ class TestOtherSitesView:
         text = BeautifulSoup(app.get(_read(dataset, resource, view)).body,
                              "html.parser").select_one(".webpageviewplus").get_text()
         assert "gitlab.com" in text and "github.com" not in text
+
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.repo_hosts",
+                             "gitlab.example.org gitlab git.example.org gitea")
+    def test_messages_name_the_sites_own_servers(self, app):
+        resource = factories.Resource(url="https://example.com/")
+        with pytest.raises(ValidationError) as raised:
+            _view(resource)
+        assert ("Bitbucket or git.example.org, gitlab.example.org, such as"
+                in raised.value.error_dict["repo_url"][0])
+        assert _view(resource, repo_url="https://git.example.org/o/r")
+        plugin = plugins.get_plugin(repos.VIEW_TYPE)
+        variables = plugin.setup_template_variables({}, {
+            "resource": resource, "resource_view": {"repo_url": "https://example.com/"}})
+        assert variables["self_hosted_sites"] == "git.example.org, gitlab.example.org"
+
+    def test_messages_without_self_hosted_servers(self):
+        with pytest.raises(ValidationError) as raised:
+            _view(factories.Resource(url="https://example.com/"))
+        assert "Codeberg or Bitbucket, such as" in raised.value.error_dict["repo_url"][0]
+
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.repo_hosts", "git.example.org gitea")
+    def test_view_names_the_sites_own_servers(self, app):
+        from ckan.tests import helpers
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=GITLAB_REPO)
+        view = _view(resource)
+        helpers.call_action("resource_patch", id=resource["id"], url="https://example.com/")
+        text = BeautifulSoup(app.get(_read(dataset, resource, view)).body,
+                             "html.parser").get_text()
+        assert "GitHub, GitLab, Codeberg, Bitbucket and git.example.org, such as" in text

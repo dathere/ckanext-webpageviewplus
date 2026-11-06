@@ -20,8 +20,9 @@
 ### Changed
 
 - Texts naming GitHub alone (the form's help, the save error, the missing-repository and
-  rate-limit cards, the consent card's host) now name the repository's own site. New and
-  changed strings are translated at release.
+  rate-limit cards, the consent card's host) now name the repository's own site; the save
+  error and the "no repository to show" text also name the site's `repo_hosts` servers. New
+  and changed strings are translated at release.
 
 ### Fixed
 

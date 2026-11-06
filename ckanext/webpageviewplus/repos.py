@@ -83,6 +83,12 @@ def host_for(hostname: str) -> Optional[Host]:
     return Host(kind, name, "https://" + name + _SELF_HOSTED_API[kind], name)
 
 
+def self_hosted_sites() -> str:
+    """The repo_hosts sites, for messages naming the sites a view supports:
+    "git.example.org, gitlab.example.org", or "" with none."""
+    return ", ".join(sorted(settings.repo_hosts()))
+
+
 # First path segments that are the site's own pages, not owners.
 _RESERVED = {
     "github": frozenset("""

@@ -147,7 +147,12 @@
 {% elif frame_error == 'unsaved' %}
   <p class="text-muted">{{ _('Save the view to see the PDF.') }}</p>
 {% elif frame_error == 'repo_url' %}
-  <p class="text-muted">{{ _('There is no repository to show: only public repositories on GitHub, GitLab, Codeberg and Bitbucket, such as https://github.com/ckan/ckan, are supported.') }}</p>
+  {% if self_hosted_sites %}
+    {# TRANSLATORS: {hosts} is a list of this site's own Git servers, such as "git.example.org, gitlab.example.org". #}
+    <p class="text-muted">{{ _('There is no repository to show: only public repositories on GitHub, GitLab, Codeberg, Bitbucket and {hosts}, such as https://github.com/ckan/ckan, are supported.').format(hosts=self_hosted_sites) }}</p>
+  {% else %}
+    <p class="text-muted">{{ _('There is no repository to show: only public repositories on GitHub, GitLab, Codeberg and Bitbucket, such as https://github.com/ckan/ckan, are supported.') }}</p>
+  {% endif %}
 {% elif frame_error == 'repo_unsaved' %}
   <p class="text-muted">{{ _('Save the view to see the repository.') }}</p>
 {% elif frame_error == 'host' %}

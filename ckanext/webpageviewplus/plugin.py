@@ -715,7 +715,8 @@ class RepoViewPlusPlugin(plugins.SingletonPlugin):
         url = repos.repo_url(resource_view, resource)
         found = repos.parse(url) if frame.is_http_url(url) else None
         if found is None:
-            return dict(form_vars, frame=None, frame_error="repo_url")
+            return dict(form_vars, frame=None, frame_error="repo_url",
+                        self_hosted_sites=repos.self_hosted_sites())
         view_id = resource_view.get("id")
         if not view_id:
             return dict(form_vars, frame=None, frame_error="repo_unsaved")
