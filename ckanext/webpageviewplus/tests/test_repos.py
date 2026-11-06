@@ -775,6 +775,9 @@ class TestRateLimits:
         (429, {"RateLimit": '"baseline";r=0;t=600'}, NOW + 600),
         (403, {"RateLimit": '"baseline";r=0;t=60'}, NOW + 60),
         (429, {"Retry-After": "120"}, NOW + 120),
+        (429, {"ratelimit-reset": "60"}, NOW + 60),
+        (429, {"X-RateLimit-Reset": "1900000000", "Retry-After": "120"}, 1900000000.0),
+        (429, {"Retry-After": "soon"}, 0.0),
         (429, {}, 0.0),
     ])
     def test_used_up(self, status, headers, until):
