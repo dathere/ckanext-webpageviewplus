@@ -565,8 +565,6 @@ def render_readme(text: str, path: str) -> str:
 
 
 _HEADING_TAG = re.compile(r"<(/?)h([1-6])>")
-# Stops at the next "<", so a heading full of unmatched "<" is still one pass.
-_TAG = re.compile(r"<[^<>]*>")
 _SLUG_DROP = re.compile(r"[^\w\- ]")
 
 
@@ -577,6 +575,8 @@ def _heading_ids(rendered: str) -> str:
     One pass over the heading tags: a heading is a bare opening tag whose
     next heading tag closes it. A README's raw HTML can hold any number of
     unclosed headings, so nothing here rescans the text after them."""
+    import nh3
+
     used: set[str] = set()
     counters: dict[str, int] = {}
     parts = []
@@ -588,7 +588,9 @@ def _heading_ids(rendered: str) -> str:
             continue
         if opened is not None and opened.group(2) == tag.group(2):
             inner = rendered[opened.end():tag.start()]
-            text = html_lib.unescape(_TAG.sub("", inner))
+            # The heading's text, by nh3's HTML parser (linear, and right
+            # about "<" inside quoted attributes, where a regex isn't).
+            text = html_lib.unescape(nh3.clean(inner, tags=set()))
             slug = _unused(_SLUG_DROP.sub("", text.strip().lower()).replace(" ", "-"),
                            used, counters)
             parts.append(rendered[last:opened.start()])

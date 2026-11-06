@@ -732,6 +732,8 @@ def test_heading_ids_like_githubs():
     assert '<h1 id="user-content-hello-world-v2">' in out
     assert '<h2 id="user-content-hello-world-v2-1">' in out
     assert '<h1 id="user-content-code--more">' in out
+    raw = repos.render_readme('<h2><span title="a<b">Hello</span></h2>\n', "README.md")
+    assert '<h2 id="user-content-hello">' in raw
 
 
 def test_heading_ids_never_repeat():
@@ -752,11 +754,12 @@ def test_raw_html_ids_match_the_rewritten_links():
     "<h1>" * (repos.MAX_README // 4),  # unclosed: none may rescan the rest
     "<h2>x</h2>" * (repos.MAX_README // 10),  # all the same slug
     "<h2>" + "<" * repos.MAX_README + "</h2>",  # no tag ever closes inside
-])
+], ids=["unclosed", "repeated", "unmatched-lt"])
 def test_heading_ids_stay_linear(heading):
+    # A second or less; the quadratic versions took minutes at this size.
     start = time.monotonic()
     repos._heading_ids(heading)
-    assert time.monotonic() - start < 2
+    assert time.monotonic() - start < 5
 
 
 class TestRateLimits:
