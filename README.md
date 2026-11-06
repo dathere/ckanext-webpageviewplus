@@ -737,6 +737,15 @@ there instead, and work fully. Turn the header off with `ckanext.webpageviewplus
 = false` only if you trust everyone who can upload. Doing so also makes `external` and
 `data-schematic` run as `interactive`.
 
+Without a content origin, this header is what lets `external` run unsandboxed safely, so it
+must reach the browser: a proxy or CDN rule (Cloudflare's Transform Rules, for example) that
+strips `Content-Security-Policy` from responses would undo it. Check through your site's real
+address that an HTML upload's download URL still sends it:
+
+    curl -sI https://data.example.org/dataset/<id>/resource/<id>/download/page.html | grep -i content-security-policy
+
+With a content origin, HTML downloads are redirected instead, which no such rule undoes.
+
 ### Browser support
 
 **Supported: Chrome and Edge 88+, Firefox 89+ and Safari 15+ (macOS, iOS and iPadOS)**, all
