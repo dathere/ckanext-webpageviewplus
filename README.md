@@ -1025,17 +1025,18 @@ How content is served:
   (each registers once its client library is installed: `boto3`, `google-cloud-storage` or
   `azure-storage-blob`). CKAN reads a cloud file and streams it to the visitor, so its bytes
   pass through CKAN (without range requests). The storage's hash of the file is its ETag, so
-  a browser revalidating an unchanged page gets a 304 and the file isn't read again. On S3,
-  use file-keeper 0.3.1 or later (CKAN 2.12 pins 0.2.6; pin it in your own requirements until
-  CKAN does: [ckan/ckan#9625](https://github.com/ckan/ckan/issues/9625)): before 0.3.1, file-keeper's S3 adapter opens the whole object even to read its
-  size or hash, so each 304 still costs a `GetObject`; from 0.3.1 it's one `HeadObject`. Any
-  `hashing_algorithm` works as the ETag, the default included. With `ckan:s3` from
-  [ckanext-file-keeper-cloud](https://github.com/ckan/ckanext-file-keeper-cloud), frames
-  are still streamed from this route, but CKAN's download URL redirects to a signed S3 link,
-  so the control bar's Open in new tab and Reload open the page on S3's own domain rather
-  than the content origin. Uploads on disk are sent as files, as before. This keeps every rule above in force (signed URLs,
-  `frame-ancestors`, no cookies) whatever the storage, where sending visitors to the
-  storage's own link would not.
+  a browser revalidating an unchanged page gets a 304 and the file isn't read again. On S3, use
+  file-keeper 0.3.1 or later (CKAN 2.12 pins 0.2.6; pin it in your own requirements until CKAN
+  does: [ckan/ckan#9625](https://github.com/ckan/ckan/issues/9625)): before 0.3.1,
+  file-keeper's S3 adapter opens the whole object even to read its size or hash, so each 304
+  still costs a `GetObject`; from 0.3.1 it's one `HeadObject`. Any `hashing_algorithm` works as
+  the ETag, the default included. With `ckan:s3` from
+  [ckanext-file-keeper-cloud](https://github.com/ckan/ckanext-file-keeper-cloud), CKAN's
+  download URL redirects to a signed S3 link, except for HTML uploads this route serves: those
+  are still sent to the content origin, so frames and the control bar's Open in new tab and
+  Reload all stream from this route. Uploads on disk are sent as files, as before. This keeps
+  every rule above in force (signed URLs, `frame-ancestors`, no cookies) whatever the storage,
+  where sending visitors to the storage's own link would not.
 - **CKAN 2.10 and 2.11 with cloud storage:** uploads kept by an extension such as
   ckanext-s3filestore or ckanext-cloudstorage aren't served: each has its own way of storing
   files, with no common way to read them. Their views stay framed from CKAN's origin under the

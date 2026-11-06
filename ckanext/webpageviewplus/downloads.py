@@ -93,6 +93,9 @@ def _is_ckan_served_resource(endpoint: str) -> bool:
     return _is_download(endpoint) or endpoint == "resource_proxy.proxy_view"
 
 
+_SENT_OR_REDIRECTED = frozenset({200, 301, 302, 303, 307, 308})
+
+
 def _content_redirect(response: Response) -> Response | None:
     """With a content origin, send an HTML upload's download there instead:
     CKAN's origin then never serves it. CKAN's download view has already
@@ -120,7 +123,9 @@ def _content_redirect(response: Response) -> Response | None:
 def sandbox_active_downloads(response: Response) -> Response:
     if not _is_ckan_served_resource(request.endpoint or ""):
         return response
-    if response.status_code == 200:
+    # A storage may answer CKAN's download with a redirect to its own link
+    # (ckan:s3 on CKAN 2.12), after CKAN's access check like a 200.
+    if response.status_code in _SENT_OR_REDIRECTED:
         redirected = _content_redirect(response)
         if redirected is not None:
             return redirected

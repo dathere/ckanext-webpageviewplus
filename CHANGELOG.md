@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- On CKAN 2.12 with a storage that answers downloads with a redirect to its own link
+  (`ckan:s3` from ckanext-file-keeper-cloud), an HTML upload's download URL went to that
+  link rather than the content origin, so the control bar's Open in new tab and Reload
+  left the content origin. They're now sent to it, as with every other storage.
+
 ## 0.11.0 (2026-11-04)
 
 ### Added

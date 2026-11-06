@@ -2,6 +2,7 @@ import io
 from urllib.parse import urlsplit
 
 import pytest
+from flask import redirect
 from werkzeug.datastructures import FileStorage
 
 from ckan.exceptions import CkanConfigurationException
@@ -360,3 +361,23 @@ class TestStreamedStorage:
                             "supports", lambda self, capability: False)
         assert not content.serves(resource)
         assert content.stored_file(resource) is None
+
+    @pytest.mark.parametrize("filename,fmt,to_content", [
+        ("s.html", "HTML", True),
+        ("s.csv", "CSV", False),
+    ])
+    def test_storage_redirecting_downloads(self, app, monkeypatch, filename, fmt, to_content):
+        # As ckan:s3 does: CKAN's download answers with a redirect to the
+        # storage's own link. An HTML upload's still goes to the content
+        # origin (Open in new tab and Reload use it); anything else is left be.
+        resource = _upload(factories.Dataset(), filename=filename, fmt=fmt)
+        storage_link = "https://bucket.s3.example.org/" + filename
+        monkeypatch.setattr(type(content.get_resource_uploader(resource).storage),
+                            "as_response", lambda self, data, name=None: redirect(storage_link))
+        url = url_for("dataset_resource.download", id=resource["package_id"],
+                      resource_id=resource["id"], filename=filename)
+        location = app.get(url, follow_redirects=False, status=302).headers["Location"]
+        if to_content:
+            assert location.startswith(CONTENT + "/webpageviewplus/content/")
+        else:
+            assert location == storage_link
