@@ -233,12 +233,13 @@ def view_after_validator(
                 toolkit._("This host isn't on the site's list of allowed hosts"),
             )
 
-    preset_name = frame.effective_preset_name(chosen, isolating)
+    sandboxed = settings.harden_downloads()
+    preset_name = frame.effective_preset_name(chosen, isolating, sandboxed)
     sandbox = frame.PRESETS[preset_name].sandbox
     override = _get(data, "sandbox")
     if override:
         sandbox = tuple(frame.parse_sandbox(override)[0])
-    same_origin = frame.must_isolate(on_ckan_host, isolating)
+    same_origin = frame.must_isolate(on_ckan_host, sandboxed)
     if frame.violates_same_origin_rule(sandbox, same_origin):
         _add_error(
             errors,
@@ -246,8 +247,8 @@ def view_after_validator(
             toolkit._(
                 "These settings could let the page use visitors' logins on "
                 "this site: don't combine allow-scripts with allow-same-origin. "
-                "Pages on this site never may; other pages may once the site "
-                "has a separate domain for uploads"
+                "Pages on this site and uploads never may; other pages may "
+                "once the site sandboxes downloads (harden_downloads)"
             ),
         )
 

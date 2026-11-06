@@ -79,17 +79,18 @@ def choose_preset(
     else:
         url = (resource.url if resource is not None else "") or ""
     isolating = settings.isolating_content_origin()
+    sandboxed = settings.harden_downloads()
     same_origin = frame.must_isolate(
         frame.frame_on_ckan_host(
             url, settings.ckan_hosts(), is_upload, settings.content_origin()
         ),
-        isolating,
+        sandboxed,
     )
 
     def safe(name: str) -> bool:
         if is_upload and frame.preset_for_upload(name) != name:
             return False
-        effective = frame.effective_preset_name(name, isolating)
+        effective = frame.effective_preset_name(name, isolating, sandboxed)
         return not frame.violates_same_origin_rule(
             frame.PRESETS[effective].sandbox, same_origin
         )
@@ -134,11 +135,12 @@ def migrate(dry_run: bool, uploads_only: bool, preset: Optional[str],
 
     Keeps each view's id, title, description, order and page_url.
 
-    Until uploads are served from a separate content origin, the external
-    preset runs sandboxed, so third-party apps that need their own logins or
-    storage stop working once migrated. --uploads-only converts just the
-    views of uploaded HTML, which gain the most (stock webpage_view runs them
-    unsandboxed on CKAN's origin), and leaves linked pages alone.
+    Third-party apps that need their own logins or storage stop working if
+    migrated as interactive (the default): migrate them with --preset
+    external (uploads still fall back to a sandboxed preset). --uploads-only
+    converts just the views of uploaded HTML, which gain the most (stock
+    webpage_view runs them unsandboxed on CKAN's origin), and leaves linked
+    pages alone.
     """
     if preset and preset not in settings.allowed_presets():
         raise click.UsageError(
@@ -476,16 +478,18 @@ def diagnose() -> list[tuple[str, str]]:
     if origin:
         found.append(("ok", "Uploads are isolated on " + origin
                       + ": every preset runs as itself."))
-    else:
-        missing = [name for name, ok in (
-            ("ckanext.webpageviewplus.content_origin", settings.content_origin()),
-            ("ckanext.webpageviewplus.harden_downloads", settings.harden_downloads()),
-        ) if not ok]
-        found.append(("warn", "No isolating content origin (missing: " + ", ".join(missing)
-                      + "). External and Data schematic run as Interactive, so YouTube, "
-                      "Vimeo, Tableau Public and other services needing External won't "
-                      "play, and PDF (Plus) is never offered. See the README's "
+    elif settings.harden_downloads():
+        found.append(("note", "No content origin (ckanext.webpageviewplus.content_origin): "
+                      "third-party pages run as their presets, External included, but "
+                      "uploads stay sandboxed on CKAN's origin, Data schematic runs as "
+                      "Interactive, and PDF (Plus) is never offered. See the README's "
                       "'A separate domain for uploads'."))
+    else:
+        found.append(("warn", "harden_downloads is off, so uploads could run as CKAN: "
+                      "External and Data schematic run as Interactive, so YouTube, "
+                      "Vimeo, Tableau Public and other services needing External won't "
+                      "play, and PDF (Plus) is never offered. Turn "
+                      "ckanext.webpageviewplus.harden_downloads back on."))
     try:
         from ckan.cli.db import current_revision
         revision = current_revision("webpage_view_plus") or ""

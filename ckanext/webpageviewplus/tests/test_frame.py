@@ -228,6 +228,38 @@ def test_external_degrades_to_interactive_without_content_origin():
     assert f.notices == ["degraded"]
 
 
+def test_external_runs_with_sandboxed_downloads_alone():
+    # Uploads served from CKAN's origin are CSP-sandboxed, so they can't run
+    # as CKAN even if this page navigates itself to one.
+    f = build(preset="external", downloads_sandboxed=True)
+    assert f.preset == "external"
+    assert f.sandbox is None
+    assert f.notices == []
+
+
+def test_scripts_plus_same_origin_allowed_for_third_party_with_sandboxed_downloads():
+    f = build(sandbox_override="allow-scripts allow-same-origin", downloads_sandboxed=True)
+    assert f.sandbox == "allow-scripts allow-same-origin"
+
+
+@pytest.mark.parametrize("url", [OWN, SITE + ":443/page.html"])
+def test_sandboxed_downloads_never_free_ckan_pages(url):
+    f = build(url=url, preset="external", downloads_sandboxed=True)
+    assert f.preset == "strict"
+    assert "same_origin_fallback" in f.notices
+
+
+def test_sandboxed_downloads_never_free_uploads():
+    # Without a content origin an upload is framed from CKAN's host, and its
+    # preset (data-schematic) still needs the content origin.
+    f = build(url=OWN, preset="data-schematic", is_upload=True, downloads_sandboxed=True)
+    assert f.preset == "interactive"
+    assert "allow-same-origin" not in f.sandbox
+    f = build(url=OWN, preset="interactive", is_upload=True, downloads_sandboxed=True,
+              sandbox_override="allow-scripts allow-same-origin")
+    assert f.preset == "strict"
+
+
 def test_scripts_plus_same_origin_refused_everywhere_without_content_origin():
     f = build(sandbox_override="allow-scripts allow-same-origin")
     assert f.preset == "strict"

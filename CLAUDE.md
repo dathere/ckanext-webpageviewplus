@@ -132,11 +132,19 @@ order now being built:
 - **Invariant:** while uploaded HTML could still run on CKAN's origin, no frame may let scripts
   keep a real origin. A frame with no sandbox, or with `allow-scripts` + `allow-same-origin`, can
   navigate itself (or be redirected) to such an upload, which then runs as CKAN inside the CKAN
-  page, and no URL check at save or render time can stop that. Uploads count as "isolated" only
-  when `content_origin` is set AND `harden_downloads` is on
-  (`settings.isolating_content_origin()`). Otherwise `frame.must_isolate` applies the rule to
-  every frame, and `external`/`data-schematic` degrade to `interactive`. With isolation, it still
-  applies to frames on CKAN's own host.
+  page, and no URL check at save or render time can stop that. `harden_downloads` (default on)
+  stops that by itself: every upload CKAN serves (download, resource proxy) gets a CSP sandbox
+  or, with a content origin, a redirect there. So `frame.must_isolate(on_ckan_host,
+  downloads_sandboxed)` frees third-party frames whenever `harden_downloads` is on, and
+  `external` (`Preset.needs_sandboxed_downloads`) runs as itself with no content origin.
+  Uploads count as "isolated" (`settings.isolating_content_origin()`: `content_origin` AND
+  `harden_downloads`) only for what runs uploads themselves: `data-schematic`
+  (`needs_content_origin`) and PDF (Plus). With `harden_downloads` off, the rule applies to
+  every frame, and `external`/`data-schematic` degrade to `interactive`. It always applies to
+  frames on CKAN's own host, uploads included. The `/uploads/` folder (avatars, group images)
+  isn't hooked, but CKAN accepts only PNG/GIF/JPEG there by content by default
+  (`ckan.upload.*.mimetypes`); a site widening that is exposed with or without a content
+  origin.
 - **"CKAN's own host"** is a host match against `ckan.site_url` plus `site_aliases`, ignoring
   scheme and port, because cookies aren't isolated by either. This is stricter than the spec. Hosts
   are compared in canonical form (`frame._canonical_host`), and URLs whose host Python and a browser
@@ -148,6 +156,10 @@ order now being built:
   `migrate`), so a pasted content URL can't get `external`.
 - Checked on save (`view_after_validator`) AND on render (`build_frame`, which falls back to
   `strict`), and `migrate` follows the same rule. All three must agree, so change them together.
+- `build_frame` takes `content_origin` (the isolating one) and `downloads_sandboxed`; the
+  validator, `cli` migrate and `actions.suggestion_problem` (`needs_sandboxed_downloads`) read
+  `settings.harden_downloads()` the same way. Tests of the degraded case set
+  `harden_downloads` to `"false"` with a `ckan_config` marker.
 - Tests that exercise post-isolation logic simulate it with the `content_origin` fixture
   (`test_plugin.py`, `test_cli.py`), `CO` in `test_frame.py`, or real config markers in
   `test_content.py`.

@@ -39,6 +39,7 @@
 
 {% set problem_texts = {
   'needs_content_origin': _('{service} only works with the {preset} preset, which this site runs as Interactive until it has a separate domain for uploads, so it won\'t play here yet. Ask your site administrator.'),
+  'needs_sandboxed_downloads': _('{service} only works with the {preset} preset, which this site runs as Interactive while it doesn\'t sandbox downloads, so it won\'t play here. Ask your site administrator.'),
   'preset_not_allowed': _('{service} only works with the {preset} preset, which this site doesn\'t allow.'),
   'host_not_allowed': _('{service} embeds come from {host}, which isn\'t on this site\'s list of allowed hosts.'),
   'private_dataset': _('{service}\'s viewer fetches the file from its own servers, so it can\'t show a file in a private dataset.'),
@@ -92,7 +93,11 @@
 
 {% if frame and 'degraded' in frame.notices %}
   <div class="alert alert-warning">
+    {% if (data.preset or default_preset) == 'external' %}
+    {{ _('External needs this site to sandbox downloads, which it has turned off, so the view runs as Interactive. Ask your site administrator if you need it.') }}
+    {% else %}
     {{ _('This preset needs a separate domain for uploads, which this site doesn\'t have yet, so the view runs as Interactive. Ask your site administrator if you need it.') }}
+    {% endif %}
     {% if (data.preset or default_preset) == 'data-schematic' %}{{ _('Charts, the Tour and Explore work, but maps stay blank.') }}{% endif %}
   </div>
 {% endif %}

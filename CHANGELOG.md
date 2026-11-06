@@ -19,6 +19,20 @@
 
 ### Changed
 
+- The `external` preset (YouTube, Vimeo, Tableau Public, ArcGIS, Looker Studio, Microsoft's
+  Office viewer, third-party apps) no longer needs a content origin: sandboxed downloads
+  (`harden_downloads`, on by default) are enough, since an upload CKAN serves then can't run
+  as CKAN whatever frame opens it. So these embeds play, and views are made for them
+  automatically, with no second domain. Uploads, `data-schematic` and PDF (Plus) still need
+  the content origin, and pages on CKAN's own host stay sandboxed. With `harden_downloads`
+  off, `external` still runs as `interactive`. `doctor` reports a site without a content
+  origin as a note rather than a warning. **On upgrading a site without a content origin**,
+  views already saved with `external` (including any `migrate --preset external` made) stop
+  running as `interactive` and run unsandboxed, with no edit; review them if you relied on
+  that. Sysadmin sandbox overrides combining `allow-scripts` with `allow-same-origin` are now
+  accepted for third-party pages there too. The protection then rests on download responses
+  reaching browsers with their CSP header: check that your proxy or CDN keeps it (see the
+  README's "Uploaded HTML downloads are sandboxed").
 - Texts naming GitHub alone (the form's help, the save error, the missing-repository and
   rate-limit cards, the consent card's host) now name the repository's own site; the save
   error and the "no repository to show" text also name the site's `repo_hosts` servers. New
