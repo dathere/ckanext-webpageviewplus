@@ -1,3 +1,4 @@
 pytest-ckan
 Pillow>=10.3
 nh3>=0.2.17
+cmarkgfm>=2025.10.22

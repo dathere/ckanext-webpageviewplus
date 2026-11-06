@@ -1,18 +1,22 @@
 """The Repository (Plus) view (repo_view_plus): a public repository's root
 the way its own site shows it (name, description, facts, root listing,
-README), for sites that can't be framed.
+README), for sites that can't be framed: GitHub, Codeberg (Forgejo, with
+Gitea's API), GitLab and Bitbucket, plus self-hosted GitHub Enterprise,
+Gitea/Forgejo and GitLab named in ``repo_hosts``.
 
 CKAN fetches the site's API, never the visitor's browser, and keeps a copy
 per repository (the shape of pdf.cached_pdf). The page is static: no
 scripts, served on CKAN's host under a CSP sandbox and framed with
 ``allow-popups`` only, so there is nothing for the frame invariant to guard
-and no content origin is needed. GitHub only for now.
+and no content origin is needed.
 """
 from __future__ import annotations
 
 import base64
 import datetime
+import email.utils
 import hashlib
+import html as html_lib
 import json
 import os
 import posixpath
@@ -20,7 +24,7 @@ import re
 import tempfile
 import time
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 from urllib.parse import quote, urljoin, urlsplit
 
 from flask import Blueprint, Response, abort
@@ -37,43 +41,136 @@ FAILED_SECONDS = 300
 MAX_JSON = 2 * 1024 * 1024
 MAX_README = 1024 * 1024
 MAX_ENTRIES = 1000
+# GitLab and Bitbucket list a folder a page at a time: the root's first
+# page only, with a link to the site for the rest.
+PAGE_ENTRIES = 100
 HEIGHT_MODES = ("fixed", "viewport")
 DEFAULT_HEIGHT = ("fixed", "800")
 # The frame: no scripts, no same origin; links open in a new tab.
 SANDBOX = "allow-popups allow-popups-to-escape-sandbox"
 
-# github.com/<name> paths that aren't owners.
-_RESERVED = frozenset("""
-about account apps blog codespaces collections contact customer-stories dashboard
-enterprise events explore features git-guides github issues join login logout
-marketplace new notifications orgs organizations pricing pulls readme search security
-sessions settings signup site sponsors team topics trending users
-""".split())
+
+@dataclass(frozen=True)
+class Host:
+    """A site repositories are shown from: its kind (which API it speaks),
+    its web host, its API's base address and the name the page shows."""
+    kind: str  # github, gitea, gitlab or bitbucket
+    host: str
+    api: str
+    site: str
+
+
+BUILT_IN = {
+    "github.com": Host("github", "github.com", GITHUB_API, "GitHub"),
+    "codeberg.org": Host("gitea", "codeberg.org", "https://codeberg.org/api/v1", "Codeberg"),
+    "gitlab.com": Host("gitlab", "gitlab.com", "https://gitlab.com/api/v4", "GitLab"),
+    "bitbucket.org": Host("bitbucket", "bitbucket.org", "https://api.bitbucket.org/2.0",
+                          "Bitbucket"),
+}
+# Where each self-hostable kind's API lives on its own host.
+_SELF_HOSTED_API = {"github": "/api/v3", "gitea": "/api/v1", "gitlab": "/api/v4"}
+
+
+def host_for(hostname: str) -> Optional[Host]:
+    """The site a link's host is: a built-in one, or one in repo_hosts."""
+    name = (hostname or "").lower().rstrip(".")
+    found = BUILT_IN.get(name.removeprefix("www."))
+    if found is not None:
+        return found
+    kind = settings.repo_hosts().get(name)
+    if kind not in _SELF_HOSTED_API:
+        return None
+    return Host(kind, name, "https://" + name + _SELF_HOSTED_API[kind], name)
+
+
+def self_hosted_sites() -> str:
+    """The repo_hosts sites, for messages naming the sites a view supports:
+    "git.example.org, gitlab.example.org", or "" with none."""
+    return ", ".join(sorted(settings.repo_hosts()))
+
+
+# First path segments that are the site's own pages, not owners.
+_RESERVED = {
+    "github": frozenset("""
+        about account apps blog codespaces collections contact customer-stories dashboard
+        enterprise events explore features git-guides github issues join login logout
+        marketplace new notifications orgs organizations pricing pulls readme search
+        security sessions settings signup site sponsors team topics trending users
+        """.split()),
+    "gitea": frozenset("""
+        - admin api assets attachments avatars captcha explore issues login milestones
+        notifications org pulls repo swagger.v1.json user
+        """.split()),
+    "gitlab": frozenset("""
+        - admin api assets dashboard explore groups help oauth projects public search
+        snippets uploads users
+        """.split()),
+    "bitbucket": frozenset("""
+        account blog dashboard product repo site socialauth support
+        """.split()),
+}
 _NAME = re.compile(r"[A-Za-z0-9._-]{1,100}")
 _REF = re.compile(r"[A-Za-z0-9._-]{1,250}")
+# GitLab nests groups up to 20 deep.
+_MAX_GROUPS = 20
 
 
 @dataclass(frozen=True)
 class Repo:
-    owner: str
+    owner: str  # on GitLab, the group path: "group/subgroup"
     name: str
     ref: str = ""  # "" is the default branch
+    host: Host = BUILT_IN["github.com"]
 
     @property
     def key(self) -> str:
-        return "github.com/{}/{}@{}".format(self.owner.lower(), self.name.lower(), self.ref)
+        # GitHub's is unchanged from 0.11.0, so copies already kept stay valid.
+        return "{}/{}/{}@{}".format(
+            self.host.host, self.owner.lower(), self.name.lower(), self.ref)
 
     @property
     def html_url(self) -> str:
-        url = "https://github.com/{}/{}".format(self.owner, self.name)
-        return url + "/tree/" + self.ref if self.ref else url
+        return _site_url(self.host, self.owner, self.name, self.ref, "", "dir")
+
+
+def _segments_ok(segments: list[str]) -> bool:
+    return all(_NAME.fullmatch(s) and s not in (".", "..") for s in segments)
+
+
+def _ref_ok(ref: str) -> bool:
+    return bool(_REF.fullmatch(ref)) and ref not in (".", "..")
+
+
+def _shape(kind: str, segments: list[str]) -> Optional[tuple[list[str], str]]:
+    """The repository's path segments and branch, from a link's path, for
+    each site's own address of a repository's root."""
+    if kind == "gitlab":
+        ref = ""
+        if "-" in segments:
+            at = segments.index("-")
+            if segments[at + 1:at + 2] != ["tree"] or len(segments) != at + 3:
+                return None
+            ref, segments = segments[at + 2], segments[:at]
+        if not 2 <= len(segments) <= _MAX_GROUPS + 1:
+            return None
+        return segments, ref
+    marker = {"github": ["tree"], "gitea": ["src", "branch"], "bitbucket": ["src"]}[kind]
+    if len(segments) == 2:
+        return segments, ""
+    if len(segments) == 3 + len(marker) and segments[2:-1] == marker:
+        return segments[:2], segments[-1]
+    return None
 
 
 def parse(url: str) -> Optional[Repo]:
-    """The repository a GitHub link shows at its root:
-    ``github.com/<owner>/<repo>``, optionally ``.git`` or ``/tree/<branch>``
-    (a branch without slashes). None for anything else: files, folders,
-    issues, gists and GitHub's own pages."""
+    """The repository a link shows at its root, on a site this view knows:
+    ``github.com/<owner>/<repo>`` (or ``/tree/<branch>``),
+    ``codeberg.org/<owner>/<repo>`` (or ``/src/branch/<branch>``),
+    ``gitlab.com/<group>/.../<project>`` (or ``/-/tree/<branch>``),
+    ``bitbucket.org/<workspace>/<repo>`` (or ``/src/<branch>/``), each
+    optionally ending ``.git`` without a branch, and the same on a
+    repo_hosts site of that kind. A branch has no slashes. None for anything
+    else: files, folders, issues and the sites' own pages."""
     try:
         parts = urlsplit((url or "").strip())
         port = parts.port
@@ -82,23 +179,20 @@ def parse(url: str) -> Optional[Repo]:
     if parts.scheme.lower() not in ("http", "https") or parts.username or parts.password \
             or port not in (None, 80, 443):
         return None
-    if (parts.hostname or "").lower().rstrip(".").removeprefix("www.") != "github.com":
+    host = host_for(parts.hostname or "")
+    if host is None:
         return None
-    segments = parts.path.strip("/").split("/")
-    ref = ""
-    if len(segments) == 4 and segments[2] == "tree":
-        ref = segments[3]
-        if not _REF.fullmatch(ref) or ref in (".", ".."):
-            return None
-    elif len(segments) != 2:
+    shaped = _shape(host.kind, parts.path.strip("/").split("/"))
+    if shaped is None:
         return None
-    owner, name = segments[0], segments[1]
-    if len(segments) == 2 and name.lower().endswith(".git"):
-        name = name[:-4]
-    if not _NAME.fullmatch(owner) or not _NAME.fullmatch(name) \
-            or owner.lower() in _RESERVED or name in (".", ".."):
+    segments, ref = shaped
+    if ref and not _ref_ok(ref):
         return None
-    return Repo(owner, name, ref)
+    if not ref and segments[-1].lower().endswith(".git"):
+        segments = segments[:-1] + [segments[-1][:-4]]
+    if not _segments_ok(segments) or segments[0].lower() in _RESERVED[host.kind]:
+        return None
+    return Repo("/".join(segments[:-1]), segments[-1], ref, host)
 
 
 def repo_url(config: dict[str, Any], resource: dict[str, Any]) -> str:
@@ -119,16 +213,19 @@ class Unavailable(Exception):
         self.until = until
 
 
-def _api(path: str, deadline: float, max_bytes: int, accept: str) -> tuple[int, bytes]:
-    """GET one GitHub API path with frameability's guards (public addresses,
-    the deadline, a byte cap). Redirects (a renamed repository) are followed
-    only within api.github.com, so the token never leaves it."""
-    url = GITHUB_API + path
-    headers = {"User-Agent": USER_AGENT, "Accept": accept,
-               "X-GitHub-Api-Version": "2022-11-28"}
-    token = settings.github_token()
-    if token:
-        headers["Authorization"] = "Bearer " + token
+def _api(path: str, deadline: float, max_bytes: int, accept: str,
+         api: str = GITHUB_API) -> tuple[int, bytes]:
+    """GET one API path with frameability's guards (public addresses, the
+    deadline, a byte cap). Redirects (a renamed repository) are followed
+    only within that API's base address. github_token goes to
+    api.github.com only, never to another site or GitHub Enterprise."""
+    url = api + path
+    headers = {"User-Agent": USER_AGENT, "Accept": accept}
+    if api == GITHUB_API:
+        headers["X-GitHub-Api-Version"] = "2022-11-28"
+        token = settings.github_token()
+        if token:
+            headers["Authorization"] = "Bearer " + token
     try:
         with frameability._guarded(deadline):
             for _ in range(frameability.MAX_REDIRECTS + 1):
@@ -143,16 +240,11 @@ def _api(path: str, deadline: float, max_bytes: int, accept: str) -> tuple[int, 
                     location = response.headers.get("Location")
                     if response.is_redirect and location:
                         url = urljoin(url, location)
-                        if not url.startswith(GITHUB_API + "/"):
+                        if not url.startswith(api + "/"):
                             raise Unavailable("failed")
                         continue
-                    if response.status_code in (403, 429) and (
-                            response.headers.get("X-RateLimit-Remaining") == "0"
-                            or response.status_code == 429):
-                        try:
-                            until = float(response.headers.get("X-RateLimit-Reset") or 0)
-                        except ValueError:
-                            until = 0.0
+                    until = _rate_limit(response.status_code, response.headers)
+                    if until is not None:
                         raise Unavailable("rate_limited", until)
                     data = bytearray()
                     for chunk in response.iter_content(64 * 1024):
@@ -169,8 +261,46 @@ def _api(path: str, deadline: float, max_bytes: int, accept: str) -> tuple[int, 
     raise Unavailable("failed")
 
 
-def _json(path: str, deadline: float) -> Any:
-    status, body = _api(path, deadline, MAX_JSON, "application/vnd.github+json")
+# Codeberg's (IETF draft) RateLimit field: "baseline";r=<left>;t=<seconds>.
+_RATELIMIT_FIELD = re.compile(r";\s*(r|t)=(\d+)")
+
+
+def _rate_limit(status: int, headers: Any) -> Optional[float]:
+    """When the site's limit resets, if this answer says it's used up: any
+    429, or a 403 saying no requests are left. Each site says when in its
+    own way: GitHub's X-RateLimit-Reset and GitLab's RateLimit-Reset (a
+    time), Codeberg's RateLimit ``t=`` and Retry-After (seconds, or a
+    date); 0.0 when none is readable."""
+    found = {str(k).lower(): str(v) for k, v in dict(headers or {}).items()}
+    field = dict(_RATELIMIT_FIELD.findall(found.get("ratelimit", "")))
+    left = found.get("x-ratelimit-remaining", found.get("ratelimit-remaining", field.get("r")))
+    if status != 429 and not (status == 403 and left == "0"):
+        return None
+    now = time.time()
+    times = []
+    for name in ("x-ratelimit-reset", "ratelimit-reset"):
+        try:
+            value = float(found[name])
+        except (KeyError, ValueError):
+            continue
+        # A time since 1970, or (the IETF draft's) seconds from now.
+        times.append(value if value > 1e9 else now + value)
+    if "t" in field:
+        times.append(now + float(field["t"]))
+    retry = found.get("retry-after", "").strip()
+    if retry.isdigit():
+        times.append(now + float(retry))
+    elif retry:
+        try:
+            times.append(email.utils.parsedate_to_datetime(retry).timestamp())
+        except (TypeError, ValueError):
+            pass
+    return max(times, default=0.0)
+
+
+def _json(path: str, deadline: float, api: str = GITHUB_API) -> Any:
+    accept = "application/vnd.github+json" if api == GITHUB_API else "application/json"
+    status, body = _api(path, deadline, MAX_JSON, accept, api)
     if status in (404, 451):
         raise Unavailable("missing")
     if status != 200:
@@ -182,67 +312,312 @@ def _json(path: str, deadline: float) -> Any:
 
 
 def fetch(repo: Repo, deadline: float) -> dict[str, Any]:
-    """What the page shows, from three calls: the repository, its root
-    listing and its README (rendered by GitHub, then cleaned here)."""
-    base = "/repos/{}/{}".format(quote(repo.owner), quote(repo.name))
-    info = _json(base, deadline)
-    if not isinstance(info, dict) or info.get("private"):
-        raise Unavailable("missing")
-    ref = repo.ref or str(info.get("default_branch") or "")
-    listing = _json(base + "/contents/?ref=" + quote(ref, safe=""), deadline)
-    if not isinstance(listing, list):
-        raise Unavailable("failed")
-    status, readme = _api(base + "/readme?ref=" + quote(ref, safe=""), deadline,
-                          MAX_README, "application/vnd.github.html+json")
-    if status not in (200, 404):
-        raise Unavailable("failed")
-    owner, name = _owner_and_name(info, repo)
-    entries = []
-    for item in listing[:MAX_ENTRIES]:
-        if not isinstance(item, dict) or not isinstance(item.get("name"), str):
-            continue
-        kind = "dir" if item.get("type") == "dir" else "file"
-        entries.append({"name": item["name"], "type": kind,
-                        "url": _site_url(owner, name, ref, item["name"], kind)})
+    """What the page shows, from the site's API: the repository, its root
+    listing and its README, rendered and cleaned here."""
+    return _FETCHERS[repo.host.kind](repo, deadline)
+
+
+def _q(value: str) -> str:
+    return quote(value, safe="")
+
+
+def _page_data(repo: Repo, owner: str, name: str, ref: str, info: dict[str, Any],
+               items: list[tuple[str, str]], truncated: bool, readme: str) -> dict[str, Any]:
+    """The page's data, the same shape for every site. ``info`` holds the
+    facts; stars and forks are None where the site doesn't say."""
+    entries = [{"name": item, "type": kind,
+                "url": _site_url(repo.host, owner, name, ref, item, kind)}
+               for item, kind in items[:MAX_ENTRIES]]
     entries.sort(key=lambda e: (e["type"] != "dir", e["name"].lower()))
-    readme_html = ""
-    if status == 200:
-        text = readme.decode("utf-8", "replace")
-        found = re.search(r'data-path="([^"]+)"', text)
-        readme_html = clean_readme(text, owner, name, ref,
-                                   found.group(1) if found else "README.md")
     return {
-        "site": "GitHub",
+        "site": repo.host.site,
         "full_name": "{}/{}".format(owner, name),
-        "html_url": _site_url(owner, name, ref if repo.ref else "", "", "dir"),
-        "description": info.get("description") or "",
-        "language": info.get("language") or "",
-        "stars": int(info.get("stargazers_count") or 0),
-        "forks": int(info.get("forks_count") or 0),
+        "html_url": _site_url(repo.host, owner, name, ref if repo.ref else "", "", "dir"),
+        "description": str(info.get("description") or ""),
+        "language": str(info.get("language") or ""),
+        "stars": info.get("stars"),
+        "forks": info.get("forks"),
         "pushed_at": str(info.get("pushed_at") or ""),
         "archived": bool(info.get("archived")),
         "ref": ref,
         "entries": entries,
-        "truncated": len(listing) > MAX_ENTRIES,
-        "readme": readme_html,
+        "truncated": truncated or len(items) > MAX_ENTRIES,
+        "readme": readme,
     }
 
 
-def _owner_and_name(info: dict[str, Any], repo: Repo) -> tuple[str, str]:
+def _count(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _fetch_github(repo: Repo, deadline: float) -> dict[str, Any]:
+    """Three calls; the README comes rendered by GitHub."""
+    api = repo.host.api
+    base = "/repos/{}/{}".format(quote(repo.owner), quote(repo.name))
+    info = _json(base, deadline, api)
+    if not isinstance(info, dict) or info.get("private"):
+        raise Unavailable("missing")
+    ref = repo.ref or str(info.get("default_branch") or "")
+    listing = _json(base + "/contents/?ref=" + _q(ref), deadline, api)
+    if not isinstance(listing, list):
+        raise Unavailable("failed")
+    status, readme = _api(base + "/readme?ref=" + _q(ref), deadline, MAX_README,
+                          "application/vnd.github.html+json", api)
+    if status not in (200, 404):
+        raise Unavailable("failed")
+    owner, name = _owner_and_name(info.get("full_name"), repo)
+    readme_html = ""
+    if status == 200:
+        text = readme.decode("utf-8", "replace")
+        found = re.search(r'data-path="([^"]+)"', text)
+        readme_html = clean_readme(text, *_readme_bases(
+            repo.host, owner, name, ref, found.group(1) if found else "README.md"))
+    facts = {"description": info.get("description"), "language": info.get("language"),
+             "stars": _count(info.get("stargazers_count")),
+             "forks": _count(info.get("forks_count")),
+             "pushed_at": info.get("pushed_at"), "archived": info.get("archived")}
+    return _page_data(repo, owner, name, ref, facts, _items(listing, "name", ("dir",)),
+                      len(listing) > MAX_ENTRIES, readme_html)
+
+
+def _fetch_gitea(repo: Repo, deadline: float) -> dict[str, Any]:
+    """Codeberg, Forgejo and Gitea: two or three calls; the README is
+    raw (the render endpoint needs a token), rendered here."""
+    api = repo.host.api
+    base = "/repos/{}/{}".format(_q(repo.owner), _q(repo.name))
+    info = _json(base, deadline, api)
+    if not isinstance(info, dict) or info.get("private") or info.get("internal"):
+        raise Unavailable("missing")
+    ref = repo.ref or str(info.get("default_branch") or "")
+    listing: Any = []
+    if not info.get("empty") and ref:
+        listing = _json(base + "/contents/?ref=" + _q(ref), deadline, api)
+    if not isinstance(listing, list):
+        raise Unavailable("failed")
+    owner, name = _owner_and_name(info.get("full_name"), repo)
+    items = _items(listing, "name", ("dir",))
+    readme = _readme(repo.host, owner, name, ref, items, deadline,
+                     lambda path: base + "/raw/" + quote(path) + "?ref=" + _q(ref))
+    facts = {"description": info.get("description"), "language": info.get("language"),
+             "stars": _count(info.get("stars_count")), "forks": _count(info.get("forks_count")),
+             "pushed_at": info.get("updated_at"), "archived": info.get("archived")}
+    return _page_data(repo, owner, name, ref, facts, items, False, readme)
+
+
+def _fetch_gitlab(repo: Repo, deadline: float) -> dict[str, Any]:
+    """GitLab: two or three calls. Its anonymous project answer has no
+    language or archived flag; the root's first PAGE_ENTRIES only."""
+    api = repo.host.api
+    base = "/projects/" + _q(repo.owner + "/" + repo.name)
+    info = _json(base, deadline, api)
+    if not isinstance(info, dict) or info.get("visibility", "public") != "public":
+        raise Unavailable("missing")
+    ref = repo.ref or str(info.get("default_branch") or "")
+    listing: Any = []
+    if ref:  # An empty project has no default branch.
+        listing = _json("{}/repository/tree?per_page={}&ref={}".format(
+            base, PAGE_ENTRIES, _q(ref)), deadline, api)
+    if not isinstance(listing, list):
+        raise Unavailable("failed")
+    owner, name = _owner_and_name(info.get("path_with_namespace"), repo)
+    items = _items(listing, "name", ("tree",))
+    readme = _readme(repo.host, owner, name, ref, items, deadline,
+                     lambda path: "{}/repository/files/{}/raw?ref={}".format(
+                         base, _q(path), _q(ref)))
+    facts = {"description": info.get("description"),
+             "stars": _count(info.get("star_count")), "forks": _count(info.get("forks_count")),
+             "pushed_at": info.get("last_activity_at"), "archived": info.get("archived")}
+    return _page_data(repo, owner, name, ref, facts, items,
+                      len(listing) >= PAGE_ENTRIES, readme)
+
+
+def _fetch_bitbucket(repo: Repo, deadline: float) -> dict[str, Any]:
+    """Bitbucket: two or three calls. It counts no stars, and forks would
+    take another call, so neither is shown; the root's first PAGE_ENTRIES."""
+    api = repo.host.api
+    base = "/repositories/{}/{}".format(_q(repo.owner), _q(repo.name))
+    info = _json(base, deadline, api)
+    if not isinstance(info, dict) or info.get("is_private") is not False:
+        raise Unavailable("missing")
+    branch = info.get("mainbranch")
+    ref = repo.ref or (str(branch.get("name") or "") if isinstance(branch, dict) else "")
+    page: Any = {"values": []}
+    if ref:  # An empty repository has no main branch.
+        page = _json("{}/src/{}/?pagelen={}".format(base, _q(ref), PAGE_ENTRIES), deadline, api)
+    if not isinstance(page, dict) or not isinstance(page.get("values"), list):
+        raise Unavailable("failed")
+    owner, name = _owner_and_name(info.get("full_name"), repo)
+    items = _items(page["values"], "path", ("commit_directory",))
+    readme = _readme(repo.host, owner, name, ref, items, deadline,
+                     lambda path: "{}/src/{}/{}".format(base, _q(ref), quote(path)))
+    facts = {"description": info.get("description"), "language": info.get("language"),
+             "pushed_at": info.get("updated_on")}
+    return _page_data(repo, owner, name, ref, facts, items, bool(page.get("next")), readme)
+
+
+_FETCHERS: dict[str, Callable[[Repo, float], dict[str, Any]]] = {
+    "github": _fetch_github, "gitea": _fetch_gitea,
+    "gitlab": _fetch_gitlab, "bitbucket": _fetch_bitbucket,
+}
+
+
+def _items(listing: list[Any], name_key: str, dir_types: tuple[str, ...]
+           ) -> list[tuple[str, str]]:
+    """``(name, "dir" | "file")`` for each listed entry with a usable name."""
+    items = []
+    for item in listing:
+        if not isinstance(item, dict) or not isinstance(item.get(name_key), str):
+            continue
+        name = item[name_key]
+        if not name or "/" in name:
+            continue
+        items.append((name, "dir" if item.get("type") in dir_types else "file"))
+    return items
+
+
+def _owner_and_name(full: Any, repo: Repo) -> tuple[str, str]:
     """The repository's current names (after a rename), if they're sane."""
-    full = str(info.get("full_name") or "")
-    owner, _, name = full.partition("/")
-    if _NAME.fullmatch(owner) and _NAME.fullmatch(name):
+    owner, _, name = str(full or "").rpartition("/")
+    if owner and _segments_ok(owner.split("/") + [name]) \
+            and (repo.host.kind == "gitlab" or "/" not in owner):
         return owner, name
     return repo.owner, repo.name
 
 
-def _site_url(owner: str, name: str, ref: str, path: str, kind: str) -> str:
-    url = "https://github.com/{}/{}".format(owner, name)
+def _site_url(host: Host, owner: str, name: str, ref: str, path: str, kind: str) -> str:
+    """The site's own page for the repository (no path), a folder or a file."""
+    url = "https://{}/{}/{}".format(host.host, owner, name)
+    ref = quote(ref, safe="")
+    if host.kind == "gitea":
+        if not path:
+            return url + "/src/branch/" + ref if ref else url
+        return "{}/src/branch/{}/{}".format(url, ref, quote(path))
+    if host.kind == "gitlab":
+        if not path:
+            return url + "/-/tree/" + ref if ref else url
+        return "{}/-/{}/{}/{}".format(url, "tree" if kind == "dir" else "blob", ref, quote(path))
+    if host.kind == "bitbucket":
+        if not path:
+            return url + "/src/" + ref + "/" if ref else url
+        return "{}/src/{}/{}{}".format(url, ref, quote(path), "/" if kind == "dir" else "")
     if not path:
-        return url + "/tree/" + quote(ref, safe="") if ref else url
-    return "{}/{}/{}/{}".format(url, "tree" if kind == "dir" else "blob",
-                                quote(ref, safe=""), quote(path))
+        return url + "/tree/" + ref if ref else url
+    return "{}/{}/{}/{}".format(url, "tree" if kind == "dir" else "blob", ref, quote(path))
+
+
+def _readme_bases(host: Host, owner: str, name: str, ref: str, path: str) -> tuple[str, str]:
+    """The folder addresses the README's relative links (the site's file
+    pages) and images (raw files) are resolved against."""
+    folder = posixpath.dirname(path)
+    tail = "{}/{}".format(quote(ref, safe=""), quote(folder) + "/" if folder else "")
+    url = "https://{}/{}/{}".format(host.host, owner, name)
+    if host.kind == "gitea":
+        return url + "/src/branch/" + tail, url + "/raw/branch/" + tail
+    if host.kind == "gitlab":
+        return url + "/-/blob/" + tail, url + "/-/raw/" + tail
+    if host.kind == "bitbucket":
+        return url + "/src/" + tail, url + "/raw/" + tail
+    if host.host == "github.com":
+        return (url + "/blob/" + tail,
+                "https://raw.githubusercontent.com/{}/{}/{}".format(owner, name, tail))
+    return url + "/blob/" + tail, url + "/raw/" + tail  # GitHub Enterprise
+
+
+# The README, on sites that send it raw
+
+_MARKDOWN = (".md", ".markdown", ".mdown", ".mkd")
+_README_NAME = re.compile(r"readme(\.[a-z]{1,8})?", re.IGNORECASE)
+
+
+def _pick_readme(items: list[tuple[str, str]]) -> Optional[str]:
+    """The root's README file, Markdown first, as the sites pick it."""
+    found = [n for n, kind in items if kind == "file" and _README_NAME.fullmatch(n)]
+    found.sort(key=lambda n: (not n.lower().endswith(_MARKDOWN), len(n), n))
+    return found[0] if found else None
+
+
+def _readme(host: Host, owner: str, name: str, ref: str, items: list[tuple[str, str]],
+            deadline: float, raw_path: Callable[[str], str]) -> str:
+    """The README's cleaned HTML, "" when there is none. A README that
+    fails to load leaves the rest of the page showing."""
+    path = _pick_readme(items)
+    if path is None:
+        return ""
+    status, body = _api(raw_path(path), deadline, MAX_README, "text/plain", host.api)
+    if status == 404:
+        return ""
+    if status != 200:
+        raise Unavailable("failed")
+    return clean_readme(render_readme(body.decode("utf-8", "replace"), path),
+                        *_readme_bases(host, owner, name, ref, path))
+
+
+def render_readme(text: str, path: str) -> str:
+    """A raw README as HTML, not yet cleaned: Markdown with GitHub's own
+    cmark-gfm (tables, task lists, autolinks, strikethrough), anything else
+    as preformatted text."""
+    if not path.lower().endswith(_MARKDOWN):
+        return "<pre>{}</pre>".format(html_lib.escape(text))
+    import cmarkgfm
+    from cmarkgfm.cmark import Options
+
+    # UNSAFE keeps a README's raw HTML (a centred logo, <details>) for nh3
+    # to clean, as GitHub does; without it cmark drops all of it.
+    rendered = cmarkgfm.github_flavored_markdown_to_html(text, options=Options.CMARK_OPT_UNSAFE)
+    return _heading_ids(rendered)
+
+
+_HEADING_TAG = re.compile(r"<(/?)h([1-6])>")
+_SLUG_DROP = re.compile(r"[^\w\- ]")
+
+
+def _heading_ids(rendered: str) -> str:
+    """GitHub's heading ids (``user-content-`` and a slug, ``-1`` and so on
+    for repeats), so the README's ``#`` links scroll as on GitHub.
+
+    One pass over the heading tags: a heading is a bare opening tag whose
+    next heading tag closes it. A README's raw HTML can hold any number of
+    unclosed headings, so nothing here rescans the text after them."""
+    import nh3
+
+    used: set[str] = set()
+    counters: dict[str, int] = {}
+    parts = []
+    last = 0
+    opened: Optional["re.Match[str]"] = None
+    for tag in _HEADING_TAG.finditer(rendered):
+        if not tag.group(1):
+            opened = tag
+            continue
+        if opened is not None and opened.group(2) == tag.group(2):
+            inner = rendered[opened.end():tag.start()]
+            # The heading's text, by nh3's HTML parser (linear, and right
+            # about "<" inside quoted attributes, where a regex isn't).
+            text = html_lib.unescape(nh3.clean(inner, tags=set()))
+            slug = _unused(_SLUG_DROP.sub("", text.strip().lower()).replace(" ", "-"),
+                           used, counters)
+            parts.append(rendered[last:opened.start()])
+            parts.append('<h{0} id="user-content-{1}">{2}</h{0}>'.format(
+                tag.group(2), html_lib.escape(slug), inner))
+            last = tag.end()
+        opened = None
+    parts.append(rendered[last:])
+    return "".join(parts)
+
+
+def _unused(base: str, used: set[str], counters: dict[str, int]) -> str:
+    """``base``, or the first ``base-<n>`` not given out yet: a heading
+    titled "Foo-1" may already have taken one."""
+    slug, n = base, counters.get(base, 0)
+    while slug in used:
+        n += 1
+        slug = "{}-{}".format(base, n)
+    counters[base] = n
+    used.add(slug)
+    return slug
 
 
 # Cleaning the README
@@ -268,23 +643,20 @@ _ATTRIBUTES = {
 }
 
 
-def clean_readme(html: str, owner: str, name: str, ref: str, path: str) -> str:
-    """GitHub's rendered README, cleaned with nh3 to a fixed list of tags and
-    attributes. Relative links point at the file on GitHub and relative
-    images at its raw address, from the README's own folder; in-page links
-    at GitHub's ``user-content-`` ids."""
+def clean_readme(html: str, blob: str, raw: str) -> str:
+    """A rendered README, cleaned with nh3 to a fixed list of tags and
+    attributes. Relative links resolve against ``blob`` (the README's folder
+    on the site) and relative images against ``raw`` (its raw files); in-page
+    links, ids and names all carry ``user-content-``, as GitHub's do."""
     import nh3
-
-    folder = posixpath.dirname(path)
-    quoted_ref = quote(ref, safe="")
-    blob = "https://github.com/{}/{}/blob/{}/{}".format(
-        owner, name, quoted_ref, folder + "/" if folder else "")
-    raw = "https://raw.githubusercontent.com/{}/{}/{}/{}".format(
-        owner, name, quoted_ref, folder + "/" if folder else "")
 
     def rewrite(tag: str, attribute: str, value: str) -> Optional[str]:
         if tag == "input" and attribute == "type":
             return value if value == "checkbox" else None
+        if attribute in ("id", "name"):
+            # As GitHub does, so a raw <h2 id="install"> is where the
+            # rewritten #install link below points.
+            return value if value.startswith("user-content-") else "user-content-" + value
         if attribute not in ("href", "src"):
             return value
         value = value.strip()
@@ -339,7 +711,7 @@ def cached(repo: Repo, view_id: str = "") -> tuple[Optional[dict[str, Any]], str
     Kept for repo_cache_seconds and shared by every view of the same
     repository and branch. One worker fetches a repository at a time (a lock
     file); the others serve the copy being refreshed. A failure is
-    remembered for FAILED_SECONDS, or until GitHub's limit resets; when a
+    remembered for FAILED_SECONDS, or until the site's limit resets; when a
     refresh fails, the old copy keeps being served, as the repository is
     public at its source."""
     folder = _folder()
@@ -363,7 +735,7 @@ def cached(repo: Repo, view_id: str = "") -> tuple[Optional[dict[str, Any]], str
             until = max(time.time() + FAILED_SECONDS, problem.until)
             _write(base + ".failed", {"kind": problem.kind, "until": until})
             events.emit("repo_fetch_failed", view_id=view_id, reason=problem.kind,
-                        host="github.com")
+                        host=repo.host.host)
             return (stale, "") if stale is not None else (None, problem.kind)
         _write(path, data)
         pdf._remove(base + ".failed")
@@ -438,6 +810,7 @@ def page(view_id: str) -> Response:
         "updated": _when(str((data or {}).get("pushed_at") or "")),
         "problem": problem,
         "link": found.html_url if found is not None else url,
+        "site": found.host.site if found is not None else "",
         "style": STYLE,
         "lang": toolkit.h.lang(),
     })

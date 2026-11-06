@@ -8,9 +8,9 @@
   'viewport': _('Share of the window height, in percent'),
 } %}
 
-{% call form.input('repo_url', id='field-repo_url', label=_('Repository url'), placeholder=_('eg. https://github.com/ckan/ckan  (if blank uses resource url)'), value=data.repo_url, error=errors.repo_url, classes=['control-full', 'control-large'], attrs={'class': 'form-control', 'aria-describedby': 'help-repo_url'}) %}
+{% call form.input('repo_url', id='field-repo_url', label=_('Repository url'), placeholder=_('eg. https://github.com/ckan/ckan or https://gitlab.com/gitlab-org/gitlab  (if blank uses resource url)'), value=data.repo_url, error=errors.repo_url, classes=['control-full', 'control-large'], attrs={'class': 'form-control', 'aria-describedby': 'help-repo_url'}) %}
   <p class="form-text" id="help-repo_url">
-    {{ _("Leave blank to show the repository this resource links to, or enter another repository or branch to show instead. A public GitHub repository's name, description, files and README are fetched by this site and shown here, as GitHub's pages can't be embedded. Add /tree/<branch> for a branch other than the default.") }}
+    {{ _("Leave blank to show the repository this resource links to, or enter another repository or branch to show instead. A public repository's name, description, files and README are fetched by this site and shown here, as the pages of GitHub, GitLab, Codeberg and Bitbucket can't be embedded. For a branch other than the default, use the address of the branch's page.") }}
   </p>
 {% endcall %}
 

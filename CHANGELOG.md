@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Added
+
+- The Repository (Plus) view shows public repositories on Codeberg (Forgejo), GitLab
+  (nested groups too) and Bitbucket, as well as GitHub, each from its own link and branch
+  addresses. Their READMEs come as raw Markdown, rendered by CKAN with cmarkgfm (GitHub's
+  cmark-gfm) and cleaned with nh3 as GitHub's are, with heading anchors so in-page links
+  work. Stars and forks are left out where a site doesn't count them (Bitbucket). The
+  `[repos]` extra now installs cmarkgfm too.
+- `ckanext.webpageviewplus.repo_hosts`: self-hosted GitHub Enterprise, Gitea/Forgejo and
+  GitLab sites, as `host kind` pairs, checked at startup. They're fetched over https at
+  public addresses only, with no token, and redirects are followed only within the site's
+  API.
+- Each site's rate limit is read from its own headers (GitHub's and GitLab's reset times,
+  Codeberg's `RateLimit`, `Retry-After`), so a view waits for the right moment.
+
+### Changed
+
+- Texts naming GitHub alone (the form's help, the save error, the missing-repository and
+  rate-limit cards, the consent card's host) now name the repository's own site; the save
+  error and the "no repository to show" text also name the site's `repo_hosts` servers. New
+  and changed strings are translated at release.
+
 ### Fixed
 
 - On CKAN 2.12 with a storage that answers downloads with a redirect to its own link

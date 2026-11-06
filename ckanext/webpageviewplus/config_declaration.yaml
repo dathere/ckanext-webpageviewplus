@@ -292,9 +292,9 @@ groups:
         description: |
           repo_view_plus: how long CKAN keeps its copy of a repository's page
           (under ckan.storage_path, shared by every view of that repository
-          and branch) before asking GitHub again. GitHub allows 60 requests
+          and branch) before asking its site again. GitHub allows 60 requests
           an hour per server without github_token, and a repository takes
-          three.
+          three; GitLab allows 500 a minute, Codeberg 2,000 every ten minutes.
 
       - key: ckanext.webpageviewplus.github_token
         default: ""
@@ -303,3 +303,14 @@ groups:
           api.github.com, raising GitHub's limit from 60 to 5,000 requests an
           hour. A fine-grained token with no permissions is enough: it only
           reads public repositories.
+
+      - key: ckanext.webpageviewplus.repo_hosts
+        default: ""
+        description: |
+          repo_view_plus: self-hosted sites to show repositories from, besides
+          github.com, codeberg.org, gitlab.com and bitbucket.org: pairs of a
+          host name and its kind, github (GitHub Enterprise), gitea (Gitea or
+          Forgejo) or gitlab, separated by spaces or new lines, such as
+          "git.example.org gitea gitlab.example.org gitlab". CKAN fetches
+          their APIs over https, and only from public addresses, so a site
+          reachable only inside your network won't load. No token is sent.

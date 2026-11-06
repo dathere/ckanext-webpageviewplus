@@ -50,7 +50,6 @@ README = ('<div id="readme" class="rst" data-path="README.rst"><article>'
     ("https://github.com/c%2Fk/ckan", None),
     ("https://user@github.com/ckan/ckan", None),
     ("https://github.com:8443/ckan/ckan", None),
-    ("https://gitlab.com/ckan/ckan", None),
     ("", None),
 ])
 def test_parse(url, expected):
@@ -59,7 +58,8 @@ def test_parse(url, expected):
 
 class TestCleanReadme:
     def _clean(self, html, path="README.md"):
-        return repos.clean_readme(html, "o", "r", "main", path)
+        return repos.clean_readme(html, *repos._readme_bases(
+            repos.BUILT_IN["github.com"], "o", "r", "main", path))
 
     def test_relative_links_and_images_from_the_readmes_folder(self):
         out = self._clean('<a href="guide.md">g</a><img src="img/a.png">', "docs/README.md")
@@ -110,9 +110,11 @@ def api(monkeypatch):
     }
     calls = []
 
-    def fake(path, deadline, max_bytes, accept):
-        calls.append(path)
-        answer = answers.get(path, (404, b"{}"))
+    def fake(path, deadline, max_bytes, accept, api=repos.GITHUB_API):
+        # GitHub's answers by path; other sites' by their whole address.
+        key = path if api == repos.GITHUB_API else api + path
+        calls.append(key)
+        answer = answers.get(key, (404, b"{}"))
         if isinstance(answer, Exception):
             raise answer
         return answer
@@ -488,3 +490,430 @@ class TestStartup:
     def test_starts_with_both(self, monkeypatch):
         self._plugins(monkeypatch, True)
         plugin.RepoViewPlusPlugin().configure({})
+
+
+# Other sites
+
+CODEBERG = repos.BUILT_IN["codeberg.org"]
+GITLAB = repos.BUILT_IN["gitlab.com"]
+BITBUCKET = repos.BUILT_IN["bitbucket.org"]
+
+
+@pytest.mark.parametrize("url,expected", [
+    ("https://codeberg.org/forgejo/forgejo", repos.Repo("forgejo", "forgejo", "", CODEBERG)),
+    ("https://codeberg.org/forgejo/forgejo.git", repos.Repo("forgejo", "forgejo", "", CODEBERG)),
+    ("https://codeberg.org/forgejo/forgejo/src/branch/v9.0",
+     repos.Repo("forgejo", "forgejo", "v9.0", CODEBERG)),
+    ("https://gitlab.com/gitlab-org/gitlab-runner",
+     repos.Repo("gitlab-org", "gitlab-runner", "", GITLAB)),
+    ("https://gitlab.com/a/b/c/project", repos.Repo("a/b/c", "project", "", GITLAB)),
+    ("https://gitlab.com/a/b/project/-/tree/main", repos.Repo("a/b", "project", "main", GITLAB)),
+    ("https://bitbucket.org/atlassian/connect", repos.Repo("atlassian", "connect", "", BITBUCKET)),
+    ("https://bitbucket.org/atlassian/connect/src/master/",
+     repos.Repo("atlassian", "connect", "master", BITBUCKET)),
+    # Not a repository's root, or a site's own pages.
+    ("https://codeberg.org/forgejo", None),
+    ("https://codeberg.org/forgejo/forgejo/tree/main", None),
+    ("https://codeberg.org/forgejo/forgejo/src/branch/main/docs", None),
+    ("https://codeberg.org/explore/repos", None),
+    ("https://codeberg.org/forgejo/forgejo/issues", None),
+    ("https://gitlab.com/gitlab-org", None),
+    ("https://gitlab.com/gitlab-org/gitlab-runner/-/issues", None),
+    ("https://gitlab.com/gitlab-org/gitlab-runner/-/tree/main/docs", None),
+    ("https://gitlab.com/explore/projects", None),
+    ("https://gitlab.com/" + "/".join(["g"] * 22), None),
+    ("https://bitbucket.org/atlassian", None),
+    ("https://bitbucket.org/atlassian/connect/src/master/lib/", None),
+    ("https://bitbucket.org/account/signin", None),
+    # A site that isn't in repo_hosts.
+    ("https://git.example.org/o/r", None),
+])
+def test_parse_other_sites(url, expected):
+    assert repos.parse(url) == expected
+
+
+def test_built_in_hosts_match_settings():
+    assert tuple(repos.BUILT_IN) == settings.REPO_BUILT_IN_HOSTS
+    assert set(repos._SELF_HOSTED_API) == set(settings.REPO_HOST_KINDS)
+
+
+def test_github_cache_key_unchanged():
+    assert repos.Repo("CKAN", "CKAN", "dev").key == "github.com/ckan/ckan@dev"
+
+
+@pytest.mark.parametrize("value,url,host", [
+    ("git.example.org gitea", "https://git.example.org/o/r/src/branch/main",
+     repos.Host("gitea", "git.example.org", "https://git.example.org/api/v1", "git.example.org")),
+    ("GITLAB.example.org gitlab", "https://gitlab.example.org/g/s/p",
+     repos.Host("gitlab", "gitlab.example.org", "https://gitlab.example.org/api/v4",
+                "gitlab.example.org")),
+    ("ghe.example.org github", "https://ghe.example.org/o/r/tree/main",
+     repos.Host("github", "ghe.example.org", "https://ghe.example.org/api/v3", "ghe.example.org")),
+])
+def test_repo_hosts(value, url, host, ckan_config, monkeypatch):
+    monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.repo_hosts", value)
+    settings.check()
+    found = repos.parse(url)
+    assert found is not None and found.host == host
+    assert found.html_url == url
+
+
+@pytest.mark.parametrize("value,message", [
+    ("git.example.org", "give each host with its kind"),
+    ("git.example.org bitbucket", "the kind must be one of github, gitea, gitlab"),
+    ("https://git.example.org gitea", "give a host name only"),
+    ("git.example.org:8443 gitea", "give a host name only"),
+    ("git.example.org/x gitea", "give a host name only"),
+    ("gitlab.com gitlab", "is already supported"),
+    ("www.github.com github", "is already supported"),
+    ("a.example.org gitea a.example.org gitlab", "is listed twice"),
+])
+def test_bad_repo_hosts_stop_startup(value, message, ckan_config, monkeypatch):
+    monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.repo_hosts", value)
+    with pytest.raises(CkanConfigurationException, match="repo_hosts: .*" + message):
+        settings.check()
+
+
+def test_ckan_host_refused_in_repo_hosts(ckan_config, monkeypatch):
+    monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.site_aliases", "data.example.org")
+    monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.repo_hosts", "DATA.example.org gitea")
+    with pytest.raises(CkanConfigurationException, match="one of CKAN's own hosts"):
+        settings.check()
+
+
+def _site_answers(answers, api, entries):
+    for path, answer in entries.items():
+        answers[api + path] = answer if isinstance(answer, (tuple, Exception)) else (
+            200, answer if isinstance(answer, bytes) else json.dumps(answer).encode())
+
+
+GITEA_INFO = {"full_name": "forgejo/forgejo", "description": "Beyond coding", "language": "Go",
+              "stars_count": 3000, "forks_count": 500, "updated_at": "2026-11-01T10:00:00Z",
+              "default_branch": "forgejo", "private": False, "archived": False, "empty": False}
+GITEA_LISTING = [{"name": "docs", "type": "dir"}, {"name": "README.md", "type": "file"},
+                 {"name": "main.go", "type": "file"}, {"name": "README.txt", "type": "file"}]
+MARKDOWN = (b'<div align="center"><img src="./assets/logo.svg" onerror="x()"></div>\n\n'
+            b"# Welcome\n\nSee [the docs](docs/README.md) and [install](#install).\n\n"
+            b"## Install\n\n- [x] done\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n"
+            b"<script>alert(1)</script>\n[x](javascript:alert(1))\n")
+
+
+class TestFetchOtherSites:
+    def test_codeberg(self, api):
+        answers, calls = api
+        _site_answers(answers, CODEBERG.api, {
+            "/repos/forgejo/forgejo": GITEA_INFO,
+            "/repos/forgejo/forgejo/contents/?ref=forgejo": GITEA_LISTING,
+            "/repos/forgejo/forgejo/raw/README.md?ref=forgejo": MARKDOWN,
+        })
+        data = repos.fetch(repos.parse("https://codeberg.org/forgejo/forgejo"), time.monotonic() + 5)
+        assert data["site"] == "Codeberg" and data["full_name"] == "forgejo/forgejo"
+        assert (data["stars"], data["forks"], data["language"]) == (3000, 500, "Go")
+        assert data["html_url"] == "https://codeberg.org/forgejo/forgejo"
+        assert data["entries"][0] == {
+            "name": "docs", "type": "dir",
+            "url": "https://codeberg.org/forgejo/forgejo/src/branch/forgejo/docs"}
+        readme = data["readme"]
+        assert '<h1 id="user-content-welcome">Welcome</h1>' in readme
+        assert 'href="#user-content-install"' in readme and 'id="user-content-install"' in readme
+        assert 'href="https://codeberg.org/forgejo/forgejo/src/branch/forgejo/docs/README.md"' \
+            in readme
+        assert 'src="https://codeberg.org/forgejo/forgejo/raw/branch/forgejo/assets/logo.svg"' \
+            in readme
+        assert '<input type="checkbox" checked="" disabled="disabled">' in readme
+        assert "<table>" in readme
+        for word in ("<script", "onerror", "javascript:"):
+            assert word not in readme
+        assert len(calls) == 3
+
+    def test_empty_codeberg_repository(self, api):
+        answers, calls = api
+        _site_answers(answers, CODEBERG.api, {
+            "/repos/o/r": dict(GITEA_INFO, full_name="o/r", empty=True)})
+        data = repos.fetch(repos.parse("https://codeberg.org/o/r"), time.monotonic() + 5)
+        assert data["entries"] == [] and data["readme"] == "" and len(calls) == 1
+
+    def test_gitlab_nested_group(self, api):
+        answers, calls = api
+        info = {"path_with_namespace": "group/sub/project", "description": "D",
+                "star_count": 7, "forks_count": 2, "last_activity_at": "2026-10-01T00:00:00Z",
+                "default_branch": "main", "visibility": "public"}
+        listing = [{"name": "src", "type": "tree"}, {"name": "README", "type": "blob"}]
+        _site_answers(answers, GITLAB.api, {
+            "/projects/group%2Fsub%2Fproject": info,
+            "/projects/group%2Fsub%2Fproject/repository/tree?per_page=100&ref=main": listing,
+            "/projects/group%2Fsub%2Fproject/repository/files/README/raw?ref=main":
+                b"Plain <b>text</b>",
+        })
+        data = repos.fetch(repos.parse("https://gitlab.com/group/sub/project"),
+                           time.monotonic() + 5)
+        assert data["full_name"] == "group/sub/project" and data["site"] == "GitLab"
+        assert data["language"] == "" and (data["stars"], data["forks"]) == (7, 2)
+        assert data["entries"][0]["url"] == "https://gitlab.com/group/sub/project/-/tree/main/src"
+        assert data["entries"][1]["url"] == "https://gitlab.com/group/sub/project/-/blob/main/README"
+        assert data["readme"] == "<pre>Plain &lt;b&gt;text&lt;/b&gt;</pre>"
+        assert not data["truncated"]
+
+    def test_gitlab_full_page_is_truncated(self, api):
+        answers, _ = api
+        listing = [{"name": "f{}".format(i), "type": "blob"} for i in range(repos.PAGE_ENTRIES)]
+        _site_answers(answers, GITLAB.api, {
+            "/projects/g%2Fp": {"path_with_namespace": "g/p", "default_branch": "main"},
+            "/projects/g%2Fp/repository/tree?per_page=100&ref=main": listing,
+        })
+        data = repos.fetch(repos.parse("https://gitlab.com/g/p"), time.monotonic() + 5)
+        assert data["truncated"] and data["readme"] == ""
+
+    def test_gitlab_empty_project(self, api):
+        answers, calls = api
+        _site_answers(answers, GITLAB.api, {
+            "/projects/g%2Fp": {"path_with_namespace": "g/p", "default_branch": None}})
+        data = repos.fetch(repos.parse("https://gitlab.com/g/p"), time.monotonic() + 5)
+        assert data["entries"] == [] and len(calls) == 1
+
+    def test_gitlab_private_counts_as_missing(self, api):
+        answers, _ = api
+        _site_answers(answers, GITLAB.api, {
+            "/projects/g%2Fp": {"path_with_namespace": "g/p", "visibility": "internal"}})
+        with pytest.raises(repos.Unavailable) as raised:
+            repos.fetch(repos.parse("https://gitlab.com/g/p"), time.monotonic() + 5)
+        assert raised.value.kind == "missing"
+
+    def test_bitbucket(self, api):
+        answers, _ = api
+        info = {"full_name": "atlassian/connect", "description": "Connect", "language": "js",
+                "is_private": False, "updated_on": "2026-09-01T00:00:00+00:00",
+                "mainbranch": {"name": "master"}}
+        page = {"values": [{"path": "lib", "type": "commit_directory"},
+                           {"path": "README.md", "type": "commit_file"}], "next": "https://x"}
+        _site_answers(answers, BITBUCKET.api, {
+            "/repositories/atlassian/connect": info,
+            "/repositories/atlassian/connect/src/master/?pagelen=100": page,
+            "/repositories/atlassian/connect/src/master/README.md": b"# Connect\n\n![](img/a.png)",
+        })
+        data = repos.fetch(repos.parse("https://bitbucket.org/atlassian/connect"),
+                           time.monotonic() + 5)
+        assert (data["stars"], data["forks"]) == (None, None) and data["truncated"]
+        assert data["entries"][0]["url"] == "https://bitbucket.org/atlassian/connect/src/master/lib/"
+        assert 'src="https://bitbucket.org/atlassian/connect/raw/master/img/a.png"' in data["readme"]
+
+    def test_bitbucket_private_counts_as_missing(self, api):
+        answers, _ = api
+        _site_answers(answers, BITBUCKET.api, {
+            "/repositories/w/r": {"full_name": "w/r", "is_private": True}})
+        with pytest.raises(repos.Unavailable) as raised:
+            repos.fetch(repos.parse("https://bitbucket.org/w/r"), time.monotonic() + 5)
+        assert raised.value.kind == "missing"
+
+    def test_readme_failing_to_load_is_failed(self, api):
+        answers, _ = api
+        _site_answers(answers, CODEBERG.api, {
+            "/repos/forgejo/forgejo": GITEA_INFO,
+            "/repos/forgejo/forgejo/contents/?ref=forgejo": GITEA_LISTING,
+            "/repos/forgejo/forgejo/raw/README.md?ref=forgejo": (500, b""),
+        })
+        with pytest.raises(repos.Unavailable):
+            repos.fetch(repos.parse("https://codeberg.org/forgejo/forgejo"), time.monotonic() + 5)
+
+
+@pytest.mark.parametrize("names,expected", [
+    (["README.txt", "README.md", "readme"], "README.md"),
+    (["README", "README.rst"], "README"),
+    (["readme.markdown", "main.go"], "readme.markdown"),
+    (["READMEFIRST", "notes.md"], None),
+])
+def test_pick_readme(names, expected):
+    assert repos._pick_readme([(n, "file") for n in names]) == expected
+
+
+def test_heading_ids_like_githubs():
+    out = repos.render_readme("# Hello, World! (v2)\n\n## Hello, World! (v2)\n\n# `code` & more\n",
+                              "README.md")
+    assert '<h1 id="user-content-hello-world-v2">' in out
+    assert '<h2 id="user-content-hello-world-v2-1">' in out
+    assert '<h1 id="user-content-code--more">' in out
+    raw = repos.render_readme('<h2><span title="a<b">Hello</span></h2>\n', "README.md")
+    assert '<h2 id="user-content-hello">' in raw
+
+
+def test_heading_ids_never_repeat():
+    out = repos.render_readme("# Foo\n\n# Foo-1\n\n# Foo\n\n# Foo\n", "README.md")
+    assert [h["id"] for h in BeautifulSoup(out, "html.parser").find_all("h1")] == [
+        "user-content-foo", "user-content-foo-1", "user-content-foo-2", "user-content-foo-3"]
+
+
+def test_raw_html_ids_match_the_rewritten_links():
+    html = repos.render_readme('<h2 id="install">Install</h2>\n\n[go](#install) '
+                               '<a name="top"></a>\n', "README.md")
+    out = repos.clean_readme(html, "https://x.example/b/", "https://x.example/r/")
+    assert 'id="user-content-install"' in out and 'href="#user-content-install"' in out
+    assert 'name="user-content-top"' in out
+
+
+@pytest.mark.parametrize("heading", [
+    "<h1>" * (repos.MAX_README // 4),  # unclosed: none may rescan the rest
+    "<h2>x</h2>" * (repos.MAX_README // 10),  # all the same slug
+    "<h2>" + "<" * repos.MAX_README + "</h2>",  # no tag ever closes inside
+], ids=["unclosed", "repeated", "unmatched-lt"])
+def test_heading_ids_stay_linear(heading):
+    # A second or less; the quadratic versions took minutes at this size.
+    start = time.monotonic()
+    repos._heading_ids(heading)
+    assert time.monotonic() - start < 5
+
+
+class TestRateLimits:
+    NOW = 1_800_000_000.0
+
+    @pytest.fixture(autouse=True)
+    def clock(self, monkeypatch):
+        monkeypatch.setattr(repos.time, "time", lambda: self.NOW)
+
+    @pytest.mark.parametrize("status, headers, until", [
+        (403, {"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1900000000"}, 1900000000.0),
+        (429, {"ratelimit-remaining": "0", "ratelimit-reset": "1900000000"}, 1900000000.0),
+        (429, {"RateLimit": '"baseline";r=0;t=600'}, NOW + 600),
+        (403, {"RateLimit": '"baseline";r=0;t=60'}, NOW + 60),
+        (429, {"Retry-After": "120"}, NOW + 120),
+        (429, {}, 0.0),
+    ])
+    def test_used_up(self, status, headers, until):
+        assert repos._rate_limit(status, headers) == until
+
+    def test_retry_after_a_date(self):
+        found = repos._rate_limit(429, {"Retry-After": "Sat, 16 Jan 2027 08:00:00 GMT"})
+        assert found == 1800086400.0
+
+    @pytest.mark.parametrize("status, headers", [
+        (403, {}),
+        (403, {"RateLimit": '"baseline";r=12;t=600'}),
+        (200, {"X-RateLimit-Remaining": "0"}),
+        (404, {"Retry-After": "60"}),
+    ])
+    def test_not_used_up(self, status, headers):
+        assert repos._rate_limit(status, headers) is None
+
+
+def _call_site(api, path="/projects/g%2Fp"):
+    return repos._api(path, time.monotonic() + 10, 1000, "application/json", api)
+
+
+class TestOtherSitesApi:
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.github_token", "github_pat_x")
+    @pytest.mark.parametrize("api", [GITLAB.api, CODEBERG.api, BITBUCKET.api,
+                                     "https://ghe.example.org/api/v3"])
+    def test_github_token_never_sent(self, http, api):
+        answers, made = http
+        answers[api + "/projects/g%2Fp"] = _Response(200, b"{}")
+        assert _call_site(api)[0] == 200
+        assert "Authorization" not in made[0][1]
+
+    @pytest.mark.parametrize("location", [
+        "https://evil.example/x",
+        "https://git.example.org/o/r",
+        "https://git.example.org/api/v1x/repos",
+        "http://git.example.org/api/v1/repos/o/r",
+    ])
+    def test_self_hosted_redirect_off_its_api_refused(self, http, location):
+        answers, made = http
+        api = "https://git.example.org/api/v1"
+        answers[api + "/repos/o/r"] = _Response(302, headers={"Location": location})
+        with pytest.raises(repos.Unavailable) as raised:
+            _call_site(api, "/repos/o/r")
+        assert raised.value.kind == "failed" and len(made) == 1
+
+    def test_redirect_within_its_api_followed(self, http):
+        answers, made = http
+        api = "https://git.example.org/api/v1"
+        answers[api + "/repos/o/r"] = _Response(301, headers={"Location": "/api/v1/repos/o/new"})
+        answers[api + "/repos/o/new"] = _Response(200, b"{}")
+        assert _call_site(api, "/repos/o/r") == (200, b"{}")
+
+    def test_private_address_never_requested(self, http, monkeypatch):
+        _, made = http
+        monkeypatch.setattr(frameability, "_address_kind", lambda url, deadline: "private")
+        with pytest.raises(repos.Unavailable):
+            _call_site("https://git.example.org/api/v4")
+        assert made == []
+
+    def test_rate_limited(self, http):
+        answers, _ = http
+        answers[GITLAB.api + "/projects/g%2Fp"] = _Response(
+            429, headers={"RateLimit-Reset": "1900000000"})
+        with pytest.raises(repos.Unavailable) as raised:
+            _call_site(GITLAB.api)
+        assert (raised.value.kind, raised.value.until) == ("rate_limited", 1900000000.0)
+
+
+GITLAB_REPO = "https://gitlab.com/g/p"
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus repo_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins", "storage")
+class TestOtherSitesView:
+    def test_offered_for_each_sites_links(self):
+        plugin = plugins.get_plugin(repos.VIEW_TYPE)
+        for url in ("https://codeberg.org/o/r", GITLAB_REPO, "https://bitbucket.org/w/r"):
+            assert plugin.can_view({"resource": {"url": url}})
+
+    def test_bitbucket_page_has_no_stars_or_forks(self, app, api):
+        answers, _ = api
+        _site_answers(answers, BITBUCKET.api, {
+            "/repositories/w/r": {"full_name": "w/r", "is_private": False,
+                                  "mainbranch": {"name": "main"}},
+            "/repositories/w/r/src/main/?pagelen=100": {"values": []},
+        })
+        view = _view(factories.Resource(url="https://bitbucket.org/w/r"))
+        page = BeautifulSoup(app.get(_page(view)).body, "html.parser")
+        facts = page.select_one(".repo-facts").get_text()
+        assert "star" not in facts and "fork" not in facts and "Branch: main" in facts
+
+    def test_cards_name_the_site(self, app, api):
+        answers, _ = api
+        answers[GITLAB.api + "/projects/g%2Fp"] = repos.Unavailable("rate_limited")
+        view = _view(factories.Resource(url=GITLAB_REPO))
+        card = BeautifulSoup(app.get(_page(view)).body, "html.parser").select_one(".repo-card")
+        assert "requests to GitLab" in card.get_text()
+        assert card.select_one("a").get_text() == "Open on GitLab"
+        assert card.select_one("a")["href"] == GITLAB_REPO
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.privacy_profile", "eu")
+    def test_consent_card_names_the_repositorys_host(self, app):
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=GITLAB_REPO)
+        view = _view(resource)
+        text = BeautifulSoup(app.get(_read(dataset, resource, view)).body,
+                             "html.parser").select_one(".webpageviewplus").get_text()
+        assert "gitlab.com" in text and "github.com" not in text
+
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.repo_hosts",
+                             "gitlab.example.org gitlab git.example.org gitea")
+    def test_messages_name_the_sites_own_servers(self, app):
+        resource = factories.Resource(url="https://example.com/")
+        with pytest.raises(ValidationError) as raised:
+            _view(resource)
+        assert ("Bitbucket or git.example.org, gitlab.example.org, such as"
+                in raised.value.error_dict["repo_url"][0])
+        assert _view(resource, repo_url="https://git.example.org/o/r")
+        plugin = plugins.get_plugin(repos.VIEW_TYPE)
+        variables = plugin.setup_template_variables({}, {
+            "resource": resource, "resource_view": {"repo_url": "https://example.com/"}})
+        assert variables["self_hosted_sites"] == "git.example.org, gitlab.example.org"
+
+    def test_messages_without_self_hosted_servers(self):
+        with pytest.raises(ValidationError) as raised:
+            _view(factories.Resource(url="https://example.com/"))
+        assert "Codeberg or Bitbucket, such as" in raised.value.error_dict["repo_url"][0]
+
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.repo_hosts", "git.example.org gitea")
+    def test_view_names_the_sites_own_servers(self, app):
+        from ckan.tests import helpers
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=GITLAB_REPO)
+        view = _view(resource)
+        helpers.call_action("resource_patch", id=resource["id"], url="https://example.com/")
+        text = BeautifulSoup(app.get(_read(dataset, resource, view)).body,
+                             "html.parser").get_text()
+        assert "GitHub, GitLab, Codeberg, Bitbucket and git.example.org, such as" in text

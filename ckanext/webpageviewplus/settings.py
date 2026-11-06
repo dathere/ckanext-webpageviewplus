@@ -5,6 +5,7 @@ from typing import Optional
 from urllib.parse import urlsplit
 
 import ipaddress
+import re
 
 from publicsuffixlist import PublicSuffixList
 
@@ -150,6 +151,48 @@ def github_token() -> str:
     return (_get("github_token") or "").strip()
 
 
+# repo_view_plus's own sites (repos.BUILT_IN), and the kinds a site can be
+# self-hosted as. Bitbucket Data Center has another API, so it isn't one.
+REPO_BUILT_IN_HOSTS = ("github.com", "codeberg.org", "gitlab.com", "bitbucket.org")
+REPO_HOST_KINDS = ("github", "gitea", "gitlab")
+_HOSTNAME = re.compile(
+    r"(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+")
+
+
+def repo_hosts() -> dict[str, str]:
+    """Self-hosted sites for repo_view_plus: host name to kind, from
+    whitespace-separated ``host kind`` pairs. check() refuses bad entries at
+    startup; this skips them."""
+    tokens = (_get("repo_hosts") or "").lower().split()
+    return {host: kind for host, kind in zip(tokens[0::2], tokens[1::2])
+            if kind in REPO_HOST_KINDS and _HOSTNAME.fullmatch(host)
+            and host not in REPO_BUILT_IN_HOSTS}
+
+
+def _check_repo_hosts() -> None:
+    key = PREFIX + "repo_hosts: "
+    tokens = (_get("repo_hosts") or "").lower().split()
+    if len(tokens) % 2:
+        raise CkanConfigurationException(
+            key + "give each host with its kind, such as: git.example.org gitea")
+    ckan = set(ckan_hosts())
+    seen = set()
+    for host, kind in zip(tokens[0::2], tokens[1::2]):
+        if kind not in REPO_HOST_KINDS:
+            raise CkanConfigurationException(
+                key + "{}: the kind must be one of {}".format(host, ", ".join(REPO_HOST_KINDS)))
+        if not _HOSTNAME.fullmatch(host):
+            raise CkanConfigurationException(
+                key + "{}: give a host name only (no scheme, port or path)".format(host))
+        if host in REPO_BUILT_IN_HOSTS or host.removeprefix("www.") in REPO_BUILT_IN_HOSTS:
+            raise CkanConfigurationException(key + "{}: is already supported".format(host))
+        if frame.canonical_config_host(host) in ckan:
+            raise CkanConfigurationException(key + "{}: is one of CKAN's own hosts".format(host))
+        if host in seen:
+            raise CkanConfigurationException(key + "{}: is listed twice".format(host))
+        seen.add(host)
+
+
 LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "[::1]")
 _psl = None
 
@@ -292,6 +335,7 @@ def check() -> None:
         raise CkanConfigurationException(PREFIX + "pdf_cache_seconds: can't be negative")
     if _get("repo_cache_seconds") is not None and repo_cache_seconds() < 0:
         raise CkanConfigurationException(PREFIX + "repo_cache_seconds: can't be negative")
+    _check_repo_hosts()
     if url_ttl() < 30:
         raise CkanConfigurationException(
             PREFIX + "url_ttl: must be at least 30 seconds"
