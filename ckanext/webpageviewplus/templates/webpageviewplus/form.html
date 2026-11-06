@@ -93,7 +93,11 @@
 
 {% if frame and 'degraded' in frame.notices %}
   <div class="alert alert-warning">
+    {% if (data.preset or default_preset) == 'external' %}
+    {{ _('External needs this site to sandbox downloads, which it has turned off, so the view runs as Interactive. Ask your site administrator if you need it.') }}
+    {% else %}
     {{ _('This preset needs a separate domain for uploads, which this site doesn\'t have yet, so the view runs as Interactive. Ask your site administrator if you need it.') }}
+    {% endif %}
     {% if (data.preset or default_preset) == 'data-schematic' %}{{ _('Charts, the Tour and Explore work, but maps stay blank.') }}{% endif %}
   </div>
 {% endif %}

@@ -587,10 +587,10 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   `http://` page on an `https://` site gets a card too: browsers block it. Use its `https://`
   address if it has one.
 
-- **Q: Why won't my YouTube video play, and why does the form say it needs a separate domain for uploads?**<br>
+- **Q: Why won't my YouTube video play, and why does the form say it runs as Interactive?**<br>
   A: YouTube, like Vimeo, Tableau Public and some other services, only works under `external`,
-  which needs your site to have a [separate domain for uploads](#a-separate-domain-for-uploads).
-  Ask your site administrator (point them to [Why won't YouTube videos play on my
+  which needs your site to [sandbox downloads](#uploaded-html-downloads-are-sandboxed)
+  (`harden_downloads`, on unless your site turned it off). Ask your site administrator (point them to [Why won't YouTube videos play on my
   site?](#for-site-administrators)), or link to the page instead of embedding it.
 
 - **Q: Why did my YouTube link change to youtube-nocookie.com?**<br>
@@ -893,7 +893,7 @@ ckanext.webpageviewplus.default_view_services = youtube vimeo datawrapper flouri
 
 CKAN then makes the view when such a resource is created, or when its format changes (not
 for resources added by editing the whole dataset, e.g. `package_update` from a harvester). Only
-settings that work on your site are used: without a [separate domain for uploads](#a-separate-domain-for-uploads),
+settings that work on your site are used: with [`harden_downloads`](#uploaded-html-downloads-are-sandboxed) off,
 services that need `external` (YouTube, Vimeo, Tableau Public...) get no view, and nor does a
 link to a host outside `allowed_hosts`, or an Office file in a private dataset (when Office is
 listed). Uploaded files

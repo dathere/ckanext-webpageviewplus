@@ -209,6 +209,31 @@ def test_form_says_external_runs_as_interactive_only_without_sandboxed_downloads
 
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.ckan_config("ckanext.webpageviewplus.harden_downloads", "false")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+@pytest.mark.parametrize("preset, says", [
+    ("external", "External needs this site to sandbox downloads"),
+    ("data-schematic", "This preset needs a separate domain for uploads"),
+])
+def test_degraded_warning_names_what_the_preset_needs(app, preset, says):
+    sysadmin = factories.SysadminWithToken()
+    dataset = factories.Dataset()
+    resource = factories.Resource(package_id=dataset["id"], url="https://pages.example.com/a")
+    view = helpers.call_action(
+        "resource_view_create", context={"user": sysadmin["name"], "ignore_auth": True},
+        resource_id=resource["id"], view_type="webpage_view_plus", title="Report",
+        preset=preset)
+    url = url_for(
+        "{}_resource.edit_view".format(dataset["type"]),
+        id=dataset["name"],
+        resource_id=resource["id"],
+        view_id=view["id"],
+    )
+    body = app.get(url, headers={"Authorization": sysadmin["token"]}).body
+    assert says in body
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
 @pytest.mark.ckan_config("ckanext.webpageviewplus.allowed_hosts", "pages.example.com charts.example.org")
 @pytest.mark.usefixtures("non_clean_db", "with_plugins")
 def test_form_help_text_is_linked_to_its_fields(app):

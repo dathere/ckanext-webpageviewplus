@@ -135,11 +135,12 @@ def migrate(dry_run: bool, uploads_only: bool, preset: Optional[str],
 
     Keeps each view's id, title, description, order and page_url.
 
-    Until uploads are served from a separate content origin, the external
-    preset runs sandboxed, so third-party apps that need their own logins or
-    storage stop working once migrated. --uploads-only converts just the
-    views of uploaded HTML, which gain the most (stock webpage_view runs them
-    unsandboxed on CKAN's origin), and leaves linked pages alone.
+    Third-party apps that need their own logins or storage stop working if
+    migrated as interactive (the default): migrate them with --preset
+    external (uploads still fall back to a sandboxed preset). --uploads-only
+    converts just the views of uploaded HTML, which gain the most (stock
+    webpage_view runs them unsandboxed on CKAN's origin), and leaves linked
+    pages alone.
     """
     if preset and preset not in settings.allowed_presets():
         raise click.UsageError(
