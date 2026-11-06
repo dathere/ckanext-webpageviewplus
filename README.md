@@ -571,8 +571,8 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   ready-made sandbox. Under `strict` nothing runs; under `interactive` scripts, forms, popups
   and downloads work, but the page can't keep logins or saved settings; `data-schematic` adds
   saved data and maps for qsv Data Schematics; `external` lifts the sandbox for third-party
-  sites you trust. The last two need your site to have a separate domain for uploads, and run as
-  `interactive` without one. If something in your page doesn't work, check what its preset
+  sites you trust. Both run as `interactive` unless your site sandboxes downloads (on by default), and
+  `data-schematic` also needs a separate domain for uploads. If something in your page doesn't work, check what its preset
   allows. See [How the protection works](#how-the-protection-works).
 
 - **Q: Which preset should I pick?**<br>
