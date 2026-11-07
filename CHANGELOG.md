@@ -25,6 +25,9 @@
   settings in `.env` through `envvars`, a start script running `db upgrade`, and `doctor` in
   the container. Deploying a content origin gains Caddy and Apache recipes, and what to keep
   behind Cloudflare or another CDN.
+- The README's "Behind Cloudflare" section covers each zone's settings: Full (strict) TLS,
+  the Host header (Origin Rules, Tunnel), HTML caching, and features that rewrite uploads,
+  change their Referrer-Policy or challenge visitors on the content domain.
 
 ### Changed
 

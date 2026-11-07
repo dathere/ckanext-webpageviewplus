@@ -560,7 +560,8 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   consent card and load-on-tap depend on those headers. A CDN that caches HTML and ignores
   `Vary` (Cloudflare's "Cache Everything", for one) would serve one visitor's version to all,
   and view counts would undercount. Leave HTML uncached there, or bypass the cache for pages with
-  views. Thumbnails are fine to cache: their address changes with the picture.
+  views. Thumbnails are fine to cache: their address changes with the picture. For
+  Cloudflare, see [Behind Cloudflare](#behind-cloudflare).
 
 - **Q: Which browsers does it support?**<br>
   A: Chrome and Edge 88+, Firefox 89+ and Safari 15+, on desktops, phones and tablets. The
@@ -1093,7 +1094,8 @@ workers work, and the browser keeps them apart from CKAN's pages, cookies and AP
    domain or on CKAN's, where they sandbox downloads. And keep the responses' own
    `Cache-Control`: an edge TTL that ignores it (Cloudflare's "Ignore cache-control header")
    would keep serving a dataset after it's made private. `doctor` checks the download headers
-   through whatever is in front of CKAN.
+   through whatever is in front of CKAN. For Cloudflare's settings, see
+   [Behind Cloudflare](#behind-cloudflare).
 3. **Configure CKAN**, with a fresh 32+ character secret (for example from
    `python -c "import secrets; print(secrets.token_urlsafe(48))"`):
 
@@ -1147,6 +1149,40 @@ How content is served:
   no cookies. See [PDF views](#pdf-views).
 - **Rollback:** unset `content_origin` and restart. No data changes, and views fall back to the
   sandboxed behaviour.
+
+#### Behind Cloudflare
+
+Cloudflare's defaults mostly suit this extension. These are the settings to check. The content
+domain is a separate registrable domain, so it's a zone of its own, and each zone has its own
+settings.
+
+- **SSL/TLS: Full (strict)**, on both zones. Flexible reaches your server over plain http, and
+  loops if the server redirects http to https. A Cloudflare Origin CA certificate on your
+  server is enough for Full (strict).
+- **Keep the `Host` header.** Don't add a Host Header override in an Origin Rule. With
+  Cloudflare Tunnel, route both hostnames to your server and leave `httpHostHeader` unset on
+  their ingress rules. Then run step 2's `curl` checks through Cloudflare.
+- **Leave HTML caching at the defaults.** Cloudflare doesn't cache HTML by default, and it
+  honours `private` and `no-cache`. A Cache Rule that caches HTML ignores `Vary` (see the
+  [CDN question](#faq)), and an Edge TTL that ignores `Cache-Control` keeps serving an upload
+  after its dataset goes private.
+- **On the content zone, turn off features that rewrite HTML:** Rocket Loader, Email Address
+  Obfuscation, Automatic HTTPS Rewrites, and Web Analytics' automatic setup. They change or add
+  scripts in uploaded pages. Email Obfuscation and Automatic HTTPS Rewrites also make Cloudflare
+  drop the ETag, so an unchanged upload costs a full download instead of a 304. If you use
+  Rocket Loader on CKAN's zone, check that a view still sizes itself and that its control bar
+  works.
+- **On the content zone, leave the "Add security headers" Managed Transform off.** It adds
+  `Referrer-Policy: same-origin`, against the `strict-origin-when-cross-origin` CKAN sends
+  there. With no Referer, OpenStreetMap's tile servers refuse an upload's map tiles.
+- **On the content zone, don't challenge visitors.** Keep Under Attack mode and Bot Fight Mode
+  off, and add no WAF challenge rules for its hostname. A challenge page would show in the view
+  instead of the upload. The PDF viewer fetches its PDF from a script, and Cloudflare documents
+  that challenges fail on those requests. Bot Fight Mode also sets its own `__cf_bm` cookie, so
+  the content domain would no longer be cookie-free. The cookie is Cloudflare's and stays on
+  that domain, so it never reaches CKAN.
+- **Check from outside:** `ckan webpageviewplus doctor --site-url https://data.example.org`
+  fetches a download through Cloudflare, and fails if a rule strips its sandbox headers.
 
 ### Frameability check
 
