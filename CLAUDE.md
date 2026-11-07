@@ -141,7 +141,10 @@ order now being built:
   `harden_downloads`) only for what runs uploads themselves: `data-schematic`
   (`needs_content_origin`) and PDF (Plus). With `harden_downloads` off, the rule applies to
   every frame, and `external`/`data-schematic` degrade to `interactive`. It always applies to
-  frames on CKAN's own host, uploads included. The `/uploads/` folder (avatars, group images)
+  frames on CKAN's own host, uploads included. An upload `content.serves` refuses (a 2.10/2.11
+  cloud storage) is framed with no content origin (`content.frame_content_origin`, used by
+  render, the validator and `migrate`), so `data-schematic` degrades to `interactive` there
+  rather than failing the rule as `strict`. The `/uploads/` folder (avatars, group images)
   isn't hooked, but CKAN accepts only PNG/GIF/JPEG there by content by default
   (`ckan.upload.*.mimetypes`); a site widening that is exposed with or without a content
   origin.

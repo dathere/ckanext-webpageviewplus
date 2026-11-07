@@ -53,6 +53,14 @@
   (`ckan:s3` from ckanext-file-keeper-cloud), an HTML upload's download URL went to that
   link rather than the content origin, so the control bar's Open in new tab and Reload
   left the content origin. They're now sent to it, as with every other storage.
+- On CKAN 2.10 and 2.11 with a content origin, a qsv Data Schematic kept by a cloud storage
+  extension (ckanext-s3filestore, ckanext-cloudstorage), which can't be served from the
+  content origin, ran as Strict with no scripts, and saving one as Data Schematic was refused.
+  It now runs as Interactive, as on a site without a content origin, and the form says why.
+  Its charts work; maps still need CKAN 2.12.
+- README: corrections from a documentation audit, mostly places still saying `external`
+  (YouTube, Office files...) needs a separate domain for uploads, and the content-origin
+  check after deploying, which now fetches a real content address.
 
 ## 0.11.0 (2026-11-04)
 

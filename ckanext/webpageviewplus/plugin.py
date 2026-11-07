@@ -217,6 +217,13 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             "presets": settings.allowed_presets(),
             # An upload's own address is never checked for framing.
             "upload_resource": resource.get("url_type") == "upload",
+            # Kept by a storage this extension can't serve from the content
+            # origin (a cloud storage extension on CKAN 2.10/2.11).
+            "upload_not_served": (
+                not page_url and resource.get("url_type") == "upload"
+                and bool(settings.isolating_content_origin())
+                and not content.serves(resource)
+            ),
             # A PDF shows better in PDF (Plus), where it's offered.
             "suggest_pdf_view": (
                 plugins.plugin_loaded(pdf.VIEW_TYPE)
@@ -293,7 +300,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             preset,
             ckan_hosts=ckan_hosts,
             is_upload=is_upload,
-            content_origin=settings.isolating_content_origin(),
+            content_origin=content.frame_content_origin(resource, is_upload),
             downloads_sandboxed=settings.harden_downloads(),
             sandbox_override=resource_view.get("sandbox") or "",
             allow_override=resource_view.get("allow") or "",

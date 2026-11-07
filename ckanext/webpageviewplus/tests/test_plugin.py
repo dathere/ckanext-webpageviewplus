@@ -1106,3 +1106,43 @@ def test_unknown_privacy_profile_stops_startup(monkeypatch):
     )
     with pytest.raises(CkanConfigurationException, match="privacy_profile"):
         settings.check()
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestUploadTheContentOriginCantServe:
+    """A cloud storage extension on CKAN 2.10/2.11 with a content origin: the
+    upload stays on CKAN's origin, so data-schematic runs as interactive
+    rather than failing the same-origin rule as strict."""
+
+    @pytest.fixture(autouse=True)
+    def unreadable(self, content_origin, monkeypatch):
+        from ckanext.webpageviewplus import content
+        monkeypatch.setattr(content, "_readable_uploader", lambda resource: None)
+
+    def test_data_schematic_saves(self):
+        resource = factories.Resource(url_type="upload", url="schematic.html")
+        view = _view(factories.Sysadmin(), resource["id"], preset="data-schematic")
+        assert view["preset"] == "data-schematic"
+
+    def test_renders_as_interactive(self):
+        resource = factories.Resource(url_type="upload", url="schematic.html")
+        variables = WebpageviewplusPlugin().setup_template_variables(
+            {}, {"resource_view": {"preset": "data-schematic"}, "resource": resource})
+        built = variables["frame"]
+        assert (built.preset, built.notices) == ("interactive", ["degraded"])
+        assert "allow-same-origin" not in built.sandbox.split()
+        assert variables["upload_not_served"]
+
+    def test_form_says_why(self, app):
+        sysadmin = factories.SysadminWithToken()
+        dataset = factories.Dataset()
+        resource = factories.Resource(
+            package_id=dataset["id"], url_type="upload", url="schematic.html")
+        view = _view(sysadmin, resource["id"], preset="data-schematic")
+        url = url_for(
+            "{}_resource.edit_view".format(dataset["type"]),
+            id=dataset["name"], resource_id=resource["id"], view_id=view["id"])
+        body = app.get(url, headers={"Authorization": sysadmin["token"]}).body
+        assert "the separate domain for uploads can't serve it from" in body
+        assert "which this site doesn't have yet" not in body
