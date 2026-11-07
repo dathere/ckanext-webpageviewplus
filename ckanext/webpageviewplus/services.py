@@ -11,7 +11,7 @@ Slides, Our World in Data, Felt and Jupyter notebooks
 and Online, Looker Studio, Plotly Cloud, Streamlit, Hugging Face and
 shinyapps.io apps, Google Forms, Typeform, Infogram, uMap, OpenStreetMap,
 the Internet Archive and Sketchfab need scripts with their own origin, so they need
-external, which needs a content origin.
+external, which needs sandboxed downloads (harden_downloads).
 """
 from __future__ import annotations
 

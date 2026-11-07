@@ -78,7 +78,7 @@ loading third-party pages, and opt in to anonymous view counts.
 | Accessibility | a generic "Webpage view" title | the view's title read out, a skip link, announcements, works at 400% zoom |
 | Pages that can't be shown | a blank frame | a card saying why, with Open in new tab |
 | Editor help | none | paste a link from one of 30 well-known services and the form fills in the embed settings; optional warning when a site refuses to be embedded |
-| Resource list | a format label | optionally a thumbnail: an image the editor picks, the page's own preview image, or the service's thumbnail or logo |
+| Resource list | a format label | optionally a thumbnail: an image the editor picks, the page's own preview image, an Office file's preview picture, a PDF's first page, or the service's thumbnail or logo |
 | Finding broken views | none | one command lists views (core's too) whose page is gone or refuses to be embedded |
 | Telemetry | none | none by default; opt-in view counting |
 | Languages | CKAN's | English, German, Spanish, French, Italian, Japanese and Brazilian Portuguese |
@@ -111,10 +111,10 @@ address and settings. Optional next steps, each a section below:
   ([Views made automatically](#views-made-automatically)).
 - Move existing core Website views over: `ckan webpageviewplus migrate --dry-run`
   ([Migrating from webpage_view](#migrating-from-webpage_view)).
-- Let YouTube, Vimeo, Tableau Public and uploaded qsv Data Schematics run fully, and turn on
-  PDF (Plus): set up [a separate domain for uploads](#a-separate-domain-for-uploads).
-  `doctor` says when that's missing.
-- Thumbnails in the resource list and PDF (Plus): the other two plugins, in
+- Let uploaded qsv Data Schematics run fully (maps, saved data), and turn on PDF (Plus): set up
+  [a separate domain for uploads](#a-separate-domain-for-uploads). `doctor` says when that's
+  missing. YouTube, Vimeo, Tableau Public and the other `external` services don't need one.
+- Thumbnails in the resource list, PDF (Plus) and Repository (Plus): the other plugins, in
   [Installation](#installation).
 
 ## Requirements
@@ -242,7 +242,7 @@ Add a "Website (Plus)" view to an HTML resource and pick a security preset:
 | `strict` | show its HTML, with no scripts | static HTML: reports, notebooks without JavaScript |
 | `interactive` (the default) | run scripts, submit forms, open popups and downloads, but keep no logins or saved data | charts and other scripted pages |
 | `external` | everything it could do on its own site | third-party sites you trust (dashboards, apps, videos). Needs [sandboxed downloads](#uploaded-html-downloads-are-sandboxed) (on by default); with `harden_downloads` off it runs as `interactive`. Never used for uploads or CKAN's own pages |
-| `data-schematic` | what `interactive` allows, plus saved data and popups | qsv Data Schematics (maps, Tour, Explore). Needs a separate domain for uploads; without one it runs as `interactive` and maps stay blank |
+| `data-schematic` | what `interactive` allows, plus a real origin (saved data, maps) and popups that leave the sandbox | qsv Data Schematics (maps, Tour, Explore). Needs a separate domain for uploads; without one it runs as `interactive` and maps stay blank |
 
 Editors pick the preset and the height. Sysadmins can also fine-tune a view's sandbox and
 browser features (see [How the protection works](#how-the-protection-works)).
@@ -383,9 +383,9 @@ visits" on a view. Only daily totals per view are kept, with nothing about the v
 view says it counts visits. See [Opt-in view counting](#opt-in-view-counting).
 
 **Show thumbnails in the resource list.** Install with Pillow
-(`pip install ckanext-webpageviewplus[thumbnails]`) and add `webpage_view_plus_thumbnails` to
+(`pip install "ckanext-webpageviewplus[thumbnails]"`) and add `webpage_view_plus_thumbnails` to
 `ckan.plugins` after `webpage_view_plus`. A dataset's resource list then shows a small image,
-instead of the format icon, beside each resource with a Website (Plus) view. With
+instead of the format icon, beside each resource with a Website (Plus) or PDF (Plus) view. With
 `thumbnail_fetch = true`, CKAN also takes the page's own preview image when a view is saved. See
 [Thumbnails in the resource list](#thumbnails-in-the-resource-list).
 
@@ -416,8 +416,8 @@ skips the view and says so. Back up the database first, and start with a dry run
 use `--uploads-only`.** Stock `webpage_view` runs embedded pages unsandboxed, and a third-party
 app migrated as `interactive` (the default) would lose its own logins and saved settings.
 With `--preset external`, uploads still fall back to a preset that sandboxes them.
-`--uploads-only` converts just the views of uploaded HTML, which gain the most, and leaves
-linked pages on `webpage_view`.
+`--uploads-only` converts just the views of uploads (with no page URL of their own), which
+gain the most, and leaves linked pages on `webpage_view`.
 
 On a large site, `--dataset NAME` migrates one dataset's views at a time, so you can check a
 few before converting the rest.
@@ -446,9 +446,10 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 - **Q: What exactly does the sandbox stop, and what doesn't it?**<br>
   A: It stops an embedded page from using your visitors' logins. Whether it's another site's page
   or HTML someone uploaded, the page can't read your site's pages, cookies or saved data, can't
-  see private datasets, and can't change anything in a visitor's name. Without a separate domain
-  for uploads, no frame is ever allowed to run scripts with a real origin, as that's the one
-  combination that could open an upload on your site's address and give it the visitor's login.
+  see private datasets, and can't change anything in a visitor's name. Uploads and your site's
+  own pages are never allowed to run scripts with a real origin, as that's the one combination
+  that could act as your site with the visitor's login; other sites' pages may (`external`),
+  because your site sandboxes the uploads it serves, so no frame can open one as your site.
   It doesn't vouch for what a page says or loads. A page can still be misleading, including a
   fake sign-in form (only a separate domain for uploads takes that off your site's address). And
   loading another site's page still sends that site the visitor's own cookies for it, which is
@@ -508,8 +509,8 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 - **Q: We keep uploads in S3 or other cloud storage. Does it work?**<br>
   A: On CKAN 2.12, yes: uploads in any `ckan.files` storage that can stream, S3 included, are
   served from your separate domain. On CKAN 2.10 and 2.11, uploads kept by ckanext-s3filestore
-  or ckanext-cloudstorage stay sandboxed on CKAN's own address, so schematics lose their maps
-  there. Upgrading to 2.12 lifts that. See [Deploying a content
+  or ckanext-cloudstorage stay sandboxed on CKAN's own address, so schematics run as
+  `interactive` and lose their maps there. Upgrading to 2.12 lifts that. See [Deploying a content
   origin](#deploying-a-content-origin).
 
 - **Q: Can I control what editors embed?**<br>
@@ -568,8 +569,8 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 - **Q: How do I turn it off or roll back?**<br>
   A: Unsetting `content_origin` and restarting falls back to the sandboxed behaviour at once,
   with no data changes (PDF (Plus) views then say they can't be shown). Removing
-  `webpage_view_plus` from `ckan.plugins` (with `webpage_view_plus_thumbnails` and
-  `pdf_view_plus`, if enabled: they won't start without it) hides its views, as CKAN hides any
+  `webpage_view_plus` from `ckan.plugins` (with `webpage_view_plus_thumbnails`, `pdf_view_plus`
+  and `repo_view_plus`, if enabled: they won't start without it) hides its views, as CKAN hides any
   view whose plugin isn't enabled, but keeps them in the database: enabling it again brings them
   back. Don't run `ckan views clean` while it's off: that deletes every view whose plugin isn't
   enabled, and with them their counts, thumbnails and stored checks. To remove the extension's
@@ -616,7 +617,7 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   A: `interactive`, the default, suits most charts and scripted pages. Use `strict` for plain
   HTML with no scripts, `data-schematic` for qsv Data Schematics, and `external` only for
   third-party sites you trust that need their own logins or saved settings. Pasting a link from
-  a well-known service picks the preset for you. See [Adding a view](#adding-a-view).
+  a well-known service offers the right preset (click "Use them"). See [Adding a view](#adding-a-view).
 
 - **Q: Why does my view show "doesn't allow its pages to be shown inside other sites"?**<br>
   A: That site refuses to be embedded, so a browser would show an empty box; the card offers
@@ -653,11 +654,13 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   links](#well-known-services-recognised-links).
 
 - **Q: Can I show a Word, Excel or PowerPoint file?**<br>
-  A: Yes, if it's public and your site has a separate domain for uploads: paste the file's
+  A: Yes, if it's public and your site sandboxes downloads (`harden_downloads`, on by default):
+  paste the file's
   address as the page URL, or leave the page URL empty on the file's own resource, and the form
   suggests Microsoft's online viewer. OpenDocument files (`.odt`, `.ods`, `.odp`) work too.
   Files in private datasets can't be shown that way, since Microsoft fetches the file itself.
-  Your site administrator decides whether Office resources offer the view. See [Well-known
+  Your site administrator decides whether Office resources get the view by themselves; you
+  can always add it. See [Well-known
   services: recognised links](#well-known-services-recognised-links).
 
 - **Q: Can I show a PDF?**<br>
@@ -685,10 +688,11 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 - **Q: How do I get a picture in the resource list?**<br>
   A: Where your site has thumbnails on, pick an image uploaded to the same dataset under
   "Thumbnail in the resource list" in the view form; for a PDF (Plus) view you can pick "The
-  PDF's first page" there instead. Without one, a well-known service shows its own thumbnail or
-  logo, an Office file shows the preview picture saved inside it, and where the site allows it
-  the page's own preview image is used; tick "Don't make a thumbnail automatically" to leave
-  those out. See [Thumbnails in the resource list](#thumbnails-in-the-resource-list).
+  PDF's first page" there instead. Without one, an Office file shows the preview picture saved
+  inside it, and where the site fetches thumbnails (`thumbnail_fetch`) a well-known service's own
+  thumbnail or the page's preview image is used. Otherwise a well-known service shows its logo,
+  when it's the resource's only view. Tick "Don't make a thumbnail automatically" to leave out
+  the preview picture and fetched images; a logo still shows. See [Thumbnails in the resource list](#thumbnails-in-the-resource-list).
 
 - **Q: Why do visitors see "This view loads content from …" first?**<br>
   A: That's the consent card: the site, or you for this view, asked visitors to agree before a
@@ -761,7 +765,7 @@ visitor's cookies or storage, as extra hardening against trackers.
 With this plugin enabled, CKAN's resource downloads and the resource proxy get a
 `Content-Security-Policy: sandbox` header without `allow-same-origin`, on everything except
 types a browser never runs scripts in: images (not SVG), audio, video, fonts, plain text, CSV,
-TSV, JSON, PDF, zip, gzip, `application/octet-stream` and `application/vnd.*` (not XML ones).
+TSV, JSON (and `+json` types), PDF, zip, gzip, `application/octet-stream` and `application/vnd.*` (not XML ones).
 CKAN sends a resource's mimetype as its type, and editors can set it to anything, so a type
 that isn't exactly one of those counts as able to run scripts: browsers run `text/plain,
 text/html` (or `text/plain; charset=UTF-8, text/html`) as HTML, and guess HTML for
@@ -858,7 +862,7 @@ checked in Chrome under each preset:
 | [Google Slides](https://www.google.com/slides/about/) | presentations published to the web, `docs.google.com/presentation/d/e/<id>/pub` or `/embed` (`start`, `loop`, `delayms` and `slide` are kept) | `interactive` | 960/569 |
 | [Our World in Data](https://ourworldindata.org/) | charts and explorers, `ourworldindata.org/grapher/<chart>` and `/explorers/<name>`, with the query that picks countries, years and tab | `interactive` | 600 px |
 | [Streamlit](https://streamlit.io/cloud) | public apps on Community Cloud, `<name>.streamlit.app` (embedded with `?embed=true`) | `external` | 800 px |
-| [Hugging Face Spaces](https://huggingface.co/spaces) | `huggingface.co/spaces/<owner>/<name>` (embedded through its `/embed` address, which redirects to the Space's `<name>.hf.space` host, so `allowed_hosts` needs both), or a `<name>.hf.space` (or static `<name>.static.hf.space`) address | `external` | 800 px |
+| [Hugging Face Spaces](https://huggingface.co/spaces) | `huggingface.co/spaces/<owner>/<name>` (embedded through its `/embed` address, which redirects to the Space's `<name>.hf.space` host; `allowed_hosts` checks only the saved address, so it needs `huggingface.co`, and a Space's own host only if editors paste that), or a `<name>.hf.space` (or static `<name>.static.hf.space`) address | `external` | 800 px |
 | [shinyapps.io](https://www.shinyapps.io/) | Shiny apps at `<account>.shinyapps.io/<app>/` | `external` | 800 px |
 | [Infogram](https://infogram.com/) | `infogram.com/<name>` (embedded from `e.infogram.com`) | `external` | 600 px |
 | [Felt](https://felt.com/) | public maps, `felt.com/map/<name>` (a `loc` and display options are kept, a private map's `token` isn't) | `interactive` | 600 px |
@@ -894,7 +898,7 @@ own file. Office links get no view [automatically](#views-made-automatically) un
 (an uploaded one never does). The resource
 list keeps the file's own format (DOCX, XLSX...). OpenDocument files (`.odt`, `.ods`, `.odp`) render too,
 though the viewer refuses some files it can't read: check yours. [ckanext-officedocs](https://github.com/jqnatividad/ckanext-officedocs)
-shows Office files without a sandbox, so it also works on sites without a separate domain.
+shows Office files without a sandbox, so it also works with `harden_downloads` off.
 
 Only public embeds are recognised. Power BI reports shared inside an organisation and private
 CARTO maps need the viewer's login or an access token (as do private Plotly Cloud apps), and
@@ -937,8 +941,8 @@ settings that work on your site are used: with [`harden_downloads`](#uploaded-ht
 services that need `external` (YouTube, Vimeo, Tableau Public...) get no view, and nor does a
 link to a host outside `allowed_hosts`, or an Office file in a private dataset (when Office is
 listed). Uploaded files
-never get one: an editor decides whether Microsoft's viewer may fetch them. Other pages get no
-view unless you list their formats in `ckanext.webpageviewplus.formats` (e.g. `html htm`); those
+never get a service's view: an editor decides whether Microsoft's viewer may fetch them. Other
+pages, uploads included, get no view unless you list their formats in `ckanext.webpageviewplus.formats` (e.g. `html htm`); those
 views frame the resource's own link with the default preset.
 
 For resources that already exist, run CKAN's own command, on one dataset first:
@@ -971,13 +975,14 @@ recognise, and whether they can be embedded is up to their own server:
 #### Office files compared with ckanext-officedocs
 
 Both show public Office files through Microsoft's online viewer, which fetches the file itself.
-ckanext-officedocs needs nothing else; Website (Plus) needs a
-[separate domain for uploads](#a-separate-domain-for-uploads), as the viewer only works
-unsandboxed, which this extension allows only once uploads can't run as CKAN.
+ckanext-officedocs needs nothing else; Website (Plus) needs
+[sandboxed downloads](#uploaded-html-downloads-are-sandboxed) (`harden_downloads`, on by
+default), as the viewer only works unsandboxed, which this extension allows only once uploads
+can't run as CKAN.
 
 | | ckanext-officedocs (2.0.1) | Website (Plus) with the Microsoft Office service |
 | --- | --- | --- |
-| Needs | nothing | a separate domain for uploads |
+| Needs | nothing | sandboxed downloads (`harden_downloads`, the default) |
 | Formats | DOC, DOCX, XLS, XLSX, XLSB, PPT, PPTX, PPS, PPSX, ODT, ODS, ODP (configurable) | DOC, DOCX, XLS, XLSX, PPT, PPTX, PPSX, ODT, ODS, ODP (XLSB didn't open in tests) |
 | How a view is made | made for those formats automatically | the form suggests the viewer for the file, or for a link to one pasted as the page URL; with `webpage_view_plus` in `ckan.views.default_views` and `microsoft-office` in `default_view_services`, linked files in public datasets get one automatically |
 | Frame | Microsoft's viewer, no sandbox | the same viewer under the `external` preset, with the site's host list and Permissions Policy |
@@ -1052,7 +1057,7 @@ workers work, and the browser keeps them apart from CKAN's pages, cookies and AP
            }
        }
 
-   With Apache (`mod_proxy`, `mod_proxy_http`, `mod_headers`, `mod_rewrite` and
+   With Apache (`mod_ssl`, `mod_proxy`, `mod_proxy_http`, `mod_headers`, `mod_rewrite` and
    `mod_deflate` enabled):
 
        <VirtualHost *:443>
@@ -1073,9 +1078,12 @@ workers work, and the browser keeps them apart from CKAN's pages, cookies and AP
    **The proxy must pass the original `Host` header** (`proxy_set_header Host $host` in
    nginx, `ProxyPreserveHost On` in Apache, and the same in any CDN in front of it). CKAN
    recognises the content domain by that header. Only on it does CKAN answer the content
-   route alone and 404 everything else. If the header is rewritten, the whole CKAN site
-   answers on the content domain. Check it after deploying: `curl -I
-   https://example-usercontent.org/dataset/` must return 404.
+   route alone and 404 everything else. If the header is rewritten, CKAN takes each request
+   for its own site and answers the content route with 404, so upload views come up empty
+   (and a proxy forwarding every path would show the whole site on the content domain). Check
+   it after deploying: a public HTML upload's content address, `curl -I
+   https://example-usercontent.org/webpageviewplus/content/<resource id>/<file name>`, must
+   return 200, and `https://example-usercontent.org/dataset/` 404.
 
    **Behind Cloudflare or another CDN**, three things matter. Keep the `Host` header (in
    Cloudflare, no Host Header override in an Origin Rule). Keep the responses' own headers: no
@@ -1213,7 +1221,7 @@ The `webpage_view_plus_thumbnails` plugin replaces the format icon in a dataset'
 list for resources with a Website (Plus) or PDF (Plus) view. It's a plugin of its own, so a site that
 doesn't enable it never loads its override of `package/snippets/resource_item.html` (the
 `resource_item_title` block), which could clash with a theme's. It needs Pillow
-(`pip install ckanext-webpageviewplus[thumbnails]`), and CKAN won't start without it. The
+(`pip install "ckanext-webpageviewplus[thumbnails]"`), and CKAN won't start without it. The
 image comes from, first match wins:
 
 1. **An image the editor picks** in the view form ("Thumbnail in the resource list"): a PNG,
@@ -1288,7 +1296,8 @@ Harvested datasets (ckanext-harvest's) are left alone: the next harvest would se
 back. A schema whose format field only accepts fixed choices (ckanext-scheming) refuses the
 service's name, and the format stays as it was.
 
-`ckan webpageviewplus check-views` remakes every Website (Plus) view's thumbnail too, so run
+`ckan webpageviewplus check-views` remakes every Website (Plus) and PDF (Plus) view's thumbnail
+too (not with `--no-store`), so run
 from cron it picks up changed pages and images replaced through `package_update`. When
 remaking one fails, it keeps the copy it has.
 
@@ -1400,7 +1409,8 @@ The pages of GitHub, GitLab, Codeberg and Bitbucket refuse to be framed, so a We
 view of a repository stays blank. The **Repository (Plus)** view (plugin `repo_view_plus`)
 shows a public repository the way its site does at its root: its name, description, language,
 stars, forks and last update (as far as the site says), the root's folders and files, and the
-README. Every link opens on the repository's site in a new tab.
+README. Every link opens on the repository's site in a new tab, except a README's links to its
+own headings, which scroll the view.
 
     pip install "ckanext-webpageviewplus[repos]"
     ckan.plugins = ... webpage_view_plus repo_view_plus
@@ -1415,7 +1425,9 @@ view's **Repository url** can name another one. Links ending `.git` work too.
 | [GitLab](https://gitlab.com) | `gitlab.com/<group>/.../<project>` | `/-/tree/<branch>` | no language; the root's first 100 entries |
 | [Bitbucket](https://bitbucket.org) | `bitbucket.org/<workspace>/<repo>` | `/src/<branch>/` | no stars or forks; the root's first 100 entries |
 
-A link to a GitLab group, not a project, shows the "wasn't found" card. Codeberg, GitLab and
+A link to a GitLab subgroup (`gitlab.com/<group>/<subgroup>`), not a project, looks like a
+nested project and shows the "wasn't found" card; a top-level group's link isn't accepted when
+the view is saved. Codeberg, GitLab and
 Bitbucket send their READMEs as raw Markdown, which CKAN renders with
 [cmarkgfm](https://github.com/theacodes/cmarkgfm) (GitHub's own cmark-gfm: tables, task lists,
 autolinks, strikethrough, heading anchors); a README in another format is shown as plain text.
@@ -1445,7 +1457,7 @@ server reachable only inside your network shows the "couldn't be loaded" card.
 - **A page with no scripts.** The README is cleaned with nh3 (tags and attributes from a fixed
   list; relative links point at the files on the repository's site, relative images at their
   raw addresses), and the page is served on CKAN's host with a CSP `sandbox` and
-  `default-src 'none'`, in a frame sandboxed with `allow-popups` only. With nothing able to
+  `default-src 'none'`, in a frame sandboxed with only `allow-popups` and `allow-popups-to-escape-sandbox`. With nothing able to
   run, it needs no separate domain for uploads. On a private dataset, the page needs the same
   access as the dataset.
 - **Third-party content.** README images load in the visitor's browser (the repository's site,
@@ -1482,7 +1494,8 @@ it). It sees CKAN's requests, at most one per
 - **Server logs** for admins, on the `ckanext.webpageviewplus.events` logger, with structured
   fields and nothing about the visitor: `view_rendered` (preset, notices; at DEBUG, as there's
   one per page view), `frame_refused` (a card shown instead of the page), `same_origin_refused`,
-  `signature_refused`, `frameability_blocked`, `pdf_fetch_failed` and
+  `signature_refused`, `frameability_blocked`, `pdf_fetch_failed`, `repo_fetch_failed` (a
+  repository's site couldn't be read, with the reason) and
   `content_request_on_ckan_host` (a content-origin address that reached CKAN's own host: your
   proxy rewrites `Host`, and upload views come up empty).
 
