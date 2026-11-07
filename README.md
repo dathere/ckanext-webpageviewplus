@@ -446,10 +446,12 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 - **Q: What exactly does the sandbox stop, and what doesn't it?**<br>
   A: It stops an embedded page from using your visitors' logins. Whether it's another site's page
   or HTML someone uploaded, the page can't read your site's pages, cookies or saved data, can't
-  see private datasets, and can't change anything in a visitor's name. Uploads and your site's
-  own pages are never allowed to run scripts with a real origin, as that's the one combination
-  that could act as your site with the visitor's login; other sites' pages may (`external`),
-  because your site sandboxes the uploads it serves, so no frame can open one as your site.
+  see private datasets, and can't change anything in a visitor's name. Your site's own pages,
+  and uploads shown from your site's address, are never allowed to run scripts with a real
+  origin, as that's the one combination that could act as your site with the visitor's login.
+  Uploads shown from a separate domain for uploads may (`data-schematic`), as that domain holds
+  no logins; other sites' pages may too (`external`), because your site sandboxes the uploads it
+  serves, so no frame can open one as your site.
   It doesn't vouch for what a page says or loads. A page can still be misleading, including a
   fake sign-in form (only a separate domain for uploads takes that off your site's address). And
   loading another site's page still sends that site the visitor's own cookies for it, which is
