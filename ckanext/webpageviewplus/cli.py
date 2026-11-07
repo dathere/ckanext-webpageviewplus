@@ -78,7 +78,10 @@ def choose_preset(
         url = settings.content_origin() + "/"
     else:
         url = (resource.url if resource is not None else "") or ""
-    isolating = settings.isolating_content_origin()
+    isolating = content.frame_content_origin(
+        content.resource_dict(resource) if resource is not None else None,
+        not page_url and resource is not None and resource.url_type == "upload",
+    )
     sandboxed = settings.harden_downloads()
     same_origin = frame.must_isolate(
         frame.frame_on_ckan_host(

@@ -112,6 +112,19 @@ class TestMigrate:
         assert result.exit_code == 0, result.output
         assert _show(view)["preset"] == "data-schematic"
 
+    def test_schematic_kept_where_the_content_origin_cant_serve_it(
+        self, cli, monkeypatch, content_origin
+    ):
+        # A cloud storage extension on CKAN 2.10/2.11: framed from CKAN's
+        # origin, it runs as interactive, which the rule accepts.
+        from ckanext.webpageviewplus import content
+        monkeypatch.setattr(content, "_readable_uploader", lambda resource: None)
+        monkeypatch.setattr(wvp_cli, "looks_like_schematic", lambda resource: True)
+        view = _stock_view(factories.Resource(url_type="upload", url="s.html"))
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate"])
+        assert result.exit_code == 0, result.output
+        assert _show(view)["preset"] == "data-schematic"
+
     @pytest.mark.parametrize("storage", ["local_storage", "memory_storage"])
     def test_schematic_detected_in_a_real_upload(self, request, storage):
         # Reads the file itself, on disk or streamed (memory: CKAN 2.12+).

@@ -80,6 +80,17 @@ def serves(resource: dict[str, Any]) -> bool:
     return _readable_uploader(resource) is not None
 
 
+def frame_content_origin(resource: Optional[dict[str, Any]], own_upload: bool) -> Optional[str]:
+    """The isolating content origin to build a view's frame with, where
+    ``own_upload`` means the frame shows the resource's own upload. An upload
+    this extension can't serve stays on CKAN's origin, so for it there's none:
+    presets that need one then degrade to interactive rather than failing the
+    same-origin rule as strict."""
+    if own_upload and (resource is None or not serves(resource)):
+        return None
+    return settings.isolating_content_origin()
+
+
 def _readable_uploader(resource: dict[str, Any]) -> Any:
     """The resource's uploader if this extension can read its files: the
     classic ResourceUpload (CKAN's upload folder), or, on CKAN 2.12+, one

@@ -202,10 +202,9 @@ def view_after_validator(
         )
         return
 
-    isolating = settings.isolating_content_origin()
-    if is_upload and resource is not None and content.serves(
-        content.resource_dict(resource)
-    ):
+    resource_dict = content.resource_dict(resource) if resource is not None else None
+    isolating = content.frame_content_origin(resource_dict, is_upload and not page_url)
+    if is_upload and resource_dict is not None and content.serves(resource_dict):
         # Framed from the content origin (see plugin.setup_template_variables).
         url = settings.content_origin() + "/"
     on_ckan_host = frame.frame_on_ckan_host(
