@@ -21,6 +21,10 @@
   without `nosniff`, as when a proxy or CDN rule strips them. A redirect off CKAN's host
   (the content origin, a storage's own link) passes. Skipped with `harden_downloads` off
   and with `--no-http`. (#6)
+- The README covers installing with Docker (ckan-docker): the Dockerfile line, plugins and
+  settings in `.env` through `envvars`, a start script running `db upgrade`, and `doctor` in
+  the container. Deploying a content origin gains Caddy and Apache recipes, and what to keep
+  behind Cloudflare or another CDN.
 
 ### Changed
 

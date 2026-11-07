@@ -148,7 +148,7 @@ needs one, and `ckan.storage_path` set to show PDFs linked from other sites.
        pip install ckanext-webpageviewplus
 
    The optional plugins need extras: `[thumbnails]` (Pillow) for thumbnails in the resource
-   list and `[repos]` (nh3) for repository views. Install the ones you'll enable, for example:
+   list and `[repos]` (nh3 and cmarkgfm) for repository views. Install the ones you'll enable, for example:
 
        pip install "ckanext-webpageviewplus[thumbnails,repos]"
 
@@ -169,7 +169,7 @@ needs one, and `ckan.storage_path` set to show PDFs linked from other sites.
        ckan.plugins = ... webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus
 
    CKAN won't start if `webpage_view_plus` is missing or, for thumbnails, Pillow is, or, for
-   repository views, nh3 is, and says which. Without a separate domain, `pdf_view_plus` loads
+   repository views, nh3 or cmarkgfm is, and says which. Without a separate domain, `pdf_view_plus` loads
    but offers no view. Keep
    `webpage_view` (and ckanext-pdfview's `pdf_view` or ckanext-officedocs' `officedocs_view`,
    if you use them) enabled until you've moved your views over: `migrate` and `migrate-pdf`
@@ -194,6 +194,41 @@ needs one, and `ckan.storage_path` set to show PDFs linked from other sites.
    (inside a container), add `--site-url http://localhost:5000`, or `--no-http` to skip it.
 
 All settings are optional; they're listed under [Config settings](#config-settings).
+
+### With Docker
+
+For [ckan-docker](https://github.com/ckan/ckan-docker) and other images built on
+`ckan/ckan-base`, the same steps go in the image and its `.env` file:
+
+1. Install the extension in `ckan/Dockerfile`:
+
+       RUN pip3 install "ckanext-webpageviewplus[thumbnails,repos]"
+
+2. Add the plugins to `CKAN__PLUGINS` in `.env`, before `envvars`, which must stay last:
+
+       CKAN__PLUGINS="image_view text_view datatables_view webpage_view_plus webpage_view_plus_thumbnails repo_view_plus envvars"
+
+3. Put settings in `.env` too. The `envvars` plugin reads each setting from a variable named
+   after it in upper case, with each dot as `__`:
+
+       CKANEXT__WEBPAGEVIEWPLUS__CONTENT_ORIGIN=https://example-usercontent.org
+       CKANEXT__WEBPAGEVIEWPLUS__SIGNING_SECRET=<secret>
+       CKANEXT__WEBPAGEVIEWPLUS__GITHUB_TOKEN=<token>
+
+4. Create the tables at every start, so an upgraded image never runs without them. Add
+   `ckan/docker-entrypoint.d/10_webpageviewplus.sh` (the image runs these scripts after its own
+   setup, as part of its start script, so don't `exit` in it):
+
+       ckan -c "$CKAN_INI" db upgrade -p webpage_view_plus
+
+5. Rebuild and restart (`docker compose build`, then `docker compose up -d`), and check the
+   setup inside the container. There `ckan.site_url` usually doesn't resolve, so point `doctor`
+   at CKAN's own port:
+
+       docker compose exec ckan ckan webpageviewplus doctor --site-url http://localhost:5000
+
+For a [separate domain for uploads](#deploying-a-content-origin), add its `server` block to
+ckan-docker's `nginx/setup/default.conf`, with `proxy_pass http://ckan:5000`.
 
 
 ## Adding a view
@@ -1001,12 +1036,52 @@ workers work, and the browser keeps them apart from CKAN's pages, cookies and AP
            location / { return 404; }
        }
 
+   With Caddy, which keeps the `Host` header and gets the certificate by itself:
+
+       example-usercontent.org {
+           encode gzip
+           # report/ only with connection_reports, pdfjs/ and pdf/ only with pdf_view_plus
+           @content path /webpageviewplus/content/* /webpageviewplus/report/* /webpageviewplus/pdfjs/* /webpageviewplus/pdf/*
+           handle @content {
+               reverse_proxy 127.0.0.1:5000   # the same CKAN
+           }
+           handle {
+               respond 404
+           }
+       }
+
+   With Apache (`mod_proxy`, `mod_proxy_http`, `mod_headers`, `mod_rewrite` and
+   `mod_deflate` enabled):
+
+       <VirtualHost *:443>
+           ServerName example-usercontent.org
+           SSLEngine on
+           SSLCertificateFile    /etc/ssl/example-usercontent.org.pem
+           SSLCertificateKeyFile /etc/ssl/example-usercontent.org.key
+           # required, see below
+           ProxyPreserveHost On
+           RequestHeader set X-Forwarded-Proto "https"
+           AddOutputFilterByType DEFLATE text/html
+           RewriteEngine On
+           # report/ only with connection_reports, pdfjs/ and pdf/ only with pdf_view_plus
+           RewriteRule "!^/webpageviewplus/(content|report|pdfjs|pdf)/" - [R=404]
+           ProxyPassMatch "^/(webpageviewplus/(content|report|pdfjs|pdf)/.*)$" "http://127.0.0.1:5000/$1"
+       </VirtualHost>
+
    **The proxy must pass the original `Host` header** (`proxy_set_header Host $host` in
    nginx, `ProxyPreserveHost On` in Apache, and the same in any CDN in front of it). CKAN
    recognises the content domain by that header. Only on it does CKAN answer the content
    route alone and 404 everything else. If the header is rewritten, the whole CKAN site
    answers on the content domain. Check it after deploying: `curl -I
    https://example-usercontent.org/dataset/` must return 404.
+
+   **Behind Cloudflare or another CDN**, three things matter. Keep the `Host` header (in
+   Cloudflare, no Host Header override in an Origin Rule). Keep the responses' own headers: no
+   rule may remove `Content-Security-Policy` or `X-Content-Type-Options`, on the content
+   domain or on CKAN's, where they sandbox downloads. And keep the responses' own
+   `Cache-Control`: an edge TTL that ignores it (Cloudflare's "Ignore cache-control header")
+   would keep serving a dataset after it's made private. `doctor` checks the download headers
+   through whatever is in front of CKAN.
 3. **Configure CKAN**, with a fresh 32+ character secret (for example from
    `python -c "import secrets; print(secrets.token_urlsafe(48))"`):
 
