@@ -204,9 +204,11 @@ For [ckan-docker](https://github.com/ckan/ckan-docker) and other images built on
 
        RUN pip3 install "ckanext-webpageviewplus[thumbnails,repos]"
 
-2. Add the plugins to `CKAN__PLUGINS` in `.env`, before `envvars`, which must stay last:
+2. Add the plugins to the existing `CKAN__PLUGINS` list in `.env`, before `envvars`, which must
+   stay last. The variable replaces the whole list, so keep the plugins already in it (such as
+   ckan-docker's `datastore` and `datapusher`):
 
-       CKAN__PLUGINS="image_view text_view datatables_view webpage_view_plus webpage_view_plus_thumbnails repo_view_plus envvars"
+       CKAN__PLUGINS="... webpage_view_plus webpage_view_plus_thumbnails repo_view_plus envvars"
 
 3. Put settings in `.env` too. The `envvars` plugin reads each setting from a variable named
    after it in upper case, with each dot as `__`:
