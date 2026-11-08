@@ -1168,15 +1168,18 @@ settings.
   after its dataset goes private.
 - **On the content zone, turn off features that rewrite HTML:** Rocket Loader, Email Address
   Obfuscation, Automatic HTTPS Rewrites, and Web Analytics' automatic setup. They change or add
-  scripts in uploaded pages. Email Obfuscation and Automatic HTTPS Rewrites also make Cloudflare
-  drop the ETag, so an unchanged upload costs a full download instead of a 304. If you use
+  scripts in uploaded pages. Cloudflare's ETag docs list Rocket Loader, Email Obfuscation and
+  Automatic HTTPS Rewrites among the features that make it remove the ETag. Without one, an
+  unchanged upload costs a full download instead of a 304. If you use
   Rocket Loader on CKAN's zone, check that a view still sizes itself and that its control bar
   works.
 - **On the content zone, leave the "Add security headers" Managed Transform off.** It adds
-  `Referrer-Policy: same-origin`, against the `strict-origin-when-cross-origin` CKAN sends
-  there. With no Referer, OpenStreetMap's tile servers refuse an upload's map tiles.
+  `Referrer-Policy: same-origin`, which can override the `strict-origin-when-cross-origin`
+  CKAN sends there. With no Referer, OpenStreetMap's tile servers refuse an upload's map
+  tiles.
 - **On the content zone, don't challenge visitors.** Keep Under Attack mode and Bot Fight Mode
-  off, and add no WAF challenge rules for its hostname. A challenge page would show in the view
+  off (no rule can skip Bot Fight Mode for one hostname), and add no WAF challenge rules for
+  its hostname. A challenge page would show in the view
   instead of the upload. The PDF viewer fetches its PDF from a script, and Cloudflare documents
   that challenges fail on those requests. Bot Fight Mode also sets its own `__cf_bm` cookie, so
   the content domain would no longer be cookie-free. The cookie is Cloudflare's and stays on
