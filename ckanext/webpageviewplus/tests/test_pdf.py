@@ -444,6 +444,26 @@ def test_website_form_points_pdfs_to_pdf_plus(app):
                 resource_id=resource["id"], view_type="webpage_view_plus"),
         headers={"Authorization": sysadmin["token"]},
     ).body
+    # The form's default preset is sandboxed, so Chrome would show it blank.
+    assert "this PDF stays blank with this preset" in body
+    assert "Use a PDF (Plus) view instead." in body
+    assert "the PDF (Plus) view shows it better" not in body
+
+
+def test_website_form_without_sandbox_still_points_to_pdf_plus(app):
+    dataset = factories.Dataset()
+    resource = factories.Resource(package_id=dataset["id"], url=LINK, format="PDF")
+    sysadmin = factories.SysadminWithToken()
+    view = helpers.call_action(
+        "resource_view_create", context={"user": sysadmin["name"], "ignore_auth": True},
+        resource_id=resource["id"], view_type="webpage_view_plus", title="Plan",
+        preset="external")
+    body = app.get(
+        url_for("dataset_resource.edit_view", id=dataset["name"],
+                resource_id=resource["id"], view_id=view["id"]),
+        headers={"Authorization": sysadmin["token"]},
+    ).body
+    assert "this PDF stays blank with this preset" not in body
     assert "the PDF (Plus) view shows it better" in body
 
 

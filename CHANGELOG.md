@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- The Website (Plus) form warns when the view shows a PDF in a sandboxed frame, which
+  Chrome and Edge leave blank as they don't run their PDF viewer in a sandbox. It points to
+  PDF (Plus) where the site offers it, else to the External preset for a linked PDF where
+  External runs unsandboxed, else to linking the PDF. The view shows a PDF when its page URL
+  ends in `.pdf`, or with no page URL, when the resource's format or URL says PDF.
+
 ## 0.12.0 (2026-11-08)
 
 ### Added

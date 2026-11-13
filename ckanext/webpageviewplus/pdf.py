@@ -114,15 +114,20 @@ def looks_like_pdf(data: bytes) -> bool:
     return b"%PDF-" in data[:HEADER_WINDOW]
 
 
+def is_pdf_url(url: str) -> bool:
+    """A URL whose path ends in .pdf."""
+    try:
+        path = urlsplit(url or "").path
+    except ValueError:
+        return False
+    return path.lower().endswith(".pdf")
+
+
 def is_pdf_resource(resource: dict[str, Any]) -> bool:
     """A resource whose format, or URL's extension, says PDF."""
     if (resource.get("format") or "").lower() in PDF_FORMATS:
         return True
-    try:
-        path = urlsplit(resource.get("url") or "").path
-    except ValueError:
-        return False
-    return path.lower().endswith(".pdf")
+    return is_pdf_url(resource.get("url") or "")
 
 
 def _cache_dir() -> Optional[str]:

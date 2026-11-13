@@ -233,6 +233,87 @@ def test_degraded_warning_names_what_the_preset_needs(app, preset, says):
     assert says in body
 
 
+PDF_LINK = "https://docs.example.com/plan.pdf"
+PDF_BLANK = "this PDF stays blank with this preset"
+USE_EXTERNAL = "the External preset shows it"
+LINK_INSTEAD = "Link to the PDF instead"
+
+
+def _view_form(app, resource, **fields):
+    sysadmin = factories.SysadminWithToken()
+    view = helpers.call_action(
+        "resource_view_create", context={"user": sysadmin["name"], "ignore_auth": True},
+        resource_id=resource["id"], view_type="webpage_view_plus", title="Plan", **fields)
+    dataset = model.Package.get(resource["package_id"])
+    url = url_for("{}_resource.edit_view".format(dataset.type), id=dataset.name,
+                  resource_id=resource["id"], view_id=view["id"])
+    return app.get(url, headers={"Authorization": sysadmin["token"]}).body
+
+
+# Chrome won't run its PDF viewer in a sandboxed frame.
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestPdfInSandboxWarning:
+    @pytest.mark.parametrize("preset", ["strict", "interactive"])
+    def test_sandboxed_link_points_to_external(self, app, preset):
+        resource = factories.Resource(url=PDF_LINK, format="PDF")
+        body = _view_form(app, resource, preset=preset)
+        assert PDF_BLANK in body
+        assert USE_EXTERNAL in body
+
+    def test_external_has_no_warning(self, app):
+        resource = factories.Resource(url=PDF_LINK, format="PDF")
+        assert PDF_BLANK not in _view_form(app, resource, preset="external")
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.harden_downloads", "false")
+    def test_degraded_external_warns_without_offering_it(self, app):
+        resource = factories.Resource(url=PDF_LINK, format="PDF")
+        body = _view_form(app, resource, preset="external")
+        assert PDF_BLANK in body
+        assert USE_EXTERNAL not in body
+        assert LINK_INSTEAD in body
+
+    # External is still sandboxed on CKAN's own host, so it isn't offered.
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.site_aliases", "ckan-alias.example.net")
+    def test_own_host_is_not_offered_external(self, app):
+        resource = factories.Resource(
+            url="https://ckan-alias.example.net/plan.pdf", format="PDF")
+        body = _view_form(app, resource, preset="interactive")
+        assert PDF_BLANK in body
+        assert USE_EXTERNAL not in body
+        assert LINK_INSTEAD in body
+
+    def test_page_url_decides_over_the_resource(self, app):
+        pdf_resource = factories.Resource(url=PDF_LINK, format="PDF")
+        body = _view_form(app, pdf_resource, preset="interactive",
+                          page_url="https://pages.example.com/plan")
+        assert PDF_BLANK not in body
+        csv_resource = factories.Resource(url="https://docs.example.com/a.csv", format="CSV")
+        body = _view_form(app, csv_resource, preset="interactive", page_url=PDF_LINK)
+        assert PDF_BLANK in body
+
+    def test_not_for_other_pages(self, app):
+        resource = factories.Resource(url="https://pages.example.com/a", format="HTML")
+        assert PDF_BLANK not in _view_form(app, resource, preset="interactive")
+
+    def test_new_view_form(self, app):
+        resource = factories.Resource(url=PDF_LINK, format="PDF")
+        warning = _form(app, resource).find(string=re.compile(PDF_BLANK))
+        assert warning is not None
+
+    def test_upload_is_never_offered_external(self, app, local_storage):
+        import io
+        from werkzeug.datastructures import FileStorage
+
+        upload = factories.Resource(
+            url="plan.pdf", url_type="upload", format="PDF",
+            upload=FileStorage(io.BytesIO(b"%PDF-1.4"), filename="plan.pdf"))
+        body = str(_form(app, upload))
+        assert PDF_BLANK in body
+        assert USE_EXTERNAL not in body
+        assert LINK_INSTEAD in body
+
+
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
 @pytest.mark.ckan_config("ckanext.webpageviewplus.allowed_hosts", "pages.example.com charts.example.org")
 @pytest.mark.usefixtures("non_clean_db", "with_plugins")
