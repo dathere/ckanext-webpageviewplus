@@ -33,7 +33,18 @@
     {% if allowed_hosts %}{{ _('This site accepts pages from these hosts only: {hosts}.').format(hosts=allowed_hosts | join(', ')) }}{% endif %}
   </p>
 {% endcall %}
-{% if suggest_pdf_view %}
+{% if pdf_sandboxed %}
+  <div class="alert alert-warning">
+    {{ _('In Chrome and Edge, this PDF stays blank with this preset: they don\'t show PDFs in a sandbox.') }}
+    {% if suggest_pdf_view %}
+    {{ _('Use a PDF (Plus) view instead.') }}
+    {% elif pdf_sandboxed == 'external' and 'external' in presets and isolated %}
+    {{ _('If you trust the site the PDF comes from, the External preset shows it.') }}
+    {% else %}
+    {{ _('Link to the PDF instead, or ask your site administrator about the PDF (Plus) view.') }}
+    {% endif %}
+  </div>
+{% elif suggest_pdf_view %}
   <div class="alert alert-info">{{ _('This resource is a PDF: the PDF (Plus) view shows it better, on phones too.') }}</div>
 {% endif %}
 

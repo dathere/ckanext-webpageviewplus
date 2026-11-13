@@ -230,6 +230,9 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
                 and bool(settings.isolating_content_origin())
                 and pdf.is_pdf_resource(resource)
             ),
+            # Set below once the frame is built, for a PDF framed in a
+            # sandbox, where Chrome won't run its PDF viewer.
+            "pdf_sandboxed": None,
             "default_preset": settings.default_preset(),
             "height_modes": frame.HEIGHT_MODES,
             "referrer_policies": frame.REFERRER_POLICIES,
@@ -383,8 +386,22 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
         except (TypeError, ValueError):
             size = 0
         load_size = toolkit.h.localised_filesize(size) if size > 0 else None
+        # Judged on the frame as built, which knows about degraded presets,
+        # the upload policy and sandbox overrides. strict is sandbox="".
+        # "external" means switching to External would show it: never on
+        # CKAN's own host or the content origin, which External can't free,
+        # nor for a view already on External.
+        shows_pdf = pdf.is_pdf_url(page_url) if page_url else pdf.is_pdf_resource(resource)
+        pdf_sandboxed = None
+        if shows_pdf and built.sandbox is not None:
+            external_helps = (
+                third_party and preset != "external"
+                and not frame.on_content_origin(url, settings.content_origin())
+            )
+            pdf_sandboxed = "external" if external_helps else "other"
         return dict(
             form_vars,
+            pdf_sandboxed=pdf_sandboxed,
             frame=built,
             share_url=share_url,
             held_back=held_back,
