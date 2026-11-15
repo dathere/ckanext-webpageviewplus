@@ -16,9 +16,9 @@
   without a separate domain for uploads too (qsv PR #5033). The view form's notice and the
   README now say only older schematics lose their maps there; saved data still needs
   `data-schematic` and a separate domain. A new FAQ entry covers `qsv viz map` charts, whose
-  default OpenStreetMap tiles Firefox can't load in a sandbox: build them with
-  `--style carto-positron`, noting that CARTO's basemap terms require your own CARTO API key,
-  though these styles still load without one today.
+  default OpenStreetMap tiles Firefox can't load in a sandbox: it points to a separate domain
+  for uploads, or to `qsv viz geo`, and notes that Data Schematics' CARTO basemaps need your
+  own CARTO API key under CARTO's terms, though they still load without one today.
 
 ## 0.12.0 (2026-11-08)
 
