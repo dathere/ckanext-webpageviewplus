@@ -408,50 +408,78 @@ def _microlink_answer(shot_url, final=PAGE):
     }).encode())
 
 
+IMAGE_URL = "https://iad.microlink.io/abc.jpeg"
+
+
+def _microlink(shot_url=IMAGE_URL, final=PAGE, image=None):
+    """A Backend answering Microlink's API and then its image URL."""
+    def answer(method, url, kwargs):
+        if url in ("https://api.microlink.io/", "https://pro.microlink.io/"):
+            return _microlink_answer(shot_url, final)
+        return image or screenshots.Answer(200, {"content-type": "image/jpeg"}, _jpeg())
+    return Backend(answer)
+
+
 @_marks(MICROLINK)
 class TestMicrolink:
     def test_request_and_image(self, monkeypatch):
-        backend = Backend(lambda *a: _microlink_answer("https://iad.microlink.io/abc.jpeg",
-                                                       final="https://www.example.org/report"))
+        backend = _microlink(final="https://www.example.org/report")
         monkeypatch.setattr(screenshots, "_send", backend)
-        fetched = []
-
-        def fetch_body(url, deadline, max_bytes, user_agent, truncate=False):
-            fetched.append(url)
-            return frameability.Body(url, "image/jpeg", None, _jpeg())
-        monkeypatch.setattr(frameability, "fetch_body", fetch_body)
         _, _, view = _setup()
         assert screenshots.capture(view["id"]) == "taken"
-        (method, url, kwargs), = backend.calls
+        (_, url, kwargs), (_, image_url, image_kwargs) = backend.calls
         assert url == "https://api.microlink.io/" and kwargs["guarded"]
         assert kwargs["params"]["url"] == PAGE and "x-api-key" not in kwargs["headers"]
-        assert fetched == ["https://iad.microlink.io/abc.jpeg"]
+        assert image_url == IMAGE_URL and image_kwargs["guarded"]
         assert screenshots.stored(view["id"])["final_host"] == "www.example.org"
 
     @pytest.mark.ckan_config("ckanext.webpageviewplus.microlink_api_key", "mk")
     def test_key_in_a_header(self, monkeypatch):
-        backend = Backend(lambda *a: _microlink_answer("https://iad.microlink.io/a.jpeg"))
+        backend = _microlink()
         monkeypatch.setattr(screenshots, "_send", backend)
-        monkeypatch.setattr(frameability, "fetch_body",
-                            lambda url, *a, **kw: frameability.Body(url, "image/jpeg", None,
-                                                                    _jpeg()))
         _, _, view = _setup()
         screenshots.capture(view["id"])
-        (_, url, kwargs), = backend.calls
+        (_, url, kwargs), (_, _, image_kwargs) = backend.calls
         assert url == "https://pro.microlink.io/" and kwargs["headers"]["x-api-key"] == "mk"
         assert "mk" not in json.dumps(kwargs["params"])
+        assert "x-api-key" not in image_kwargs.get("headers", {})
 
     @pytest.mark.parametrize("shot_url", [
         "https://evil.example.com/a.jpeg", "http://iad.microlink.io/a.jpeg",
         "https://microlink.io.evil.example.com/a.jpeg", "", None,
     ])
     def test_image_only_from_microlink(self, monkeypatch, shot_url):
-        monkeypatch.setattr(screenshots, "_send",
-                            Backend(lambda *a: _microlink_answer(shot_url)))
-        monkeypatch.setattr(frameability, "fetch_body",
-                            lambda *a, **kw: pytest.fail("fetched an untrusted image URL"))
+        backend = _microlink(shot_url)
+        monkeypatch.setattr(screenshots, "_send", backend)
         _, _, view = _setup()
         assert screenshots.capture(view["id"]) == "no_image"
+        assert len(backend.calls) == 1
+
+    @pytest.mark.parametrize("status", [301, 302, 307, 404])
+    def test_image_redirect_not_followed(self, monkeypatch, status):
+        backend = _microlink(image=screenshots.Answer(
+            status, {"location": "https://elsewhere.example.com/a.jpeg"}, b""))
+        monkeypatch.setattr(screenshots, "_send", backend)
+        _, _, view = _setup()
+        assert screenshots.capture(view["id"]) == "no_image"
+        assert backend.urls() == ["https://api.microlink.io/", IMAGE_URL]
+
+    def test_withheld_where_the_route_would_refuse(self, app, monkeypatch):
+        # Public by its flag but not to anonymous visitors: serve() 404s,
+        # so the card and the list must not offer the image (and the list
+        # falls back to a logo or the format label).
+        from ckanext.webpageviewplus import content
+        monkeypatch.setattr(screenshots, "_send", _microlink())
+        dataset, resource, view = _setup()
+        assert screenshots.capture(view["id"]) == "taken"
+        listed = {"id": view["id"], "view_type": screenshots.VIEW_TYPE, "config": view}
+        with app.flask_app.test_request_context():
+            assert screenshots.for_card(view["id"], view, resource, dataset)
+            assert screenshots.for_list(listed, resource, dataset)
+        monkeypatch.setattr(content, "is_public", lambda package_id: False)
+        with app.flask_app.test_request_context():
+            assert screenshots.for_card(view["id"], view, resource, dataset) is None
+            assert screenshots.for_list(listed, resource, dataset) is None
 
     def test_page_failed(self, monkeypatch):
         monkeypatch.setattr(screenshots, "_send", Backend(lambda *a: screenshots.Answer(

@@ -268,16 +268,16 @@ def _microlink(url: str) -> Shot:
         raise Failure("page_failed")
     shot_url = ((data.get("screenshot") or {}) if isinstance(data.get("screenshot"), dict)
                 else {}).get("url") or ""
-    # From an untrusted answer: only Microlink's own https hosts, and with
-    # the same guards as any other fetch.
+    # From an untrusted answer: only Microlink's own https hosts, guarded,
+    # and no redirect followed (one would reach a host never checked).
     if not isinstance(shot_url, str) or not _microlink_host(shot_url):
         raise Failure("no_image")
-    body = frameability.fetch_body(shot_url, time.monotonic() + SECONDS["microlink"],
-                                   MAX_ANSWER_BYTES, USER_AGENT)
-    if body is None or not _microlink_host(body.url):
+    image = _send("GET", shot_url, guarded=True, seconds=SECONDS["microlink"],
+                  max_bytes=MAX_ANSWER_BYTES)
+    if image.status != 200:
         raise Failure("no_image")
     final = data.get("url") if isinstance(data.get("url"), str) else ""
-    return Shot(body.data, final)
+    return Shot(image.body, final)
 
 
 def _gotenberg_form(url: str) -> dict[str, tuple[None, str]]:
@@ -388,7 +388,8 @@ def _remember_limit(backend: str, until: float) -> None:
     try:
         _redis().setex(_REDIS_PREFIX + "rate-limited:" + backend, seconds, str(until))
     except Exception:
-        pass
+        # Not remembered: the next run asks the backend and is refused again.
+        log.debug("webpageviewplus: screenshot limit not remembered")
 
 
 def take(url: str) -> Shot:
@@ -599,6 +600,13 @@ def _counts(row: Optional[dict[str, Any]], url: Optional[str]) -> bool:
     return bool(row and url and row["digest"] and row["source"] == source(url))
 
 
+def _withheld(package_id: Optional[str]) -> bool:
+    """Whether serve() would refuse the dataset's screenshots for a hosted
+    backend (not public to anonymous visitors, as _view_target judges), so
+    pages don't show a broken image instead of their fallback."""
+    return hosted() and not (package_id and content.is_public(package_id))
+
+
 def for_card(view_id: Optional[str], config: dict[str, Any], resource: dict[str, Any],
              package: dict[str, Any]) -> Optional[dict[str, Any]]:
     """The card's screenshot of a refused page: ``src``, ``host`` (where the
@@ -608,7 +616,7 @@ def for_card(view_id: Optional[str], config: dict[str, Any], resource: dict[str,
     url = target(view_id, VIEW_TYPE, config or {}, resource.get("url") or "",
                  resource.get("url_type") or "", bool((package or {}).get("private")))
     row = stored_meta(view_id) if url else None
-    if not _counts(row, url):
+    if not _counts(row, url) or _withheld((package or {}).get("id") or resource.get("package_id")):
         return None
     return {
         "src": toolkit.url_for("webpageviewplus_screenshots.serve", view_id=view_id,
@@ -662,7 +670,7 @@ def for_list(view: dict[str, Any], res: dict[str, Any], pkg: dict[str, Any]) -> 
         return None
     url = target(view["id"], VIEW_TYPE, view.get("config") or {}, res.get("url") or "",
                  res.get("url_type") or "", bool((pkg or {}).get("private")), row["verdict"] or "")
-    if not _counts(row, url):
+    if not _counts(row, url) or _withheld(package_id):
         return None
     return toolkit.url_for("webpageviewplus_screenshots.serve", view_id=view["id"],
                            size="thumb", v=row["digest"][:16])
