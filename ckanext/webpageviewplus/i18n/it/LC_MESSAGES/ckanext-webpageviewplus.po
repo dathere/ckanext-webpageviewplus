@@ -475,8 +475,8 @@ msgstr ""
 "all'amministratore del sito se ti serve."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:114
-msgid "Charts, the Tour and Explore work, but maps stay blank."
-msgstr "I grafici, il Tour ed Explore funzionano, ma le mappe restano vuote."
+msgid "Charts, the Tour and Explore work. Maps work only in Data Schematics made with qsv 29.0.0 or later."
+msgstr "I grafici, il Tour ed Explore funzionano. Le mappe funzionano solo nei Data Schematic creati con qsv 29.0.0 o successivo."
 
 # | msgid "" "This view's sandbox would let scripts keep a real origin, which
 # | isn't " "allowed here, so it runs as Strict."

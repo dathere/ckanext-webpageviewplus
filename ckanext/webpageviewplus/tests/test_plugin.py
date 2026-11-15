@@ -1227,3 +1227,4 @@ class TestUploadTheContentOriginCantServe:
         body = app.get(url, headers={"Authorization": sysadmin["token"]}).body
         assert "the separate domain for uploads can't serve it from" in body
         assert "which this site doesn't have yet" not in body
+        assert "Maps work only in Data Schematics made with qsv 29.0.0 or later." in body

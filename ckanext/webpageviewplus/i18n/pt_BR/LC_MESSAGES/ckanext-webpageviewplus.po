@@ -473,8 +473,8 @@ msgstr ""
 "Interativo. Fale com o administrador do site se precisar dele."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:114
-msgid "Charts, the Tour and Explore work, but maps stay blank."
-msgstr "Os gráficos, o Tour e o Explore funcionam, mas os mapas ficam em branco."
+msgid "Charts, the Tour and Explore work. Maps work only in Data Schematics made with qsv 29.0.0 or later."
+msgstr "Os gráficos, o Tour e o Explore funcionam. Os mapas só funcionam em Data Schematics criados com o qsv 29.0.0 ou posterior."
 
 # | msgid "" "This view's sandbox would let scripts keep a real origin, which
 # | isn't " "allowed here, so it runs as Strict."
