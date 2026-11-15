@@ -33,6 +33,7 @@ import json
 import logging
 import math
 import time
+import uuid
 from typing import Any, Callable, Optional
 from urllib.parse import urlsplit
 
@@ -695,10 +696,14 @@ def request_job(view_id: str, url: str) -> str:
         return "cooldown"
     redis = _redis()
     key = _pending_key(view_id)
-    if not redis.set(key, "1", nx=True, ex=PENDING_SECONDS):
+    # The job gets the mark's token and clears only its own mark, never a
+    # newer job's (one queued after this mark expired).
+    token = uuid.uuid4().hex
+    if not redis.set(key, token, nx=True, ex=PENDING_SECONDS):
         return "pending"
     try:
-        toolkit.enqueue_job(job, [view_id], title="webpageviewplus screenshot", queue=QUEUE)
+        toolkit.enqueue_job(job, [view_id, token], title="webpageviewplus screenshot",
+                            queue=QUEUE)
     except Exception:
         redis.delete(key)
         raise
@@ -707,11 +712,14 @@ def request_job(view_id: str, url: str) -> str:
     return "queued"
 
 
-def job(view_id: str) -> None:
+def job(view_id: str, token: Optional[str] = None) -> None:
     """The background job: take one view's screenshot if it still
     qualifies. Checks the cooldown again, as a job may have waited long
     in a queue no worker read; never raises, so nothing that could hold
-    a URL reaches the worker's log."""
+    a URL reaches the worker's log. If the view was saved with another
+    page meanwhile (its job was held back by this one's mark), queues
+    that page's job once this one's mark is cleared."""
+    url = None
     try:
         view = model.ResourceView.get(view_id)
         url = _view_target(view) if view is not None else None
@@ -721,10 +729,30 @@ def job(view_id: str) -> None:
         log.warning("webpageviewplus: a screenshot job failed (%s)", type(e).__name__)
         model.Session.rollback()
     finally:
-        try:
-            _redis().delete(_pending_key(view_id))
-        except Exception:
-            log.debug("webpageviewplus: screenshot job's pending mark not cleared")
+        _release(view_id, token)
+    try:
+        view = model.ResourceView.get(view_id)
+        if view is not None:
+            model.Session.refresh(view)
+            now = _view_target(view)
+            if now and now != url and not _counts(stored_meta(view_id), now):
+                request_job(view_id, now)
+    except Exception as e:
+        log.warning("webpageviewplus: couldn't queue a follow-up screenshot (%s)",
+                    type(e).__name__)
+        model.Session.rollback()
+
+
+def _release(view_id: str, token: Optional[str]) -> None:
+    try:
+        redis = _redis()
+        key = _pending_key(view_id)
+        held = redis.get(key)
+        held = held.decode() if isinstance(held, bytes) else held
+        if token is None or held == token:
+            redis.delete(key)
+    except Exception:
+        log.debug("webpageviewplus: screenshot job's pending mark not cleared")
 
 
 def after_check(view: dict[str, Any]) -> None:

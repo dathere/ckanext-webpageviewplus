@@ -763,6 +763,17 @@
     if (!button) return;
     var panel = button.closest("[data-webpageviewplus-screenshot]");
     var status = panel && panel.querySelector(".webpageviewplus-screenshot-status");
+    var wait = document.getElementById("webpageviewplus-screenshot-wait");
+    // Enabled again once a wait is over (the cooldown shown, or the one a
+    // refusal names), so the editor needn't reload the form.
+    function enableAfter(seconds) {
+      setTimeout(function () {
+        button.disabled = false;
+        if (wait) wait.textContent = "";
+      }, Math.max(0, seconds) * 1000);
+    }
+    var initial = parseInt(button.getAttribute("data-cooldown") || "0", 10);
+    if (initial > 0) enableAfter(initial);
     button.addEventListener("click", function () {
       button.disabled = true;
       fetch(button.getAttribute("data-api"), {
@@ -774,6 +785,8 @@
         return response.json().then(function (answer) {
           if (response.ok && answer.success) return button.getAttribute("data-pending");
           var error = (answer && answer.error) || {};
+          var left = error.seconds_left && parseInt(error.seconds_left[0], 10);
+          enableAfter(left || 0);
           // The action's own (translated) refusal, e.g. the seconds left.
           return (error.id && error.id[0]) || button.getAttribute("data-failed");
         });

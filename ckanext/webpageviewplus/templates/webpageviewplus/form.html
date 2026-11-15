@@ -213,6 +213,7 @@
         <button type="button" class="btn btn-secondary" data-webpageviewplus-screenshot-request
                 data-api="{{ h.url_for('api.action', ver=3, logic_function='webpageviewplus_screenshot_request') }}"
                 data-view-id="{{ data.id }}"
+                data-cooldown="{{ sp.cooldown }}"
                 data-pending="{{ _('A screenshot will be taken in the background. Reload this form later to see it.') }}"
                 data-failed="{{ _('The screenshot couldn\'t be queued. Try again later.') }}"
                 {% if sp.cooldown %}disabled aria-describedby="webpageviewplus-screenshot-wait"{% endif %}>{{ _('Take a new screenshot') }}</button>

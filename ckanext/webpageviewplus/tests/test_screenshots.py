@@ -763,8 +763,8 @@ class TestJobs:
     def test_a_save_queues_one_when_there_is_none(self, jobs):
         _, _, view = _setup()
         _save(view, title="Renamed")
-        assert [(fn.__name__, args, queue) for fn, args, queue in jobs] == [
-            ("job", [view["id"]], "webpageviewplus")]
+        assert [(fn.__name__, args[0], queue) for fn, args, queue in jobs] == [
+            ("job", view["id"], "webpageviewplus")]
         assert screenshots.pending(view["id"])
 
     def test_a_save_keeps_a_current_one(self, monkeypatch, jobs):
@@ -805,6 +805,30 @@ class TestJobs:
         sent = len(backend.calls)
         screenshots.job(view["id"])
         assert len(backend.calls) == sent
+
+    def test_url_saved_during_a_capture_gets_its_own_job(self, monkeypatch, jobs):
+        _, _, view = _setup()
+        backend = _gotenberg()
+
+        def answer(*args, **kwargs):
+            if "files" in kwargs:  # the capture of PAGE: the editor saves OTHER meanwhile
+                _blocked(view["id"], OTHER)
+                _save(view, page_url=OTHER)
+            return backend(*args, **kwargs)
+        monkeypatch.setattr(screenshots, "_send", answer)
+        _save(view, title="Renamed")
+        (fn, args, _), = jobs  # OTHER's save was held back by this job's mark
+        fn(*args)
+        assert len(jobs) == 2 and jobs[1][1][0] == view["id"]
+        assert screenshots.pending(view["id"])
+
+    def test_a_job_clears_only_its_own_mark(self, redis):
+        _, _, view = _setup()
+        redis.set(screenshots._pending_key(view["id"]), "newer")
+        screenshots.job(view["id"], "older")
+        assert screenshots.pending(view["id"])
+        screenshots.job(view["id"], "newer")
+        assert not screenshots.pending(view["id"])
 
     def test_job_never_raises(self, monkeypatch):
         def broken(view_id):
