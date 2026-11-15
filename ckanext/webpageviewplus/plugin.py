@@ -21,6 +21,7 @@ from ckanext.webpageviewplus import (
     health,
     pdf,
     repos,
+    screenshots,
     stats,
     frame,
     services,
@@ -29,6 +30,13 @@ from ckanext.webpageviewplus import (
     validators as v,
 )
 from ckanext.webpageviewplus.frame import is_http_url  # noqa: F401 (re-export)
+
+def _thumbnails_loaded() -> bool:
+    """Whether webpage_view_plus_thumbnails, which owns screenshots, is on.
+    A function of its own so tests can patch it (patching
+    plugins.plugin_loaded confuses with_plugins' teardown on CKAN 2.10)."""
+    return plugins.plugin_loaded(thumbnails.PLUGIN)
+
 
 ignore_empty = toolkit.get_validator("ignore_empty")
 ignore_missing = toolkit.get_validator("ignore_missing")
@@ -425,6 +433,11 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             frame_error=None,
             refused=refused,
             refused_host=frame.url_host(url),
+            screenshot=(
+                screenshots.for_card(resource_view.get("id"), resource_view, resource,
+                                     data_dict.get("package") or {})
+                if refused == "blocked" and _thumbnails_loaded() else None
+            ),
             open_url=open_url,
             controls=settings.controls(),
             show_controls=not toolkit.asbool(resource_view.get("hide_controls")),
@@ -473,7 +486,7 @@ class WebpageviewplusThumbnailsPlugin(plugins.SingletonPlugin):
     # IBlueprint
 
     def get_blueprint(self):
-        return [thumbnails.thumbnail]
+        return [thumbnails.thumbnail, screenshots.screenshot]
 
     # IActions
 

@@ -151,6 +151,73 @@ def github_token() -> str:
     return (_get("github_token") or "").strip()
 
 
+SCREENSHOT_BACKENDS = ("none", "cloudflare", "microlink", "gotenberg")
+# Backends that send the page's URL to another company: public datasets only.
+HOSTED_SCREENSHOT_BACKENDS = ("cloudflare", "microlink")
+
+
+def screenshot_backend() -> str:
+    return (_get("screenshot_backend") or "none").strip().lower()
+
+
+def cloudflare_account_id() -> str:
+    return (_get("cloudflare_account_id") or "").strip()
+
+
+def cloudflare_api_token() -> str:
+    return (_get("cloudflare_api_token") or "").strip()
+
+
+def microlink_api_key() -> str:
+    return (_get("microlink_api_key") or "").strip()
+
+
+def gotenberg_url() -> str:
+    return (_get("gotenberg_url") or "").strip().rstrip("/")
+
+
+def gotenberg_auth() -> Optional[tuple[str, str]]:
+    user = (_get("gotenberg_username") or "").strip()
+    return (user, _get("gotenberg_password") or "") if user else None
+
+
+def screenshot_seconds() -> int:
+    return toolkit.asint(_get("screenshot_seconds") or 30 * 24 * 60 * 60)
+
+
+def _check_screenshots() -> None:
+    backend = screenshot_backend()
+    if backend not in SCREENSHOT_BACKENDS:
+        raise CkanConfigurationException(
+            PREFIX + "screenshot_backend: must be one of " + " ".join(SCREENSHOT_BACKENDS))
+    if screenshot_seconds() < 3600:
+        raise CkanConfigurationException(PREFIX + "screenshot_seconds: must be at least 3600")
+    if backend == "none":
+        return
+    if not frameability_check():
+        raise CkanConfigurationException(
+            PREFIX + "screenshot_backend: needs frameability_check, which finds the "
+            "pages that refuse to be framed")
+    if backend == "cloudflare":
+        account = cloudflare_account_id()
+        if not re.fullmatch(r"[0-9a-f]{32}", account):
+            raise CkanConfigurationException(
+                PREFIX + "cloudflare_account_id: required, the 32-character id "
+                "from dash.cloudflare.com")
+        if not cloudflare_api_token():
+            raise CkanConfigurationException(PREFIX + "cloudflare_api_token: required")
+    if backend == "gotenberg":
+        url = gotenberg_url()
+        parts = urlsplit(url)
+        # Credentials go in gotenberg_username/password, never in the URL,
+        # which can end up in logs.
+        if not frame.is_http_url(url) or parts.username or parts.password \
+                or parts.query or parts.fragment:
+            raise CkanConfigurationException(
+                PREFIX + "gotenberg_url: required, an http(s) URL such as "
+                "http://gotenberg:3000, with no credentials, query or fragment")
+
+
 # repo_view_plus's own sites (repos.BUILT_IN), and the kinds a site can be
 # self-hosted as. Bitbucket Data Center has another API, so it isn't one.
 REPO_BUILT_IN_HOSTS = ("github.com", "codeberg.org", "gitlab.com", "bitbucket.org")
@@ -336,6 +403,7 @@ def check() -> None:
     if _get("repo_cache_seconds") is not None and repo_cache_seconds() < 0:
         raise CkanConfigurationException(PREFIX + "repo_cache_seconds: can't be negative")
     _check_repo_hosts()
+    _check_screenshots()
     if url_ttl() < 30:
         raise CkanConfigurationException(
             PREFIX + "url_ttl: must be at least 30 seconds"

@@ -1085,3 +1085,10 @@ msgstr ""
 "Diese Seite kann nicht eingebettet werden: Nur http://- und https://-URLs"
 " werden unterstützt."
 
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:20
+msgid "Screenshot of {host}"
+msgstr "Bildschirmfoto von {host}"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:24
+msgid "Screenshot taken {date}. The page itself can't be shown here."
+msgstr "Bildschirmfoto vom {date}. Die Seite selbst kann hier nicht angezeigt werden."

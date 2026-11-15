@@ -336,10 +336,14 @@ def _guarded(deadline: Optional[float]) -> Iterator[None]:
 
 
 def _http_get(url: str, **kwargs: Any) -> requests.Response:
+    return _http_request("GET", url, **kwargs)
+
+
+def _http_request(method: str, url: str, **kwargs: Any) -> requests.Response:
     fetch = getattr(_local, "fetch", None)
     if fetch is None:
-        raise RuntimeError("_http_get outside _guarded")
-    return fetch.session.get(url, **kwargs)
+        raise RuntimeError("_http_request outside _guarded")
+    return fetch.session.request(method, url, **kwargs)
 
 
 @dataclass(frozen=True)

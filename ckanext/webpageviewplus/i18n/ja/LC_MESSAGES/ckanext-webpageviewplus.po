@@ -972,3 +972,10 @@ msgid ""
 "supported."
 msgstr "このページは埋め込めません。http:// と https:// の URL のみ対応しています。"
 
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:20
+msgid "Screenshot of {host}"
+msgstr "{host} のスクリーンショット"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:24
+msgid "Screenshot taken {date}. The page itself can't be shown here."
+msgstr "スクリーンショットの撮影日時: {date}。このページ自体はここに表示できません。"

@@ -127,6 +127,12 @@ order now being built:
    #3); see `repos.py` below. Next: `check-views` reporting, and the Website (Plus) form
    offering a Repository view for repository links (separate issues).
 
+12. In progress (branch `screenshots`, unreleased): screenshots of pages that refuse framing
+   (spec section "Proposed: Screenshots of pages that refuse framing", revision 3; its Build
+   order gives the steps). Step 1 built: `screenshots.py` below. Next: step 2 (the job after a
+   save, the retake limit, the view form's Screenshot panel), then the management interface
+   once its spec section is approved.
+
 ## The security model (read before touching frame, validator, content or download code)
 
 - **Invariant:** while uploaded HTML could still run on CKAN's origin, no frame may let scripts
@@ -422,6 +428,26 @@ order now being built:
   every view type, since logos and names need the resource's only view to be a known
   service's. Logos are Simple Icons SVGs in `public/webpageviewplus/logos/`, named in
   `services.LOGOS` by the name `suggest()` gives a stored embed URL.
+- `screenshots.py` (owned by `webpage_view_plus_thumbnails`): a screenshot per Website (Plus)
+  view whose third-party page's stored check is `blocked` (`target()`: not opted out, no
+  picked image, and with a hosted backend a public dataset only), taken by
+  `ckan webpageviewplus screenshots` (`due()`, `capture()`), never at render. Backends
+  (`screenshot_backend`): `cloudflare` (Browser Run, Bearer token), `microlink` (`x-api-key`;
+  its image URL from the JSON must be https on a `microlink.io` host and goes through
+  `fetch_body`), `gotenberg` (the site's own container: unguarded, so only ever
+  `gotenberg_url`). Every call goes through `_send` (redirects off, a byte cap, failures
+  become a `Failure` kind and nothing that could hold a URL or token is logged); tests fake
+  `_send` and Redis (`tests/test_screenshots.py`). Gotenberg is used only while
+  `gotenberg_safe()` holds: it must answer exactly 403 for `CANARIES` (127.0.0.1 and
+  169.254.169.254, bodies never read), cached in Redis an hour; no Redis means not safe.
+  Checked for real: an unprotected Gotenberg screenshots CKAN's own internal address.
+  Stored in `webpage_view_plus_screenshots` (fifth migration) with `source`
+  `screenshot:<url>`; a copy counts only while `target()` still gives that URL. The card gets
+  it through `setup_template_variables` (`screenshot`, gated by `plugin._thumbnails_loaded`,
+  which tests patch), the resource list through `thumbnails.for_resource` (after a stored
+  copy, before a service logo; one query per dataset, `_rows`), both from
+  `/webpageviewplus/screenshot/<view_id>` (`?size=thumb`), with the thumbnail route's checks.
+  A failed attempt keeps a screenshot of the same page and drops one of another.
 - `tests/fixtures/qsv_protocol.html` speaks the qsv messages; `resize_message.html` reports its
   height with the generic message only (both seeded in `wvp-browser` by `browser_tests/seed.py`). It's uploaded to the `wvp-demo`
   dataset with three views (`data-schematic` auto, `interactive` auto, `interactive` fixed),

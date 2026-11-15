@@ -798,7 +798,12 @@ def for_resource(pkg: dict[str, Any], res: dict[str, Any]) -> Optional[dict[str,
             and _source_active(source, pkg):
         src = toolkit.url_for(
             "webpageviewplus_thumbnails.serve", view_id=plus["id"], v=plus["digest"][:16])
-    elif service in services.LOGOS:
+    if not src:
+        # A page that refuses to be framed: its screenshot, before the
+        # service's logo, as it shows the page itself.
+        from ckanext.webpageviewplus import screenshots
+        src = screenshots.for_list(plus, res, pkg)
+    if not src and service in services.LOGOS:
         src = toolkit.h.url_for_static(
             "/webpageviewplus/logos/{}.svg".format(services.LOGOS[service]))
         logo = True

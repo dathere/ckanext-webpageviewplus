@@ -1074,3 +1074,10 @@ msgid ""
 "supported."
 msgstr "Esta página no se puede incrustar: solo se admiten URL http:// y https://."
 
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:20
+msgid "Screenshot of {host}"
+msgstr "Captura de pantalla de {host}"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:24
+msgid "Screenshot taken {date}. The page itself can't be shown here."
+msgstr "Captura tomada el {date}. La página no se puede mostrar aquí."

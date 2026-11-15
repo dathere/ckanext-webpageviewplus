@@ -131,6 +131,23 @@
   margin: 0.25rem 0 0;
 }
 
+/* A refused page's screenshot: its own size, never wider than the card. */
+.webpageviewplus-screenshot {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.webpageviewplus-screenshot img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.webpageviewplus-screenshot figcaption {
+  margin-top: 0.25rem;
+  font-size: 0.875em;
+}
+
 /* Tap to interact: over the frame (the script sets its top and height),
    so a swipe scrolls the page instead of the framed page. */
 .webpageviewplus-shield {

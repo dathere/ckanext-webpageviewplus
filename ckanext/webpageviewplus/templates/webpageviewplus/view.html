@@ -13,6 +13,17 @@
     {% else %}
       <p>{{ _("{host} doesn't allow its pages to be shown inside other sites.").format(host=refused_host) }}</p>
     {% endif %}
+    {% if screenshot %}
+      {# Taken in the background by the site's screenshot backend and
+         served by CKAN, so showing it contacts no one. #}
+      <figure class="webpageviewplus-screenshot">
+        {% set shot_alt = _('Screenshot of {host}').format(host=screenshot.host) %}
+        {% if 'open' in controls %}<a href="{{ open_url }}" target="_blank" rel="noopener noreferrer">{% endif %}
+        <img src="{{ screenshot.src }}" width="1350" height="940" loading="lazy" alt="{{ shot_alt }}">
+        {% if 'open' in controls %}</a>{% endif %}
+        <figcaption>{{ _("Screenshot taken {date}. The page itself can't be shown here.").format(date=h.render_datetime(screenshot.taken)) }}</figcaption>
+      </figure>
+    {% endif %}
     {% if 'open' in controls and refused != 'private_file' %}
       <a class="btn btn-sm btn-outline-secondary" href="{{ open_url }}" target="_blank" rel="noopener noreferrer">{{ _('Open in new tab') }}</a>
     {% endif %}

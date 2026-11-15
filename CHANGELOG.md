@@ -4,6 +4,16 @@
 
 ### Added
 
+- Screenshots of pages that refuse framing (`screenshot_backend`, with the thumbnails plugin
+  and `frameability_check`). A view whose page sends `X-Frame-Options` or `frame-ancestors`
+  shows a screenshot of it on its card, and the resource list uses it when nothing else
+  provides a thumbnail. Three backends: Cloudflare Browser Run and Microlink (hosted, public
+  datasets only, sent the page's URL) and a self-hosted Gotenberg 9.5+ (any dataset), which
+  CKAN uses only after checking it refuses private addresses. Taken in the background by
+  `ckan webpageviewplus screenshots` (for cron), stored per view in a new table (run
+  `ckan db upgrade -p webpage_view_plus`), never as resources. `doctor` reports the backend,
+  Gotenberg's private-address check and the last failure.
+
 - The Website (Plus) form warns when the view shows a PDF in a sandboxed frame, which
   Chrome and Edge leave blank as they don't run their PDF viewer in a sandbox. It points to
   PDF (Plus) where the site offers it, else to the External preset for a linked PDF where

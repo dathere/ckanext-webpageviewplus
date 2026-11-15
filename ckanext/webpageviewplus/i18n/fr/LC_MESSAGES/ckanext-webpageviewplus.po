@@ -1085,3 +1085,10 @@ msgstr ""
 "Cette page ne peut pas être intégrée : seules les URL http:// et https://"
 " sont prises en charge."
 
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:20
+msgid "Screenshot of {host}"
+msgstr "Capture d’écran de {host}"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:24
+msgid "Screenshot taken {date}. The page itself can't be shown here."
+msgstr "Capture prise le {date}. La page elle-même ne peut pas être affichée ici."

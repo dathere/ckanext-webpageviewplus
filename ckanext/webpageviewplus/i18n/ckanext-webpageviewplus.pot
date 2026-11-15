@@ -834,3 +834,10 @@ msgstr ""
 msgid "This page cannot be embedded: only http:// and https:// URLs are supported."
 msgstr ""
 
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:20
+msgid "Screenshot of {host}"
+msgstr ""
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:24
+msgid "Screenshot taken {date}. The page itself can't be shown here."
+msgstr ""

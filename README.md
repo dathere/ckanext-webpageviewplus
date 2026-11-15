@@ -1363,6 +1363,62 @@ too (not with `--no-store`), so run
 from cron it picks up changed pages and images replaced through `package_update`. When
 remaking one fails, it keeps the copy it has.
 
+### Screenshots of pages that refuse framing
+
+Some pages can't be framed at all: they send `X-Frame-Options` or a CSP `frame-ancestors` that
+no preset gets around. With [the frameability check](#frameability-check) on, their views show a
+card with Open in new tab. With a screenshot backend, that card also shows a picture of the
+page, and the resource list uses it as the thumbnail when nothing else provides one (a picked
+image or the page's own preview image comes first; the screenshot comes before a service's
+logo). No resources are added: screenshots are stored per view, like thumbnails.
+
+Screenshots are taken in the background by `ckan webpageviewplus screenshots`, never while a
+page renders. Run it from cron, for example daily: it takes views that have none, or one older
+than `screenshot_seconds` (30 days), and stops when the backend says its limit is used up. Add
+`--refresh` to retake them all, `--dry-run` to list them.
+
+**Requirements.** The `webpage_view_plus_thumbnails` plugin, `frameability_check = true`,
+`ckan db upgrade -p webpage_view_plus`, and one backend:
+
+| `screenshot_backend` | What it is | Datasets | Cost |
+| --- | --- | --- | --- |
+| `cloudflare` | [Cloudflare Browser Run](https://developers.cloudflare.com/browser-run/) on your Cloudflare account | public only | Workers Free: 10 browser minutes a day (about 30 to 60 screenshots); Workers Paid ($5 a month) includes 10 hours |
+| `microlink` | The [Microlink API](https://microlink.io/) | public only | 25 a day without a key; paid plans from $49 a month |
+| `gotenberg` | [Gotenberg](https://gotenberg.dev/) 9.5+ (MIT), a container you run | public and private | the container |
+
+The hosted two are sent each page's URL (never anything about your visitors), which is why
+they only take public datasets' pages. You agree to that provider's terms:
+[Cloudflare](https://www.cloudflare.com/terms/), [Microlink](https://microlink.io/terms)
+(with its [DPA](https://microlink.io/dpa)). Gotenberg sends nothing to anyone but the page's own
+site.
+
+- **Cloudflare:** set `cloudflare_account_id` (the id in dash.cloudflare.com's URL) and
+  `cloudflare_api_token`, a token you create under My Profile, API Tokens, with only the
+  "Browser Run - Edit" permission on that account.
+- **Microlink:** optionally set `microlink_api_key`.
+- **Gotenberg:** it runs a browser on your network, so it must refuse private addresses, or a
+  page an editor links could show (and the screenshot would keep) an internal service's page:
+
+  ```yaml
+  gotenberg:
+    image: gotenberg/gotenberg:9.5.1
+    environment:
+      CHROMIUM_DENY_PRIVATE_IPS: "true"
+    # No ports: only CKAN reaches it. Never set --chromium-proxy-server.
+  ```
+
+  Then set `gotenberg_url = http://gotenberg:3000` (and `gotenberg_username`/`gotenberg_password`
+  if it runs with `API_ENABLE_BASIC_AUTH`). CKAN checks that Gotenberg refuses
+  `http://127.0.0.1/` and `http://169.254.169.254/` before using it, again every hour, and in
+  `ckan webpageviewplus doctor`; until it does, no screenshots are taken.
+
+**What a screenshot shows.** The top of the page at 1350 x 940, as an anonymous visitor from
+wherever the backend runs sees it: cookie banners included sometimes (Microlink blocks most;
+for Cloudflare a short built-in list tries to hide the common ones; Gotenberg's aren't hidden), and a bot challenge if
+the site puts one in front of datacentre visitors. A screenshot stops being shown when the page
+can be framed again, the view points elsewhere, or the view opts out of automatic thumbnails or
+picks one.
+
 ### PDF views
 
 The `pdf_view_plus` plugin adds a **PDF (Plus)** view type for resources whose format is PDF
@@ -1615,6 +1671,11 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing, check pages when views are saved, and show a card for those that refuse. Makes CKAN request editor-typed URLs, see [Frameability check](#frameability-check) |
 | `ckanext.webpageviewplus.thumbnail_fetch` | `false` | With the `webpage_view_plus_thumbnails` plugin, fetch thumbnails when views are saved: the page's own preview image, and linked images editors pick. Makes CKAN request page and image URLs, see [Thumbnails in the resource list](#thumbnails-in-the-resource-list) |
 | `ckanext.webpageviewplus.service_format` | `false` | With the `webpage_view_plus_thumbnails` plugin, set an empty or `HTML` format to the service's name when a resource's only view is a well-known service's, see [Thumbnails in the resource list](#thumbnails-in-the-resource-list) |
+| `ckanext.webpageviewplus.screenshot_backend` | `none` | `cloudflare`, `microlink` or `gotenberg`: screenshots of pages that refuse framing, see [Screenshots of pages that refuse framing](#screenshots-of-pages-that-refuse-framing) |
+| `ckanext.webpageviewplus.cloudflare_account_id` / `cloudflare_api_token` | empty | The `cloudflare` backend's account and its "Browser Run - Edit" token |
+| `ckanext.webpageviewplus.microlink_api_key` | empty | The `microlink` backend's optional key |
+| `ckanext.webpageviewplus.gotenberg_url` / `gotenberg_username` / `gotenberg_password` | empty | Where CKAN reaches your Gotenberg, and its basic auth |
+| `ckanext.webpageviewplus.screenshot_seconds` | `2592000` (30 days) | How old a screenshot gets before `ckan webpageviewplus screenshots` retakes it |
 | `ckanext.webpageviewplus.color_scheme` | `auto` | `light` or `dark`: the colour scheme framed pages see (Firefox only so far) |
 | `ckanext.webpageviewplus.narrow_width` | `576` | View width, in px, below which aspect and viewport heights become 80% of the screen; `0` turns it off |
 | `ckanext.webpageviewplus.privacy_profile` | `default` | `eu` puts the consent card on every third-party page, whatever its preset |
