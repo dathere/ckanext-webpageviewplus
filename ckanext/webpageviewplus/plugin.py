@@ -264,6 +264,14 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             "thumbnail_fetch": thumbnails.enabled() and settings.thumbnail_fetch(),
             # The opt-out stops screenshots too (screenshots.target).
             "screenshots_on": _thumbnails_loaded() and screenshots.enabled(),
+            # The view form's Screenshot panel, from the form's own values.
+            "screenshot_panel": (
+                screenshots.panel(resource_view.get("id"), resource_view, resource,
+                                  data_dict.get("package") or {})
+                if _thumbnails_loaded() and has_request_context()
+                and (request.endpoint or "").endswith("edit_view")
+                else None
+            ),
             # Only the view's edit form shows them.
             "view_counts": (
                 stats.totals_or_none(resource_view["id"], 30)
@@ -464,6 +472,7 @@ class WebpageviewplusThumbnailsPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IConfigurable)
     plugins.implements(plugins.IBlueprint)
     plugins.implements(plugins.IActions)
+    plugins.implements(plugins.IAuthFunctions)
     plugins.implements(plugins.ITemplateHelpers)
 
     # IConfigurer
@@ -498,7 +507,13 @@ class WebpageviewplusThumbnailsPlugin(plugins.SingletonPlugin):
             "resource_view_update": actions.thumbnails_view_update,
             "resource_update": actions.thumbnails_resource_update,
             "resource_delete": actions.thumbnails_resource_delete,
+            "webpageviewplus_screenshot_request": actions.webpageviewplus_screenshot_request,
         }
+
+    # IAuthFunctions
+
+    def get_auth_functions(self):
+        return {"webpageviewplus_screenshot_request": actions.screenshot_request_auth}
 
     # ITemplateHelpers
 

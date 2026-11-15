@@ -31,6 +31,7 @@ import hashlib
 import io
 import json
 import logging
+import math
 import time
 from typing import Any, Callable, Optional
 from urllib.parse import urlsplit
@@ -72,6 +73,10 @@ CANARIES = ("http://127.0.0.1/", "http://169.254.169.254/")
 SAFE_SECONDS = 60 * 60
 # The page re-checked before a hosted capture (capture()).
 RECHECK_SECONDS = 10
+# A pending job's mark outlives any job (a lost worker): another can be
+# queued after this.
+PENDING_SECONDS = 15 * 60
+QUEUE = "webpageviewplus"
 UNSAFE_SECONDS = 5 * 60
 _REDIS_PREFIX = "webpageviewplus:screenshots:"
 # Common cookie-consent banners, hidden on backends that don't block them.
@@ -638,6 +643,183 @@ def capture(view_id: str) -> str:
     return "taken"
 
 
+# --- Background jobs and the retake limit ------------------------------------
+
+
+def _pending_key(view_id: str) -> str:
+    return _REDIS_PREFIX + "pending:" + view_id
+
+
+def jobs_on() -> bool:
+    """Whether saves and the view form's button queue screenshot jobs."""
+    return enabled() and settings.screenshot_jobs()
+
+
+def queue_has_worker() -> Optional[bool]:
+    """Whether a job worker reads the screenshot queue (RQ records its
+    workers in Redis); None if that can't be told."""
+    try:
+        from rq import Worker
+        from ckan.lib import jobs
+        return bool(Worker.all(queue=jobs.get_queue(QUEUE)))
+    except Exception:
+        return None
+
+
+def cooldown_left(view_id: str, url: str) -> int:
+    """Seconds before another attempt at ``url`` may be queued, counted
+    from the last attempt at that page (0: now). An attempt at another
+    page doesn't count, so a changed page URL is never held back."""
+    seconds = settings.screenshot_cooldown_seconds()
+    row = stored_meta(view_id) if seconds else None
+    if not row or not row["attempted_at"] or row["source"] != source(url):
+        return 0
+    # attempted_at is naive UTC, like utcnow().
+    elapsed = (datetime.datetime.utcnow() - row["attempted_at"]).total_seconds()
+    return max(0, math.ceil(seconds - elapsed))
+
+
+def pending(view_id: str) -> bool:
+    try:
+        return bool(_redis().exists(_pending_key(view_id)))
+    except Exception:
+        return False
+
+
+def request_job(view_id: str, url: str) -> str:
+    """Queue a screenshot job for a view whose page is ``url``, within the
+    retake limit: "queued", "pending" (one is queued or running already)
+    or "cooldown" (see cooldown_left). Raises if Redis or the queue
+    fails; callers decide what that means."""
+    if cooldown_left(view_id, url):
+        return "cooldown"
+    redis = _redis()
+    key = _pending_key(view_id)
+    if not redis.set(key, "1", nx=True, ex=PENDING_SECONDS):
+        return "pending"
+    try:
+        toolkit.enqueue_job(job, [view_id], title="webpageviewplus screenshot", queue=QUEUE)
+    except Exception:
+        redis.delete(key)
+        raise
+    events.emit("screenshot_requested", backend=settings.screenshot_backend(),
+                host=frame.url_host(url))
+    return "queued"
+
+
+def job(view_id: str) -> None:
+    """The background job: take one view's screenshot if it still
+    qualifies. Checks the cooldown again, as a job may have waited long
+    in a queue no worker read; never raises, so nothing that could hold
+    a URL reaches the worker's log."""
+    try:
+        view = model.ResourceView.get(view_id)
+        url = _view_target(view) if view is not None else None
+        if url and not cooldown_left(view_id, url):
+            capture(view_id)
+    except Exception as e:
+        log.warning("webpageviewplus: a screenshot job failed (%s)", type(e).__name__)
+        model.Session.rollback()
+    finally:
+        try:
+            _redis().delete(_pending_key(view_id))
+        except Exception:
+            log.debug("webpageviewplus: screenshot job's pending mark not cleared")
+
+
+def after_check(view: dict[str, Any]) -> None:
+    """After a save has checked the view's page: queue a screenshot when
+    the view qualifies and has none of its current page (a save doesn't
+    retake one that counts; the form's button and the CLI do). Never
+    fails the save."""
+    if view.get("view_type") != VIEW_TYPE or not jobs_on():
+        return
+    try:
+        model_view = model.ResourceView.get(view["id"])
+        url = _view_target(model_view) if model_view is not None else None
+        if url and not _counts(stored_meta(view["id"]), url):
+            request_job(view["id"], url)
+    except Exception as e:
+        log.warning("webpageviewplus: couldn't queue a screenshot (%s)", type(e).__name__)
+
+
+def _list_shows_other(view_id: str, config: dict[str, Any], resource: dict[str, Any]) -> bool:
+    """Whether the resource list shows this view's thumbnail copy (a picked
+    image, the page's preview image...) rather than its screenshot."""
+    try:
+        row = thumbnails._read(view_id)
+        if not row:
+            return False
+        wanted = thumbnails.source_for(
+            dict(config, id=view_id, view_type=VIEW_TYPE), resource.get("url") or "",
+            resource.get("url_type") or "", VIEW_TYPE, resource.get("last_modified"))
+        return bool(wanted) and row["source"] == wanted
+    except Exception:
+        return False
+
+
+def panel(view_id: Optional[str], config: dict[str, Any], resource: dict[str, Any],
+          package: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """The view form's Screenshot panel, from the saved row and the form's
+    current (maybe unsaved) values; None hides it. ``state`` is one of
+    new, after_save, other_url, in_use, not_in_use (with ``reason``),
+    pending and failed. Never queues anything."""
+    if not enabled():
+        return None
+    config = config or {}
+    url = health.third_party_url(config.get("page_url") or "", resource.get("url") or "",
+                                 resource.get("url_type") or "")
+    if not url or health.mixed_content(url) or toolkit.asbool(config.get("no_auto_thumbnail")):
+        return None
+    if not view_id:
+        return {"state": "new"}
+    row = stored_meta(view_id)
+    has_image = bool(row and row["digest"])
+    found: dict[str, Any] = {
+        "jobs": jobs_on(),
+        "image": toolkit.url_for("webpageviewplus_screenshots.serve", view_id=view_id,
+                                 form=1, v=row["digest"][:16]) if has_image else None,
+        "taken": row["taken_at"] if has_image else None,
+        "final_host": (row["final_host"] or "") if has_image else "",
+        "host": ((row["final_host"] if has_image else "") or frame.url_host(
+            row["source"][len(SOURCE_PREFIX):] if has_image else url)),
+        "attempted": row["attempted_at"] if row else None,
+        "error": (row["last_error"] or "") if row else "",
+        "button": False,
+        "cooldown": 0,
+    }
+    if has_image and row["source"] != source(url):
+        return dict(found, state="other_url", old_url=row["source"][len(SOURCE_PREFIX):])
+    private = bool((package or {}).get("private"))
+    target_url = target(view_id, VIEW_TYPE, config, resource.get("url") or "",
+                        resource.get("url_type") or "", private)
+    if not target_url:
+        check = health.stored(view_id, url)
+        if config.get("thumbnail_resource"):
+            reason = "picked"
+        elif private and hosted():
+            reason = "private"
+        elif check and check["verdict"] != frameability.BLOCKED:
+            reason = "frameable"
+        else:
+            # No check of this URL yet: an unsaved change.
+            return dict(found, state="after_save") if not has_image else None
+        return dict(found, state="not_in_use", reason=reason) if has_image else (
+            dict(found, state="private") if reason == "private" else None)
+    if pending(view_id):
+        state = "pending"
+    elif row and row["last_error"] and (
+            not has_image or (row["attempted_at"] or row["taken_at"]) > row["taken_at"]):
+        state = "failed"
+    elif has_image:
+        state = "in_use"
+    else:
+        state = "pending"
+    cooldown = cooldown_left(view_id, target_url) if found["jobs"] else 0
+    return dict(found, state=state, button=found["jobs"], cooldown=cooldown,
+                list_other=state == "in_use" and _list_shows_other(view_id, config, resource))
+
+
 # --- Showing ----------------------------------------------------------------
 
 
@@ -723,33 +905,43 @@ def for_list(view: dict[str, Any], res: dict[str, Any], pkg: dict[str, Any]) -> 
 
 @screenshot.route(PATH)
 def serve(view_id: str):
+    """A view's screenshot. With ?form=1 (the view form's Screenshot
+    panel), only for someone who may edit the view, the stored image even
+    when it isn't in use, never cached."""
     view = model.ResourceView.get(view_id)
     if view is None or view.view_type != VIEW_TYPE:
         abort(404)
     resource = model.Resource.get(view.resource_id)
     if resource is None or resource.state != "active":
         abort(404)
+    for_form = bool(request.args.get("form"))
+    user = {"user": getattr(current_user, "name", "") or ""}
     try:
-        toolkit.check_access(
-            "package_show",
-            {"user": getattr(current_user, "name", "") or ""},
-            {"id": resource.package_id},
-        )
+        if for_form:
+            toolkit.check_access("resource_view_update", user,
+                                 {"id": view.id, "resource_id": view.resource_id})
+        else:
+            toolkit.check_access("package_show", user, {"id": resource.package_id})
     except (toolkit.NotAuthorized, toolkit.ObjectNotFound):
         abort(404)  # not 403: don't confirm that a private dataset exists
     row = stored(view_id)
-    if not _counts(row, _view_target(view)):
+    if not row or (not for_form and not _counts(row, _view_target(view))):
         abort(404)
     image = row["thumb"] if request.args.get("size") == "thumb" else row["image"]
     if not image:
         abort(404)
+    response = Response(image, mimetype=thumbnails.MIMETYPE)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    if for_form:
+        # CKAN's response hook adds "private" and keeps this.
+        request.environ["__no_cache__"] = True
+        response.cache_control.no_store = True
+        return response
     if content.is_public(resource.package_id):
         request.environ.pop("__no_cache__", None)
         request.environ[content.REVALIDATE_ENVIRON_KEY] = True
     else:
         request.environ["__no_cache__"] = True
-    response = Response(image, mimetype=thumbnails.MIMETYPE)
-    response.headers["X-Content-Type-Options"] = "nosniff"
     response.set_etag(hashlib.sha256(image).hexdigest())
     return response.make_conditional(request)
 

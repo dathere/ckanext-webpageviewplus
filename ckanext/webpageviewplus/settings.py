@@ -185,6 +185,16 @@ def screenshot_seconds() -> int:
     return toolkit.asint(_get("screenshot_seconds") or 30 * 24 * 60 * 60)
 
 
+def screenshot_jobs() -> bool:
+    value = _get("screenshot_jobs")
+    return True if value in (None, "") else toolkit.asbool(value)
+
+
+def screenshot_cooldown_seconds() -> int:
+    value = _get("screenshot_cooldown_seconds")
+    return toolkit.asint(60 if value in (None, "") else value)
+
+
 def _check_screenshots() -> None:
     backend = screenshot_backend()
     if backend not in SCREENSHOT_BACKENDS:
@@ -192,6 +202,8 @@ def _check_screenshots() -> None:
             PREFIX + "screenshot_backend: must be one of " + " ".join(SCREENSHOT_BACKENDS))
     if screenshot_seconds() < 3600:
         raise CkanConfigurationException(PREFIX + "screenshot_seconds: must be at least 3600")
+    if screenshot_cooldown_seconds() < 0:
+        raise CkanConfigurationException(PREFIX + "screenshot_cooldown_seconds: must be 0 or more")
     if backend == "none":
         return
     if not frameability_check():

@@ -332,3 +332,21 @@
     background-image: none;
   }
 }
+
+/* The view form's Screenshot panel. */
+.webpageviewplus-form .webpageviewplus-screenshot-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #ccc;
+  margin-bottom: 0.5rem;
+}
+.webpageviewplus-form .webpageviewplus-screenshot-unused {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+@media (forced-colors: active) {
+  .webpageviewplus-form .webpageviewplus-screenshot-image {
+    border-color: CanvasText;
+  }
+}

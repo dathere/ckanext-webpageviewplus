@@ -588,6 +588,17 @@ def _screenshot_findings() -> list[tuple[str, str]]:
                  "are taken or shown.")]
     found = [("ok", "Screenshots are taken by " + backend + "; run ckan webpageviewplus "
               "screenshots from cron to take them.")]
+    if screenshots.jobs_on():
+        listening = screenshots.queue_has_worker()
+        if listening is False:
+            found.append(("warn", "screenshot_jobs is on but no worker reads the "
+                          + screenshots.QUEUE + " queue, so screenshots queued by saves and "
+                          "the view form wait unread: run ckan jobs worker "
+                          + screenshots.QUEUE + ", or set screenshot_jobs = false."))
+        elif listening is None:
+            found.append(("note", "Couldn't tell whether a worker reads the "
+                          + screenshots.QUEUE + " queue (ckan jobs worker "
+                          + screenshots.QUEUE + ")."))
     until = screenshots.limited_until(backend)
     if until > time.time():
         found.append(("note", "{} said its limit is used up, until {} UTC.".format(

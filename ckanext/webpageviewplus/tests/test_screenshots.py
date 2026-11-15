@@ -10,6 +10,7 @@ from PIL import Image
 
 from ckan.cli.cli import ckan
 from ckan.exceptions import CkanConfigurationException
+from ckan.plugins import toolkit
 from ckan.plugins.toolkit import url_for
 from ckan.tests import factories, helpers
 
@@ -40,6 +41,18 @@ class FakeRedis:
 
     def setex(self, key, seconds, value):
         self.data[key] = str(value).encode()
+
+    def set(self, key, value, nx=False, ex=None):
+        if nx and key in self.data:
+            return None
+        self.data[key] = str(value).encode()
+        return True
+
+    def exists(self, key):
+        return int(key in self.data)
+
+    def delete(self, key):
+        return int(self.data.pop(key, None) is not None)
 
 
 class Backend:
@@ -81,6 +94,18 @@ def page_still_blocked(monkeypatch):
         return frameability.Probe(frameability.BLOCKED, "x-frame-options", status=200)
     monkeypatch.setattr(screenshots, "_recheck", recheck)
     return checked
+
+
+@pytest.fixture(autouse=True)
+def jobs(monkeypatch):
+    # Saves with a backend set queue screenshot jobs: record them, never
+    # push them into a real queue.
+    queued = []
+
+    def enqueue_job(fn, args=None, kwargs=None, title=None, queue="default", rq_kwargs=None):
+        queued.append((fn, list(args or []), queue))
+    monkeypatch.setattr(screenshots.toolkit, "enqueue_job", enqueue_job)
+    return queued
 
 
 @pytest.fixture(autouse=True)
@@ -717,6 +742,220 @@ class TestOptOut:
         assert "help-no_auto_thumbnail help-no_auto_thumbnail-screenshot" in body
 
 
+# --- Jobs and the retake limit -------------------------------------------------------
+
+
+def _member(dataset, role):
+    user = factories.UserWithToken()
+    helpers.call_action("organization_member_create", context={"ignore_auth": True},
+                        id=dataset["owner_org"], username=user["name"], role=role)
+    return user
+
+
+def _ask(view, user):
+    return helpers.call_action(
+        "webpageviewplus_screenshot_request",
+        context={"user": user["name"], "ignore_auth": False}, id=view["id"])
+
+
+@_marks(GOTENBERG)
+class TestJobs:
+    def test_a_save_queues_one_when_there_is_none(self, jobs):
+        _, _, view = _setup()
+        _save(view, title="Renamed")
+        assert [(fn.__name__, args, queue) for fn, args, queue in jobs] == [
+            ("job", [view["id"]], "webpageviewplus")]
+        assert screenshots.pending(view["id"])
+
+    def test_a_save_keeps_a_current_one(self, monkeypatch, jobs):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        _, _, view = _setup()
+        screenshots.capture(view["id"])
+        _save(view, title="Renamed")
+        assert jobs == []
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.screenshot_jobs", "false")
+    def test_jobs_off(self, jobs):
+        _, _, view = _setup()
+        _save(view, title="Renamed")
+        assert jobs == []
+
+    def test_queue_failure_never_fails_the_save(self, monkeypatch):
+        def broken(*a, **kw):
+            raise RuntimeError("no redis")
+        monkeypatch.setattr(screenshots.toolkit, "enqueue_job", broken)
+        _, _, view = _setup()
+        assert _save(view, title="Renamed")["title"] == "Renamed"
+        assert not screenshots.pending(view["id"])
+
+    def test_job_takes_it_and_clears_the_mark(self, monkeypatch, jobs):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        _, _, view = _setup()
+        _save(view, title="Renamed")
+        (fn, args, _), = jobs
+        fn(*args)
+        assert screenshots.stored(view["id"])["digest"]
+        assert not screenshots.pending(view["id"])
+
+    def test_job_inside_the_cooldown_does_nothing(self, monkeypatch):
+        backend = _gotenberg()
+        monkeypatch.setattr(screenshots, "_send", backend)
+        _, _, view = _setup()
+        screenshots.capture(view["id"])
+        sent = len(backend.calls)
+        screenshots.job(view["id"])
+        assert len(backend.calls) == sent
+
+    def test_job_never_raises(self, monkeypatch):
+        def broken(view_id):
+            raise ValueError("https://secret.example.com/")
+        monkeypatch.setattr(screenshots, "capture", broken)
+        _, _, view = _setup()
+        screenshots.job(view["id"])
+
+
+@_marks(GOTENBERG)
+class TestRequestAction:
+    def test_editor_member_anonymous(self, jobs):
+        dataset, _, view = _setup()
+        assert _ask(view, _member(dataset, "editor")) == {"state": "pending"}
+        with pytest.raises(toolkit.NotAuthorized):
+            _ask(view, _member(dataset, "member"))
+        with pytest.raises(toolkit.NotAuthorized):
+            helpers.call_action("webpageviewplus_screenshot_request",
+                                context={"user": "", "ignore_auth": False}, id=view["id"])
+        assert len(jobs) == 1
+
+    def test_second_request_while_pending(self, jobs):
+        dataset, _, view = _setup()
+        editor = _member(dataset, "editor")
+        assert _ask(view, editor) == {"state": "pending"}
+        assert _ask(view, editor) == {"state": "pending"}
+        assert len(jobs) == 1
+
+    def test_inside_the_cooldown(self, monkeypatch, jobs):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        dataset, _, view = _setup()
+        screenshots.capture(view["id"])
+        with pytest.raises(toolkit.ValidationError) as refused:
+            _ask(view, _member(dataset, "editor"))
+        left = refused.value.error_dict["seconds_left"][0]
+        assert 0 < left <= 60
+        assert "{} seconds".format(left) in refused.value.error_dict["id"][0]
+        assert jobs == []
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.screenshot_cooldown_seconds", "0")
+    def test_no_cooldown(self, monkeypatch, jobs):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        dataset, _, view = _setup()
+        screenshots.capture(view["id"])
+        assert _ask(view, _member(dataset, "editor")) == {"state": "pending"}
+        assert len(jobs) == 1
+
+    def test_changed_url_skips_the_cooldown(self, monkeypatch, jobs):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        dataset, _, view = _setup()
+        screenshots.capture(view["id"])
+        _blocked(view["id"], OTHER)
+        _save(view, page_url=OTHER)
+        assert len(jobs) == 1  # the save itself: no screenshot of OTHER yet
+
+    def test_view_without_a_screenshot_target(self, jobs):
+        dataset, _, view = _setup(no_auto_thumbnail="true")
+        with pytest.raises(toolkit.ValidationError):
+            _ask(view, _member(dataset, "editor"))
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.screenshot_jobs", "false")
+    def test_refused_when_jobs_are_off(self, jobs):
+        dataset, _, view = _setup()
+        with pytest.raises(toolkit.ValidationError):
+            _ask(view, _member(dataset, "editor"))
+
+
+@_marks(GOTENBERG)
+class TestFormImage:
+    def test_editor_sees_it_even_when_not_in_use(self, app, monkeypatch):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        dataset, _, view = _setup()
+        screenshots.capture(view["id"])
+        health.store(view["id"], PAGE, frameability.Probe(frameability.FRAMEABLE))
+        src = url_for("webpageviewplus_screenshots.serve", view_id=view["id"], form=1)
+        editor = _member(dataset, "editor")
+        response = app.get(src, headers={"Authorization": editor["token"]})
+        assert response.data == screenshots.stored(view["id"])["image"]
+        cache = response.headers["Cache-Control"]
+        assert "no-store" in cache and "private" in cache and "public" not in cache
+        app.get(src, headers={"Authorization": _member(dataset, "member")["token"]}, status=404)
+        app.get(src, status=404)
+        # Without form=1, a copy not in use is never served.
+        app.get(url_for("webpageviewplus_screenshots.serve", view_id=view["id"]), status=404)
+
+
+def _form(app, dataset, resource, view):
+    sysadmin = factories.SysadminWithToken()
+    return app.get(url_for(f"{dataset['type']}_resource.edit_view", id=dataset["name"],
+                           resource_id=resource["id"], view_id=view["id"]),
+                   headers={"Authorization": sysadmin["token"]}).body
+
+
+@_marks(GOTENBERG)
+class TestPanel:
+    def test_in_use_and_inside_the_cooldown(self, app, monkeypatch):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        dataset, resource, view = _setup()
+        screenshots.capture(view["id"])
+        body = _form(app, dataset, resource, view)
+        assert 'id="webpageviewplus-screenshot-heading"' in body
+        assert "form=1" in body
+        assert "card and as its thumbnail in the resource list" in body
+        assert "Take a new screenshot" in body and "disabled" in body
+        assert "You can take a new screenshot in" in body
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.screenshot_cooldown_seconds", "0")
+    def test_button_enabled_without_cooldown(self, app, monkeypatch):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        dataset, resource, view = _setup()
+        screenshots.capture(view["id"])
+        body = _form(app, dataset, resource, view)
+        assert "data-webpageviewplus-screenshot-request" in body
+        assert "You can take a new screenshot in" not in body
+
+    def test_pending(self, app):
+        dataset, resource, view = _setup()
+        body = _form(app, dataset, resource, view)
+        assert "A screenshot will be taken in the background" in body
+
+    def test_failed(self, app, monkeypatch):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg(
+            page=lambda: screenshots.Answer(409, {}, b"")))
+        dataset, resource, view = _setup()
+        screenshots.capture(view["id"])
+        body = _form(app, dataset, resource, view)
+        assert "failed: the page didn" in body and "t load." in body
+
+    def test_not_in_use(self, app, monkeypatch):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        dataset, resource, view = _setup()
+        screenshots.capture(view["id"])
+        health.store(view["id"], PAGE, frameability.Probe(frameability.FRAMEABLE))
+        body = _form(app, dataset, resource, view)
+        assert "webpageviewplus-screenshot-unused" in body
+        assert "can now be shown in a frame" in body
+        assert "data-webpageviewplus-screenshot-request" not in body
+
+    def test_panel_never_queues(self, app, jobs):
+        dataset, resource, view = _setup()
+        _form(app, dataset, resource, view)
+        assert jobs == []
+
+
+@_marks(OFF)
+class TestPanelOff:
+    def test_no_panel(self, app):
+        dataset, resource, view = _setup()
+        assert "webpageviewplus-screenshot-heading" not in _form(app, dataset, resource, view)
+
+
 # --- The command -----------------------------------------------------------------
 
 
@@ -790,3 +1029,11 @@ class TestRobustness:
         monkeypatch.setattr(wvp_cli, "_plugin_loaded", lambda name: False)
         (level, text), = wvp_cli._screenshot_findings()
         assert level == "warn" and "isn't loaded" in text
+
+    @pytest.mark.parametrize("listening, level", [(False, "warn"), (None, "note"), (True, None)])
+    def test_doctor_worker(self, monkeypatch, listening, level):
+        from ckanext.webpageviewplus import cli as wvp_cli
+        monkeypatch.setattr(wvp_cli, "_plugin_loaded", lambda name: True)
+        monkeypatch.setattr(screenshots, "queue_has_worker", lambda: listening)
+        found = [lv for lv, text in wvp_cli._screenshot_findings() if "worker" in text]
+        assert found == ([level] if level else [])

@@ -1372,10 +1372,23 @@ page, and the resource list uses it as the thumbnail when nothing else provides 
 image or the page's own preview image comes first; the screenshot comes before a service's
 logo). No resources are added: screenshots are stored per view, like thumbnails.
 
-Screenshots are taken in the background by `ckan webpageviewplus screenshots`, never while a
-page renders. Run it from cron, for example daily: it takes views that have none, or one older
-than `screenshot_seconds` (30 days), and stops when the backend says its limit is used up. Add
-`--refresh` to retake them all, `--dry-run` to list them.
+Screenshots are taken in the background, never while a page renders:
+
+- **After a save.** Saving a view whose page refuses framing, and that has no screenshot of
+  that page yet, queues a job on its own queue, `webpageviewplus`. CKAN's usual
+  `ckan jobs worker` reads only the default queue, so **run a second worker for it**:
+  `ckan jobs worker webpageviewplus` (one is enough: screenshots are taken one at a time).
+  Without that worker the jobs wait in Redis and editors see "will be taken in the background"
+  indefinitely; `ckan webpageviewplus doctor` warns when no worker reads the queue. A site that
+  won't run one sets `screenshot_jobs = false` and relies on the command below.
+- **From the view form.** The form's Screenshot panel shows the view's screenshot and its state
+  (in use, not in use and why, pending, failed and why), with a **Take a new screenshot**
+  button that queues the same job. A view gets one queued job at a time, and another only
+  `screenshot_cooldown_seconds` (60) after its last attempt, unless its page URL changed.
+- **On a schedule.** `ckan webpageviewplus screenshots`, from cron, for example daily: it takes
+  views that have none, or one older than `screenshot_seconds` (30 days), and stops when the
+  backend says its limit is used up. Add `--refresh` to retake them all, `--dry-run` to list
+  them. It isn't held back by the cooldown.
 
 **Requirements.** The `webpage_view_plus_thumbnails` plugin, `frameability_check = true`,
 `ckan db upgrade -p webpage_view_plus`, and one backend:
@@ -1676,6 +1689,8 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.microlink_api_key` | empty | The `microlink` backend's optional key |
 | `ckanext.webpageviewplus.gotenberg_url` / `gotenberg_username` / `gotenberg_password` | empty | Where CKAN reaches your Gotenberg, and its basic auth |
 | `ckanext.webpageviewplus.screenshot_seconds` | `2592000` (30 days) | How old a screenshot gets before `ckan webpageviewplus screenshots` retakes it |
+| `ckanext.webpageviewplus.screenshot_jobs` | `true` | Whether a save and the view form's button queue a screenshot job (queue `webpageviewplus`: run `ckan jobs worker webpageviewplus`). `false`: only the scheduled command takes them |
+| `ckanext.webpageviewplus.screenshot_cooldown_seconds` | `60` | How long after a view's last attempt before a save or the button may queue another (0: only one queued job per view). A changed page URL isn't held back |
 | `ckanext.webpageviewplus.color_scheme` | `auto` | `light` or `dark`: the colour scheme framed pages see (Firefox only so far) |
 | `ckanext.webpageviewplus.narrow_width` | `576` | View width, in px, below which aspect and viewport heights become 80% of the screen; `0` turns it off |
 | `ckanext.webpageviewplus.privacy_profile` | `default` | `eu` puts the consent card on every third-party page, whatever its preset |

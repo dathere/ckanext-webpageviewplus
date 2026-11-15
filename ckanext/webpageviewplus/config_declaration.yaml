@@ -156,6 +156,25 @@ groups:
           How old a screenshot gets, in seconds, before ckan webpageviewplus
           screenshots takes it again (30 days by default).
 
+      - key: ckanext.webpageviewplus.screenshot_jobs
+        default: true
+        type: bool
+        description: |
+          Whether saving a view whose page refuses framing, and the view
+          form's "Take a new screenshot" button, queue a background job
+          (queue webpageviewplus; run ckan jobs worker webpageviewplus).
+          Off: only ckan webpageviewplus screenshots takes them, on a
+          schedule.
+
+      - key: ckanext.webpageviewplus.screenshot_cooldown_seconds
+        default: 60
+        type: int
+        description: |
+          How long, in seconds, after an attempt at a view's screenshot
+          before a save or the form's button may queue another. 0 leaves
+          only the rule of one queued job per view. A changed page URL
+          isn't held back, and the CLI is never limited.
+
       - key: ckanext.webpageviewplus.editor_can_loosen
         default: false
         type: bool

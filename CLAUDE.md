@@ -129,9 +129,9 @@ order now being built:
 
 12. In progress (branch `screenshots`, unreleased): screenshots of pages that refuse framing
    (spec section "Proposed: Screenshots of pages that refuse framing", revision 3; its Build
-   order gives the steps). Step 1 built: `screenshots.py` below. Next: step 2 (the job after a
-   save, the retake limit, the view form's Screenshot panel), then the management interface
-   once its spec section is approved.
+   order gives the steps). Steps 1 and 2 built: `screenshots.py` below. Next: step 3, the
+   management interface, once its spec section is approved; `check-views` queuing blocked views
+   with no screenshot is specified but not built.
 
 ## The security model (read before touching frame, validator, content or download code)
 
@@ -448,6 +448,20 @@ order now being built:
   copy, before a service logo; one query per dataset, `_rows`), both from
   `/webpageviewplus/screenshot/<view_id>` (`?size=thumb`), with the thumbnail route's checks.
   A failed attempt keeps a screenshot of the same page and drops one of another.
+  Step 2: the main plugin's `resource_view_create`/`_update` chain calls `after_check` right
+  after `health.after_save` (not the thumbnails plugin's chain: chained-action order follows
+  `ckan.plugins`), which queues `job` on queue `webpageviewplus` (`request_job`) only when no
+  screenshot counts for the current URL. The retake limit: a Redis `pending:` mark per view
+  (`PENDING_SECONDS`), and `cooldown_left` from `attempted_at` of the same page (another page:
+  no cooldown). `job` re-checks the cooldown, never raises, clears the mark. The editor's
+  opt-out deletes at save (`after_save`, thumbnails chain). `webpageviewplus_screenshot_request`
+  (thumbnails plugin; auth `resource_view_update` with `resource_id`) answers
+  `{"state": "pending"}` or a ValidationError with `seconds_left`. The view form's panel
+  (`panel()`, `screenshot_panel`, edit form only, never queues) shows the stored image through
+  `serve(..., form=1)`: editors only, even when not in use, `private, no-store`. Hosted
+  captures re-check the page first (`_recheck`, a gate never stored). `doctor` warns when
+  `screenshot_jobs` is on and no RQ worker reads the queue (`queue_has_worker`). Tests fake
+  `toolkit.enqueue_job` (autouse `jobs`) and Redis (`FakeRedis`).
 - `tests/fixtures/qsv_protocol.html` speaks the qsv messages; `resize_message.html` reports its
   height with the generic message only (both seeded in `wvp-browser` by `browser_tests/seed.py`). It's uploaded to the `wvp-demo`
   dataset with three views (`data-schematic` auto, `interactive` auto, `interactive` fixed),

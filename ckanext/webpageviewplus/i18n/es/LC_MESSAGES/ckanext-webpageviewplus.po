@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-15 19:42+0000\n"
+"POT-Creation-Date: 2026-11-15 20:45+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -20,52 +20,72 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.15.0\n"
 
-#: ckanext/webpageviewplus/actions.py:175 ckanext/webpageviewplus/plugin.py:188
+#: ckanext/webpageviewplus/actions.py:179 ckanext/webpageviewplus/plugin.py:188
 msgid "Website"
 msgstr "Sitio web"
 
-#: ckanext/webpageviewplus/actions.py:270
+#: ckanext/webpageviewplus/actions.py:275
 msgid "Must be a whole number"
 msgstr "Debe ser un número entero"
 
-#: ckanext/webpageviewplus/actions.py:306
+#: ckanext/webpageviewplus/actions.py:311
 msgid "PDF view not found"
 msgstr "No se encontró la vista PDF"
 
-#: ckanext/webpageviewplus/actions.py:335
+#: ckanext/webpageviewplus/actions.py:340
 msgid "Thumbnails aren't enabled on this site"
 msgstr "Las miniaturas no están activadas en este sitio"
 
-#: ckanext/webpageviewplus/actions.py:345
-#: ckanext/webpageviewplus/actions.py:348
+#: ckanext/webpageviewplus/actions.py:350
+#: ckanext/webpageviewplus/actions.py:353
 msgid "Not a usable image"
 msgstr "No es una imagen utilizable"
+
+#: ckanext/webpageviewplus/actions.py:395
+msgid "This site takes screenshots on a schedule, not on request."
+msgstr "Este sitio toma capturas de pantalla según un calendario, no a petición."
+
+#: ckanext/webpageviewplus/actions.py:399
+msgid "This view's page doesn't get a screenshot."
+msgstr "La página de esta vista no recibe captura de pantalla."
+
+#: ckanext/webpageviewplus/actions.py:405
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:217
+msgid "The screenshot couldn't be queued. Try again later."
+msgstr "No se pudo poner en cola la captura. Inténtelo de nuevo más tarde."
+
+#: ckanext/webpageviewplus/actions.py:409
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:220
+msgid "You can take a new screenshot in {seconds} second."
+msgid_plural "You can take a new screenshot in {seconds} seconds."
+msgstr[0] "Podrá tomar una nueva captura de pantalla dentro de {seconds} segundo."
+msgstr[1] "Podrá tomar una nueva captura de pantalla dentro de {seconds} segundos."
 
 #: ckanext/webpageviewplus/plugin.py:166
 msgid "Website (Plus)"
 msgstr "Sitio web (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:327
+#: ckanext/webpageviewplus/plugin.py:335
 msgid "Embedded web page"
 msgstr "Página web incrustada"
 
-#: ckanext/webpageviewplus/plugin.py:552
+#: ckanext/webpageviewplus/plugin.py:567
 msgid "PDF (Plus)"
 msgstr "PDF (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:565
+#: ckanext/webpageviewplus/plugin.py:580
 msgid "PDF"
 msgstr "PDF"
 
-#: ckanext/webpageviewplus/plugin.py:622
+#: ckanext/webpageviewplus/plugin.py:637
 msgid "PDF document"
 msgstr "Documento PDF"
 
-#: ckanext/webpageviewplus/plugin.py:730
+#: ckanext/webpageviewplus/plugin.py:745
 msgid "Repository (Plus)"
 msgstr "Repositorio (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:741 ckanext/webpageviewplus/plugin.py:778
+#: ckanext/webpageviewplus/plugin.py:756 ckanext/webpageviewplus/plugin.py:793
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:6
 msgid "Repository"
 msgstr "Repositorio"
@@ -611,9 +631,116 @@ msgstr ""
 msgid ""
 "It also stops screenshots of a page that refuses to be shown here, and "
 "saving with it ticked deletes any screenshot already taken."
-msgstr "También impide las capturas de pantalla de una página que no se deja mostrar aquí, y al guardar con la casilla marcada se borra cualquier captura ya tomada."
+msgstr ""
+"También impide las capturas de pantalla de una página que no se deja "
+"mostrar aquí, y al guardar con la casilla marcada se borra cualquier "
+"captura ya tomada."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:180
+msgid "the page didn't load"
+msgstr "la página no se cargó"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:181
+msgid "the screenshot service refused the request"
+msgstr "el servicio de capturas rechazó la solicitud"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:182
+msgid "the screenshot service's allowance is used up for now"
+msgstr "la cuota del servicio de capturas se ha agotado por ahora"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:183
+msgid "the answer wasn't an image"
+msgstr "la respuesta no era una imagen"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:184
+msgid "the screenshot service isn't set up safely"
+msgstr "el servicio de capturas no está configurado de forma segura"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:187
+msgid "Screenshot"
+msgstr "Captura de pantalla"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:189
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:20
+msgid "Screenshot of {host}"
+msgstr "Captura de pantalla de {host}"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:193
+msgid ""
+"A screenshot is taken after you save, if this page can't be shown in a "
+"frame."
+msgstr ""
+"Se toma una captura después de guardar, si esta página no se puede "
+"mostrar en un marco."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:195
+msgid ""
+"The screenshot is of {url}. A new one is taken after you save, if the new"
+" page can't be shown in a frame."
+msgstr ""
+"La captura es de {url}. Se toma una nueva después de guardar, si la nueva"
+" página no se puede mostrar en un marco."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:197
+msgid "This page can now be shown in a frame, so the screenshot isn't used."
+msgstr "Esta página ya se puede mostrar en un marco, así que la captura no se usa."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:199
+msgid "You picked a thumbnail, so the screenshot isn't used."
+msgstr "Eligió una miniatura, así que la captura no se usa."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:201
+msgid "This dataset is private, so screenshots aren't taken."
+msgstr "Este conjunto de datos es privado, así que no se toman capturas."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:203
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:216
+msgid ""
+"A screenshot will be taken in the background. Reload this form later to "
+"see it."
+msgstr ""
+"Se tomará una captura en segundo plano. Vuelva a cargar este formulario "
+"más tarde para verla."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:203
+msgid ""
+"This site takes screenshots on a schedule. Reload this form later to see "
+"it."
+msgstr ""
+"Este sitio toma capturas según un calendario. Vuelva a cargar este "
+"formulario más tarde para verla."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:205
+msgid "The last attempt on {date} failed: {reason}."
+msgstr "El último intento, el {date}, falló: {reason}."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:207
+msgid "Taken {date}, of {host}."
+msgstr "Tomada el {date}, de {host}."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:207
+msgid "Taken {date}."
+msgstr "Tomada el {date}."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
+msgid ""
+"Shown on this view's card. The resource list shows the page's own "
+"thumbnail instead."
+msgstr ""
+"Se muestra en la tarjeta de esta vista. La lista de recursos muestra en "
+"su lugar la miniatura propia de la página."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
+msgid "Shown on this view's card and as its thumbnail in the resource list."
+msgstr ""
+"Se muestra en la tarjeta de esta vista y como su miniatura en la lista de"
+" recursos."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:218
+msgid "Take a new screenshot"
+msgstr "Tomar una nueva captura"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:230
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:71
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:36
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
@@ -621,7 +748,7 @@ msgstr ""
 "Ocultar la barra de controles (Abrir en una pestaña nueva, Pantalla "
 "completa, Recargar)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:181
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:231
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:72
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:37
 msgid ""
@@ -631,11 +758,11 @@ msgstr ""
 "En teléfonos y con mucho zoom, Abrir en una pestaña nueva sigue visible, "
 "para que los visitantes siempre puedan llegar a la página."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:185
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:235
 msgid "Ask before loading a page from another site"
 msgstr "Preguntar antes de cargar una página de otro sitio"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:186
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:236
 msgid ""
 "Visitors see a card naming the site, and nothing loads from it until they"
 " choose Load. Uploads and pages on this site load as usual."
@@ -644,14 +771,14 @@ msgstr ""
 " de él hasta que eligen Cargar. Los archivos subidos y las páginas de "
 "este sitio se cargan como siempre."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:191
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:241
 msgid "Count visits (daily totals only, nothing about visitors; the view says so)"
 msgstr ""
 "Contar visitas (solo totales diarios, nada sobre los visitantes; la vista"
 " lo indica)"
 
 #. view counts as "label: number" pairs, so no plural forms are needed.
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:197
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:247
 #, python-brace-format
 msgid ""
 "Last 30 days. Shown: {impressions}. Seen: {seen}. Loaded: {loaded}. Used:"
@@ -661,11 +788,11 @@ msgstr ""
 "Cargada: {loaded}. Usada: {engaged}. Con error: {failed}."
 
 #. heading of the advanced (sysadmin-only) settings.
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:206
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:256
 msgid "Advanced"
 msgstr "Avanzado"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:207
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:257
 msgid ""
 "Each field replaces the preset's value; leave it blank to keep the "
 "preset's. A sandbox with both allow-scripts and allow-same-origin is "
@@ -676,27 +803,27 @@ msgstr ""
 "se rechaza siempre que pudiera permitir a una página actuar como este "
 "sitio."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:258
 msgid "Sandbox tokens (replace the preset's)"
 msgstr "Tokens de sandbox (reemplazan los del perfil)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:258
 msgid "eg. allow-scripts allow-popups"
 msgstr "p. ej. allow-scripts allow-popups"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:209
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:259
 msgid "Allowed features (replace the preset's)"
 msgstr "Funciones permitidas (reemplazan las del perfil)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:209
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:259
 msgid "eg. fullscreen; clipboard-write"
 msgstr "p. ej. fullscreen; clipboard-write"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:211
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:261
 msgid "Referrer policy"
 msgstr "Política de referrer"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:214
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:264
 msgid "Site default"
 msgstr "La del sitio"
 
@@ -922,10 +1049,6 @@ msgstr ""
 #, python-brace-format
 msgid "{host} doesn't allow its pages to be shown inside other sites."
 msgstr "{host} no permite que sus páginas se muestren dentro de otros sitios."
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:20
-msgid "Screenshot of {host}"
-msgstr "Captura de pantalla de {host}"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:24
 msgid "Screenshot taken {date}. The page itself can't be shown here."

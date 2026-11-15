@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import dataclasses
+import logging
 from typing import Any, Optional
 
 import ckan.model as model
@@ -20,6 +21,8 @@ from ckanext.webpageviewplus import (
     stats,
     thumbnails,
 )
+
+log = logging.getLogger(__name__)
 
 
 def frameability_auth(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:
@@ -151,6 +154,7 @@ def resource_view_create(
 ) -> dict[str, Any]:
     view = original(context, _with_service_settings(data_dict))
     health.after_save(view)
+    _screenshot_after_check(view)
     return view
 
 
@@ -183,6 +187,7 @@ def resource_view_update(
 ) -> dict[str, Any]:
     view = original(context, data_dict)
     health.after_save(view)
+    _screenshot_after_check(view)
     return view
 
 
@@ -347,3 +352,64 @@ def webpageviewplus_pdf_thumbnail(context: Context, data_dict: dict[str, Any]) -
     if source is None:
         raise toolkit.ValidationError({"image": [toolkit._("Not a usable image")]})
     return {"source": source}
+
+
+def _screenshot_after_check(view: dict[str, Any]) -> None:
+    # Here, in the main plugin's chain right after the check is stored,
+    # not in the thumbnails plugin's: the order of chained actions follows
+    # ckan.plugins, which sites write in any order.
+    from ckanext.webpageviewplus import plugin
+    if plugin._thumbnails_loaded():
+        screenshots.after_check(view)
+
+
+def _plus_view(data_dict: dict[str, Any]) -> model.ResourceView:
+    view = model.ResourceView.get(toolkit.get_or_bust(data_dict, "id"))
+    if view is None or view.view_type != screenshots.VIEW_TYPE:
+        raise toolkit.ObjectNotFound()
+    return view
+
+
+def screenshot_request_auth(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:
+    """Anyone who may edit the view."""
+    try:
+        view = _plus_view(data_dict)
+        toolkit.check_access("resource_view_update", context,
+                             {"id": view.id, "resource_id": view.resource_id})
+    except (toolkit.NotAuthorized, toolkit.ObjectNotFound, toolkit.ValidationError):
+        return {"success": False}
+    return {"success": True}
+
+
+def webpageviewplus_screenshot_request(
+    context: Context, data_dict: dict[str, Any]
+) -> dict[str, Any]:
+    """Queue a new screenshot of a Website (Plus) view's page (the view
+    form's "Take a new screenshot"), within the retake limit. Answers
+    {"state": "pending"}; refused with the seconds left inside the
+    cooldown."""
+    toolkit.check_access("webpageviewplus_screenshot_request", context, data_dict)
+    view = _plus_view(data_dict)
+    if not screenshots.jobs_on():
+        raise toolkit.ValidationError(
+            {"id": [toolkit._("This site takes screenshots on a schedule, not on request.")]})
+    url = screenshots._view_target(view)
+    if not url:
+        raise toolkit.ValidationError(
+            {"id": [toolkit._("This view's page doesn't get a screenshot.")]})
+    try:
+        outcome = screenshots.request_job(view.id, url)
+    except Exception as e:
+        log.warning("webpageviewplus: couldn't queue a screenshot (%s)", type(e).__name__)
+        raise toolkit.ValidationError(
+            {"id": [toolkit._("The screenshot couldn't be queued. Try again later.")]})
+    if outcome == "cooldown":
+        left = screenshots.cooldown_left(view.id, url)
+        raise toolkit.ValidationError({
+            "id": [toolkit.ungettext(
+                "You can take a new screenshot in {seconds} second.",
+                "You can take a new screenshot in {seconds} seconds.", left,
+            ).format(seconds=left)],
+            "seconds_left": [left],
+        })
+    return {"state": "pending"}
