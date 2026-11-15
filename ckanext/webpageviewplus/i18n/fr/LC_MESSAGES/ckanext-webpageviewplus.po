@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-15 20:45+0000\n"
+"POT-Creation-Date: 2026-11-15 22:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -50,12 +50,12 @@ msgid "This view's page doesn't get a screenshot."
 msgstr "La page de cette vue ne reçoit pas de capture d'écran."
 
 #: ckanext/webpageviewplus/actions.py:405
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:217
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:219
 msgid "The screenshot couldn't be queued. Try again later."
 msgstr "La capture n'a pas pu être mise en file d'attente. Réessayez plus tard."
 
 #: ckanext/webpageviewplus/actions.py:409
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:220
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:222
 msgid "You can take a new screenshot in {seconds} second."
 msgid_plural "You can take a new screenshot in {seconds} seconds."
 msgstr[0] "Vous pourrez prendre une nouvelle capture dans {seconds} seconde."
@@ -647,31 +647,35 @@ msgid "the page didn't load"
 msgstr "la page ne s'est pas chargée"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:181
+msgid "the page couldn't be reached"
+msgstr "la page était injoignable"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:182
 msgid "the screenshot service refused the request"
 msgstr "le service de capture a refusé la requête"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:182
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:183
 msgid "the screenshot service's allowance is used up for now"
 msgstr "le quota du service de capture est épuisé pour l'instant"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:183
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:184
 msgid "the answer wasn't an image"
 msgstr "la réponse n'était pas une image"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:184
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:185
 msgid "the screenshot service isn't set up safely"
 msgstr "le service de capture n'est pas configuré de façon sûre"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:187
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:188
 msgid "Screenshot"
 msgstr "Capture d'écran"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:189
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:190
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:20
 msgid "Screenshot of {host}"
 msgstr "Capture d’écran de {host}"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:193
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:194
 msgid ""
 "A screenshot is taken after you save, if this page can't be shown in a "
 "frame."
@@ -679,7 +683,7 @@ msgstr ""
 "Une capture est prise après l'enregistrement, si cette page ne peut pas "
 "être affichée dans un cadre."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:195
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:196
 msgid ""
 "The screenshot is of {url}. A new one is taken after you save, if the new"
 " page can't be shown in a frame."
@@ -687,22 +691,22 @@ msgstr ""
 "La capture montre {url}. Une nouvelle est prise après l'enregistrement, "
 "si la nouvelle page ne peut pas être affichée dans un cadre."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:197
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:198
 msgid "This page can now be shown in a frame, so the screenshot isn't used."
 msgstr ""
 "Cette page peut maintenant être affichée dans un cadre, la capture n'est "
 "donc pas utilisée."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:199
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:200
 msgid "You picked a thumbnail, so the screenshot isn't used."
 msgstr "Vous avez choisi une miniature, la capture n'est donc pas utilisée."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:201
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:202
 msgid "This dataset is private, so screenshots aren't taken."
 msgstr "Ce jeu de données est privé, aucune capture n'est donc prise."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:203
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:216
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:204
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:218
 msgid ""
 "A screenshot will be taken in the background. Reload this form later to "
 "see it."
@@ -710,7 +714,7 @@ msgstr ""
 "Une capture sera prise en arrière-plan. Rechargez ce formulaire plus tard"
 " pour la voir."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:203
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:204
 msgid ""
 "This site takes screenshots on a schedule. Reload this form later to see "
 "it."
@@ -718,19 +722,19 @@ msgstr ""
 "Ce site prend des captures selon un calendrier. Rechargez ce formulaire "
 "plus tard pour la voir."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:205
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:206
 msgid "The last attempt on {date} failed: {reason}."
 msgstr "La dernière tentative, le {date}, a échoué : {reason}."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:207
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
 msgid "Taken {date}, of {host}."
 msgstr "Prise le {date}, de {host}."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:207
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
 msgid "Taken {date}."
 msgstr "Prise le {date}."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:209
 msgid ""
 "Shown on this view's card. The resource list shows the page's own "
 "thumbnail instead."
@@ -738,17 +742,17 @@ msgstr ""
 "Affichée sur la carte de cette vue. La liste des ressources affiche à la "
 "place la miniature propre à la page."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:209
 msgid "Shown on this view's card and as its thumbnail in the resource list."
 msgstr ""
 "Affichée sur la carte de cette vue et comme miniature dans la liste des "
 "ressources."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:218
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:220
 msgid "Take a new screenshot"
 msgstr "Prendre une nouvelle capture"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:230
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:232
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:71
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:36
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
@@ -756,7 +760,7 @@ msgstr ""
 "Masquer la barre de commandes (Ouvrir dans un nouvel onglet, Plein écran,"
 " Recharger)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:231
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:233
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:72
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:37
 msgid ""
@@ -766,11 +770,11 @@ msgstr ""
 "Sur téléphone et en fort zoom, Ouvrir dans un nouvel onglet reste "
 "affiché, pour que les visiteurs puissent toujours atteindre la page."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:235
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:237
 msgid "Ask before loading a page from another site"
 msgstr "Demander avant de charger une page d’un autre site"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:236
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:238
 msgid ""
 "Visitors see a card naming the site, and nothing loads from it until they"
 " choose Load. Uploads and pages on this site load as usual."
@@ -779,14 +783,14 @@ msgstr ""
 " avant qu’ils choisissent Charger. Les fichiers téléversés et les pages "
 "de ce site se chargent normalement."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:241
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:243
 msgid "Count visits (daily totals only, nothing about visitors; the view says so)"
 msgstr ""
 "Compter les visites (totaux quotidiens uniquement, rien sur les visiteurs"
 " ; la vue l’indique)"
 
 #. view counts as "label: number" pairs, so no plural forms are needed.
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:247
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:249
 #, python-brace-format
 msgid ""
 "Last 30 days. Shown: {impressions}. Seen: {seen}. Loaded: {loaded}. Used:"
@@ -796,11 +800,11 @@ msgstr ""
 "Chargée : {loaded}. Utilisée : {engaged}. En échec : {failed}."
 
 #. heading of the advanced (sysadmin-only) settings.
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:256
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:258
 msgid "Advanced"
 msgstr "Avancé"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:257
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:259
 msgid ""
 "Each field replaces the preset's value; leave it blank to keep the "
 "preset's. A sandbox with both allow-scripts and allow-same-origin is "
@@ -811,27 +815,27 @@ msgstr ""
 " est refusée partout où elle pourrait laisser une page agir comme ce "
 "site."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:258
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:260
 msgid "Sandbox tokens (replace the preset's)"
 msgstr "Jetons de sandbox (remplacent ceux du profil)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:258
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:260
 msgid "eg. allow-scripts allow-popups"
 msgstr "p. ex. allow-scripts allow-popups"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:259
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:261
 msgid "Allowed features (replace the preset's)"
 msgstr "Fonctionnalités autorisées (remplacent celles du profil)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:259
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:261
 msgid "eg. fullscreen; clipboard-write"
 msgstr "p. ex. fullscreen; clipboard-write"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:261
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:263
 msgid "Referrer policy"
 msgstr "Politique de référent"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:264
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:266
 msgid "Site default"
 msgstr "Celle du site"
 

@@ -1388,7 +1388,8 @@ Screenshots are taken in the background, never while a page renders:
 - **On a schedule.** `ckan webpageviewplus screenshots`, from cron, for example daily: it takes
   views that have none, or one older than `screenshot_seconds` (30 days), and stops when the
   backend says its limit is used up. Views never tried go first, and a page that failed by
-  itself (it didn't load, or gave no image) is tried again only after a week, so failing pages
+  itself (it answered with an error, or gave no image; not one that couldn't be reached) is
+  tried again only after a week, so failing pages
   can't use up a hosted backend's daily allowance. Add `--refresh` to retake them all (failed
   ones included), `--dry-run` to list them. It isn't held back by the cooldown.
 

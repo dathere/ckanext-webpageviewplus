@@ -68,7 +68,8 @@ SECONDS = {"cloudflare": 60, "microlink": 60, "gotenberg": 45}
 CONNECT_SECONDS = 10
 USER_AGENT = "ckanext-webpageviewplus screenshot"
 # Why an attempt failed, as stored and shown (translated) in the view form.
-KINDS = ("page_failed", "rate_limited", "backend_error", "no_image", "unsafe_backend")
+KINDS = ("page_failed", "unreachable", "rate_limited", "backend_error", "no_image",
+         "unsafe_backend")
 # Gotenberg must refuse these, or it's never used.
 CANARIES = ("http://127.0.0.1/", "http://169.254.169.254/")
 SAFE_SECONDS = 60 * 60
@@ -242,7 +243,8 @@ def _cloudflare(url: str) -> Shot:
         raise Failure("backend_error")
     if answer.status == 200:
         raise Failure("no_image")
-    raise Failure("page_failed")
+    # 422: the page couldn't be loaded (DNS, a dropped connection).
+    raise Failure("unreachable")
 
 
 def _microlink_host(url: str) -> bool:
@@ -329,8 +331,10 @@ def _gotenberg(url: str) -> Shot:
         raise Failure("rate_limited", time.time() + 60)
     # 403: its outbound policy refused the page (a private address); 409:
     # the page answered 4xx or 5xx; 503: the page didn't finish in time.
-    if answer.status in (403, 409, 503):
+    if answer.status in (403, 409):
         raise Failure("page_failed")
+    if answer.status == 503:
+        raise Failure("unreachable")
     if answer.status == 200:
         raise Failure("no_image")
     raise Failure("backend_error")
@@ -621,10 +625,12 @@ def capture(view_id: str) -> str:
         # still refusing framing, and not answering with an error.
         check = _recheck(url)
         if check.problem:  # gone, http-error, unreachable, private
-            store_failure(view_id, url, backend, "page_failed")
-            events.emit("screenshot_failed", kind="page_failed", backend=backend,
+            # A passing network failure isn't the page's fault: no back-off.
+            kind = "unreachable" if check.problem == "unreachable" else "page_failed"
+            store_failure(view_id, url, backend, kind)
+            events.emit("screenshot_failed", kind=kind, backend=backend,
                         host=frame.url_host(url))
-            return "page_failed"
+            return kind
         if check.verdict != frameability.BLOCKED:
             return "skipped"
     try:

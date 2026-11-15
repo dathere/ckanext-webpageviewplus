@@ -308,7 +308,7 @@ class TestGotenberg:
         assert not screenshots.gotenberg_safe()
 
     @pytest.mark.parametrize("status, kind", [(409, "page_failed"), (403, "page_failed"),
-                                              (503, "page_failed"), (401, "backend_error"),
+                                              (503, "unreachable"), (401, "backend_error"),
                                               (429, "rate_limited")])
     def test_failures(self, monkeypatch, status, kind):
         monkeypatch.setattr(screenshots, "_send", _gotenberg(
@@ -381,7 +381,7 @@ class TestCloudflare:
     @pytest.mark.parametrize("probe, result", [
         (frameability.Probe(frameability.BLOCKED, "x-frame-options", "gone", 404), "page_failed"),
         (frameability.Probe(frameability.UNKNOWN, "", "http-error", 500), "page_failed"),
-        (frameability.Probe(frameability.UNKNOWN, "", "unreachable"), "page_failed"),
+        (frameability.Probe(frameability.UNKNOWN, "", "unreachable"), "unreachable"),
         (frameability.Probe(frameability.FRAMEABLE, status=200), "skipped"),
     ])
     def test_page_rechecked_first(self, monkeypatch, probe, result):
@@ -422,7 +422,7 @@ class TestCloudflare:
         assert len(backend.calls) == 1
 
     @pytest.mark.parametrize("status, kind", [(400, "backend_error"), (401, "backend_error"),
-                                              (500, "backend_error"), (422, "page_failed")])
+                                              (500, "backend_error"), (422, "unreachable")])
     def test_failures(self, monkeypatch, status, kind):
         monkeypatch.setattr(screenshots, "_send",
                             Backend(lambda *a: screenshots.Answer(status, {}, b"{}")))
@@ -706,6 +706,13 @@ class TestDueOrder:
         # --refresh tries it anyway, after the never-tried views.
         due = [view_id for view_id, _ in screenshots.due(refresh=True)]
         assert due.index(fresh["id"]) < due.index(failed["id"])
+
+    def test_unreachable_doesnt_back_off(self, monkeypatch):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg(
+            page=lambda: screenshots.Answer(503, {}, b"")))
+        _, _, view = _setup()
+        assert screenshots.capture(view["id"]) == "unreachable"
+        assert view["id"] in dict(screenshots.due())
 
     def test_backend_failures_dont_back_off(self, monkeypatch):
         monkeypatch.setattr(screenshots, "_send", _gotenberg(

@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-15 20:45+0000\n"
+"POT-Creation-Date: 2026-11-15 22:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -50,12 +50,12 @@ msgid "This view's page doesn't get a screenshot."
 msgstr "このビューのページにはスクリーンショットがありません。"
 
 #: ckanext/webpageviewplus/actions.py:405
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:217
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:219
 msgid "The screenshot couldn't be queued. Try again later."
 msgstr "スクリーンショットをキューに追加できませんでした。後でもう一度お試しください。"
 
 #: ckanext/webpageviewplus/actions.py:409
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:220
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:222
 msgid "You can take a new screenshot in {seconds} second."
 msgid_plural "You can take a new screenshot in {seconds} seconds."
 msgstr[0] "{seconds} 秒後に新しいスクリーンショットを撮影できます。"
@@ -570,100 +570,104 @@ msgid "the page didn't load"
 msgstr "ページが読み込まれませんでした"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:181
+msgid "the page couldn't be reached"
+msgstr "ページに到達できませんでした"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:182
 msgid "the screenshot service refused the request"
 msgstr "スクリーンショットサービスがリクエストを拒否しました"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:182
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:183
 msgid "the screenshot service's allowance is used up for now"
 msgstr "スクリーンショットサービスの利用枠を現在使い切っています"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:183
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:184
 msgid "the answer wasn't an image"
 msgstr "応答が画像ではありませんでした"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:184
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:185
 msgid "the screenshot service isn't set up safely"
 msgstr "スクリーンショットサービスが安全に設定されていません"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:187
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:188
 msgid "Screenshot"
 msgstr "スクリーンショット"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:189
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:190
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:20
 msgid "Screenshot of {host}"
 msgstr "{host} のスクリーンショット"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:193
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:194
 msgid ""
 "A screenshot is taken after you save, if this page can't be shown in a "
 "frame."
 msgstr "このページをフレーム内に表示できない場合、保存後にスクリーンショットを撮影します。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:195
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:196
 msgid ""
 "The screenshot is of {url}. A new one is taken after you save, if the new"
 " page can't be shown in a frame."
 msgstr "このスクリーンショットは {url} のものです。新しいページをフレーム内に表示できない場合、保存後に新しいスクリーンショットを撮影します。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:197
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:198
 msgid "This page can now be shown in a frame, so the screenshot isn't used."
 msgstr "このページはフレーム内に表示できるようになったため、スクリーンショットは使用されません。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:199
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:200
 msgid "You picked a thumbnail, so the screenshot isn't used."
 msgstr "サムネイルを選択したため、スクリーンショットは使用されません。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:201
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:202
 msgid "This dataset is private, so screenshots aren't taken."
 msgstr "このデータセットは非公開のため、スクリーンショットは撮影されません。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:203
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:216
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:204
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:218
 msgid ""
 "A screenshot will be taken in the background. Reload this form later to "
 "see it."
 msgstr "スクリーンショットはバックグラウンドで撮影されます。後でこのフォームを再読み込みして確認してください。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:203
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:204
 msgid ""
 "This site takes screenshots on a schedule. Reload this form later to see "
 "it."
 msgstr "このサイトはスクリーンショットをスケジュールで撮影します。後でこのフォームを再読み込みして確認してください。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:205
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:206
 msgid "The last attempt on {date} failed: {reason}."
 msgstr "{date} の前回の試行は失敗しました: {reason}。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:207
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
 msgid "Taken {date}, of {host}."
 msgstr "{date} に {host} を撮影。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:207
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
 msgid "Taken {date}."
 msgstr "{date} に撮影。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:209
 msgid ""
 "Shown on this view's card. The resource list shows the page's own "
 "thumbnail instead."
 msgstr "このビューのカードに表示されます。リソース一覧には代わりにページ自身のサムネイルが表示されます。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:209
 msgid "Shown on this view's card and as its thumbnail in the resource list."
 msgstr "このビューのカードと、リソース一覧のサムネイルとして表示されます。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:218
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:220
 msgid "Take a new screenshot"
 msgstr "新しいスクリーンショットを撮影"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:230
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:232
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:71
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:36
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
 msgstr "コントロールバーを隠す (新しいタブで開く、全画面、再読み込み)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:231
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:233
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:72
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:37
 msgid ""
@@ -671,22 +675,22 @@ msgid ""
 "always reach the page."
 msgstr "スマートフォンや高倍率のズームでは、「新しいタブで開く」が引き続き表示されるため、訪問者はいつでもページにアクセスできます。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:235
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:237
 msgid "Ask before loading a page from another site"
 msgstr "他のサイトのページを読み込む前に確認する"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:236
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:238
 msgid ""
 "Visitors see a card naming the site, and nothing loads from it until they"
 " choose Load. Uploads and pages on this site load as usual."
 msgstr "訪問者にはサイト名を示すカードが表示され、「読み込む」を選ぶまでそのサイトからは何も読み込まれません。アップロードとこのサイトのページは通常どおり読み込まれます。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:241
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:243
 msgid "Count visits (daily totals only, nothing about visitors; the view says so)"
 msgstr "訪問数を数える (日ごとの合計のみ、訪問者の情報は含まず、ビューにその旨を表示)"
 
 #. view counts as "label: number" pairs, so no plural forms are needed.
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:247
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:249
 #, python-brace-format
 msgid ""
 "Last 30 days. Shown: {impressions}. Seen: {seen}. Loaded: {loaded}. Used:"
@@ -696,11 +700,11 @@ msgstr ""
 "{failed}。"
 
 #. heading of the advanced (sysadmin-only) settings.
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:256
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:258
 msgid "Advanced"
 msgstr "詳細設定"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:257
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:259
 msgid ""
 "Each field replaces the preset's value; leave it blank to keep the "
 "preset's. A sandbox with both allow-scripts and allow-same-origin is "
@@ -709,27 +713,27 @@ msgstr ""
 "各フィールドはプリセットの値を置き換えます。空欄のままにするとプリセットの値を使用します。allow-scripts と allow-same-"
 "origin を両方含むサンドボックスは、ページがこのサイトとして動作できるおそれがある場合は拒否されます。"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:258
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:260
 msgid "Sandbox tokens (replace the preset's)"
 msgstr "サンドボックストークン (プリセットの値を置き換え)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:258
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:260
 msgid "eg. allow-scripts allow-popups"
 msgstr "例: allow-scripts allow-popups"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:259
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:261
 msgid "Allowed features (replace the preset's)"
 msgstr "許可する機能 (プリセットの値を置き換え)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:259
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:261
 msgid "eg. fullscreen; clipboard-write"
 msgstr "例: fullscreen; clipboard-write"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:261
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:263
 msgid "Referrer policy"
 msgstr "リファラーポリシー"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:264
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:266
 msgid "Site default"
 msgstr "サイトの既定値"
 
