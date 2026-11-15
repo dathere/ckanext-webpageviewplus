@@ -121,6 +121,18 @@ jobs:
     - name: Run the live tests
       run: pytest --ckan-ini=test.ini --disable-warnings -p no:cacheprovider ckanext/webpageviewplus/tests/test_gotenberg_live.py
 
+  gotenberg-redirects:
+    # Gotenberg's docs don't say whether a redirect's target is checked
+    # against CHROMIUM_DENY_PRIVATE_IPS. This checks it, with a redirector on
+    # a public-range Docker network (no CKAN, so no job container: the
+    # script needs Docker itself).
+    name: Gotenberg redirects (live)
+    runs-on: ubuntu-26.04
+    steps:
+    - uses: actions/checkout@v4
+    - name: Redirects to a private address are refused
+      run: sh scripts/gotenberg_redirects/check.sh
+
   coverage:
     # Sends coverage to Codacy. A separate job because the ckan-dev image has
     # no curl, which the reporter needs. Skipped without the secret (forks).

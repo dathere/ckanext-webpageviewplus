@@ -461,7 +461,16 @@ order now being built:
   `serve(..., form=1)`: editors only, even when not in use, `private, no-store`. Hosted
   captures re-check the page first (`_recheck`, a gate never stored). `doctor` warns when
   `screenshot_jobs` is on and no RQ worker reads the queue (`queue_has_worker`). Tests fake
-  `toolkit.enqueue_job` (autouse `jobs`) and Redis (`FakeRedis`).
+  `toolkit.enqueue_job` (autouse `jobs`) and Redis (`FakeRedis`). `due()` puts never-tried
+  views first and backs off a page's own failures (`PAGE_FAULTS`) for `FAILED_RETRY_SECONDS`.
+  Gotenberg redirects: `scripts/gotenberg_redirects/check.sh` (Docker; CI job "Gotenberg
+  redirects (live)", no job container) puts a redirector on a public-range network
+  (11.0.0.0/24) and expects a protected Gotenberg to refuse every 3xx to a private page that an
+  unprotected one reaches. Browser tests: `browser_tests/test_screenshots.py` on seed.py's
+  "Refuses framing" view (stored check and screenshot, `ci.ini` sets `frameability_check`, a
+  never-called `gotenberg_url` and `screenshot_jobs = false`; seed.py turns off save-time
+  checks). The form's button is tested without a login: the test adds its markup to a public
+  view page and stubs the action.
 - `tests/fixtures/qsv_protocol.html` speaks the qsv messages; `resize_message.html` reports its
   height with the generic message only (both seeded in `wvp-browser` by `browser_tests/seed.py`). It's uploaded to the `wvp-demo`
   dataset with three views (`data-schematic` auto, `interactive` auto, `interactive` fixed),
