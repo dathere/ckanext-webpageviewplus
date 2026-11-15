@@ -1157,7 +1157,8 @@ How content is served:
 - **CKAN 2.10 and 2.11 with cloud storage:** uploads kept by an extension such as
   ckanext-s3filestore or ckanext-cloudstorage aren't served: each has its own way of storing
   files, with no common way to read them. Their views stay framed from CKAN's origin under the
-  sandbox, so a qsv Data Schematic loses its maps and saved data there. CKAN 2.12's file
+  sandbox, so a qsv Data Schematic loses its saved data there (and its maps, if made before
+  qsv 29.0.0). CKAN 2.12's file
   storage gives them one way to read any storage; upgrade to it to have these uploads served.
 - **With `pdf_view_plus`**, it also serves the PDF.js viewer (versioned files, cached for a
   year) and the PDFs it shows, by the same rules: signed for private datasets, `frame-ancestors`,
