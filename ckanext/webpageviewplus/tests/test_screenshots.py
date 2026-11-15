@@ -5,6 +5,7 @@ import logging
 import time
 
 import pytest
+import sqlalchemy as sa
 from PIL import Image
 
 from ckan.cli.cli import ckan
@@ -604,6 +605,52 @@ class TestShowing:
         listing = app.get(url_for("dataset.read", id=dataset["name"])).body
         assert "webpageviewplus/screenshot/" in listing
         assert "logos/vimeo.svg" not in listing
+
+
+# --- The opt-out ------------------------------------------------------------------
+
+
+def _save(view, **changes):
+    return helpers.call_action(
+        "resource_view_update",
+        context={"user": factories.Sysadmin()["name"], "ignore_auth": True},
+        **dict(view, **changes))
+
+
+@_marks(GOTENBERG)
+class TestOptOut:
+    def test_opting_out_deletes_and_opting_back_in_retakes(self, monkeypatch):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        _, _, view = _setup()
+        assert screenshots.capture(view["id"]) == "taken"
+        view = _save(view, no_auto_thumbnail="true")
+        assert screenshots.stored(view["id"]) is None
+        assert view["id"] not in dict(screenshots.due())
+        _save(view, no_auto_thumbnail="")
+        assert view["id"] in dict(screenshots.due())
+
+    def test_other_saves_keep_it(self, monkeypatch):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        _, _, view = _setup()
+        screenshots.capture(view["id"])
+        _save(view, title="Renamed")
+        assert screenshots.stored(view["id"])["digest"]
+
+    def test_save_without_the_table(self, monkeypatch):
+        missing = sa.Table("webpage_view_plus_no_such_table", sa.MetaData(),
+                           sa.Column("view_id", sa.UnicodeText))
+        monkeypatch.setattr(screenshots, "table", missing)
+        _, _, view = _setup()
+        assert _save(view, no_auto_thumbnail="true")["no_auto_thumbnail"]
+
+    def test_form_says_it_stops_screenshots(self, app):
+        dataset, resource, view = _setup()
+        sysadmin = factories.SysadminWithToken()
+        body = app.get(url_for(f"{dataset['type']}_resource.edit_view", id=dataset["name"],
+                               resource_id=resource["id"], view_id=view["id"]),
+                       headers={"Authorization": sysadmin["token"]}).body
+        assert "It also stops screenshots" in body
+        assert "help-no_auto_thumbnail help-no_auto_thumbnail-screenshot" in body
 
 
 # --- The command -----------------------------------------------------------------

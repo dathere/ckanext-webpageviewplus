@@ -262,6 +262,8 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             ),
             # The page's own preview image may be fetched (thumbnails.auto).
             "thumbnail_fetch": thumbnails.enabled() and settings.thumbnail_fetch(),
+            # The opt-out stops screenshots too (screenshots.target).
+            "screenshots_on": _thumbnails_loaded() and screenshots.enabled(),
             # Only the view's edit form shows them.
             "view_counts": (
                 stats.totals_or_none(resource_view["id"], 30)

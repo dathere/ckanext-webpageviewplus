@@ -551,7 +551,17 @@ def delete(view_id: str) -> None:
         with model.meta.engine.begin() as connection:
             connection.execute(table.delete().where(table.c.view_id == view_id))
     except sa.exc.SQLAlchemyError:
-        pass
+        # No table yet (migration not run): nothing to delete.
+        log.debug("webpageviewplus: screenshot not deleted")
+
+
+def after_save(view: dict[str, Any]) -> None:
+    """The editor's opt-out deletes the view's screenshot. Changes that
+    aren't the editor's choice (the page becomes frameable, the dataset
+    stops being public, the backend is turned off) only hide it, until the
+    view qualifies again."""
+    if view.get("view_type") == VIEW_TYPE and toolkit.asbool(view.get("no_auto_thumbnail")):
+        delete(view["id"])
 
 
 def _view_target(view: model.ResourceView) -> Optional[str]:

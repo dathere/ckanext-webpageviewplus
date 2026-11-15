@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-13 13:27+0000\n"
+"POT-Creation-Date: 2026-11-15 19:42+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -20,52 +20,52 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.15.0\n"
 
-#: ckanext/webpageviewplus/actions.py:174 ckanext/webpageviewplus/plugin.py:180
+#: ckanext/webpageviewplus/actions.py:175 ckanext/webpageviewplus/plugin.py:188
 msgid "Website"
 msgstr "Website"
 
-#: ckanext/webpageviewplus/actions.py:267
+#: ckanext/webpageviewplus/actions.py:270
 msgid "Must be a whole number"
 msgstr "Muss eine ganze Zahl sein"
 
-#: ckanext/webpageviewplus/actions.py:303
+#: ckanext/webpageviewplus/actions.py:306
 msgid "PDF view not found"
 msgstr "PDF-Ansicht nicht gefunden"
 
-#: ckanext/webpageviewplus/actions.py:332
+#: ckanext/webpageviewplus/actions.py:335
 msgid "Thumbnails aren't enabled on this site"
 msgstr "Vorschaubilder sind auf dieser Website nicht aktiviert"
 
-#: ckanext/webpageviewplus/actions.py:342
 #: ckanext/webpageviewplus/actions.py:345
+#: ckanext/webpageviewplus/actions.py:348
 msgid "Not a usable image"
 msgstr "Kein verwendbares Bild"
 
-#: ckanext/webpageviewplus/plugin.py:158
+#: ckanext/webpageviewplus/plugin.py:166
 msgid "Website (Plus)"
 msgstr "Website (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:317
+#: ckanext/webpageviewplus/plugin.py:327
 msgid "Embedded web page"
 msgstr "Eingebettete Webseite"
 
-#: ckanext/webpageviewplus/plugin.py:530
+#: ckanext/webpageviewplus/plugin.py:552
 msgid "PDF (Plus)"
 msgstr "PDF (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:543
+#: ckanext/webpageviewplus/plugin.py:565
 msgid "PDF"
 msgstr "PDF"
 
-#: ckanext/webpageviewplus/plugin.py:600
+#: ckanext/webpageviewplus/plugin.py:622
 msgid "PDF document"
 msgstr "PDF-Dokument"
 
-#: ckanext/webpageviewplus/plugin.py:708
+#: ckanext/webpageviewplus/plugin.py:730
 msgid "Repository (Plus)"
 msgstr "Repository (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:719 ckanext/webpageviewplus/plugin.py:756
+#: ckanext/webpageviewplus/plugin.py:741 ckanext/webpageviewplus/plugin.py:778
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:6
 msgid "Repository"
 msgstr "Repository"
@@ -288,7 +288,9 @@ msgstr "Diese Website akzeptiert nur Seiten von diesen Hosts: {hosts}."
 msgid ""
 "In Chrome and Edge, this PDF stays blank with this preset: they don't "
 "show PDFs in a sandbox."
-msgstr "In Chrome und Edge bleibt dieses PDF mit diesem Profil leer: Sie zeigen keine PDFs in einer Sandbox an."
+msgstr ""
+"In Chrome und Edge bleibt dieses PDF mit diesem Profil leer: Sie zeigen "
+"keine PDFs in einer Sandbox an."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:40
 msgid "Use a PDF (Plus) view instead."
@@ -296,13 +298,17 @@ msgstr "Verwenden Sie stattdessen eine Ansicht PDF (Plus)."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:42
 msgid "If you trust the site the PDF comes from, the External preset shows it."
-msgstr "Wenn Sie der Website vertrauen, von der das PDF stammt, zeigt das Profil Extern es an."
+msgstr ""
+"Wenn Sie der Website vertrauen, von der das PDF stammt, zeigt das Profil "
+"Extern es an."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:44
 msgid ""
 "Link to the PDF instead, or ask your site administrator about the PDF "
 "(Plus) view."
-msgstr "Verlinken Sie stattdessen auf das PDF oder fragen Sie die Administration Ihrer Website nach der Ansicht PDF (Plus)."
+msgstr ""
+"Verlinken Sie stattdessen auf das PDF oder fragen Sie die Administration "
+"Ihrer Website nach der Ansicht PDF (Plus)."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:48
 msgid ""
@@ -481,8 +487,12 @@ msgstr ""
 "Administration Ihrer Website, wenn Sie es brauchen."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:114
-msgid "Charts, the Tour and Explore work. Maps work only in Data Schematics made with qsv 29.0.0 or later."
-msgstr "Diagramme, die Tour und Explore funktionieren. Karten funktionieren nur in Data Schematics, die mit qsv 29.0.0 oder neuer erstellt wurden."
+msgid ""
+"Charts, the Tour and Explore work. Maps work only in Data Schematics made"
+" with qsv 29.0.0 or later."
+msgstr ""
+"Diagramme, die Tour und Explore funktionieren. Karten funktionieren nur "
+"in Data Schematics, die mit qsv 29.0.0 oder neuer erstellt wurden."
 
 # | msgid "" "This view's sandbox would let scripts keep a real origin, which
 # | isn't " "allowed here, so it runs as Strict."
@@ -597,13 +607,19 @@ msgstr ""
 "Andernfalls zeigt eine in diesen Datensatz hochgeladene Office-Datei, "
 "wenn oben kein Bild gewählt ist, das in ihr gespeicherte Vorschaubild."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:177
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:171
+msgid ""
+"It also stops screenshots of a page that refuses to be shown here, and "
+"saving with it ticked deletes any screenshot already taken."
+msgstr "Er verhindert auch Screenshots einer Seite, die sich hier nicht anzeigen lässt, und beim Speichern mit gesetztem Haken wird ein bereits aufgenommener Screenshot gelöscht."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:180
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:71
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:36
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
 msgstr "Steuerleiste ausblenden (In neuem Tab öffnen, Vollbild, Neu laden)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:178
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:181
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:72
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:37
 msgid ""
@@ -613,11 +629,11 @@ msgstr ""
 "Auf Smartphones und bei starker Vergrößerung bleibt In neuem Tab öffnen "
 "sichtbar, damit Besucher die Seite immer erreichen."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:182
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:185
 msgid "Ask before loading a page from another site"
 msgstr "Vor dem Laden einer Seite von einer anderen Website fragen"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:183
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:186
 msgid ""
 "Visitors see a card naming the site, and nothing loads from it until they"
 " choose Load. Uploads and pages on this site load as usual."
@@ -626,14 +642,14 @@ msgstr ""
 "dort geladen, bis sie Laden wählen. Uploads und Seiten dieser Website "
 "laden wie gewohnt."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:188
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:191
 msgid "Count visits (daily totals only, nothing about visitors; the view says so)"
 msgstr ""
 "Besuche zählen (nur Tagessummen, nichts über Besucher; die Ansicht weist "
 "darauf hin)"
 
 #. view counts as "label: number" pairs, so no plural forms are needed.
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:194
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:197
 #, python-brace-format
 msgid ""
 "Last 30 days. Shown: {impressions}. Seen: {seen}. Loaded: {loaded}. Used:"
@@ -643,11 +659,11 @@ msgstr ""
 "{loaded}. Genutzt: {engaged}. Fehlgeschlagen: {failed}."
 
 #. heading of the advanced (sysadmin-only) settings.
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:203
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:206
 msgid "Advanced"
 msgstr "Erweitert"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:204
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:207
 msgid ""
 "Each field replaces the preset's value; leave it blank to keep the "
 "preset's. A sandbox with both allow-scripts and allow-same-origin is "
@@ -658,32 +674,32 @@ msgstr ""
 " zugleich wird überall abgelehnt, wo sie eine Seite als diese Website "
 "handeln lassen könnte."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:205
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
 msgid "Sandbox tokens (replace the preset's)"
 msgstr "Sandbox-Tokens (ersetzen die des Profils)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:205
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
 msgid "eg. allow-scripts allow-popups"
 msgstr "z. B. allow-scripts allow-popups"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:206
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:209
 msgid "Allowed features (replace the preset's)"
 msgstr "Erlaubte Funktionen (ersetzen die des Profils)"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:206
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:209
 msgid "eg. fullscreen; clipboard-write"
 msgstr "z. B. fullscreen; clipboard-write"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:211
 msgid "Referrer policy"
 msgstr "Referrer-Richtlinie"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:211
+#: ckanext/webpageviewplus/templates/webpageviewplus/form.html:214
 msgid "Site default"
 msgstr "Wie auf der Website"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:12
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:144
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:155
 msgid ""
 "This PDF can't be shown: the site needs a separate domain for uploaded "
 "content."
@@ -879,9 +895,9 @@ msgid "Open on {site}"
 msgstr "Auf {site} öffnen"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:49
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:17
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:114
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:140
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:28
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:125
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:151
 msgid "Open in new tab"
 msgstr "In neuem Tab öffnen"
 
@@ -916,26 +932,36 @@ msgstr ""
 "{host} erlaubt nicht, dass seine Seiten innerhalb anderer Websites "
 "angezeigt werden."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:28
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:20
+msgid "Screenshot of {host}"
+msgstr "Bildschirmfoto von {host}"
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:24
+msgid "Screenshot taken {date}. The page itself can't be shown here."
+msgstr ""
+"Bildschirmfoto vom {date}. Die Seite selbst kann hier nicht angezeigt "
+"werden."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:39
 msgid "Skip embedded content"
 msgstr "Eingebettete Inhalte überspringen"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:33
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:44
 #, python-brace-format
 msgid "Interact with {title}"
 msgstr "Mit {title} interagieren"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:33
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:44
 msgid "Tap to interact"
 msgstr "Zum Interagieren tippen"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:59
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:70
 #, python-brace-format
 msgid "This view loads content from {host}."
 msgstr "Diese Ansicht lädt Inhalte von {host}."
 
 # it
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:61
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:72
 msgid ""
 "Loading it lets {host} know you are visiting this site, and it may "
 "recognise you if you are signed in there."
@@ -943,91 +969,91 @@ msgstr ""
 "Beim Laden erfährt {host}, dass Sie diese Website besuchen, und erkennt "
 "Sie womöglich, wenn Sie dort angemeldet sind."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:62
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:107
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:73
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:118
 msgid "Privacy policy"
 msgstr "Datenschutzerklärung"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:65
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:76
 msgid "Not loaded, to save data."
 msgstr "Nicht geladen, um Daten zu sparen."
 
 #. a button loading the embedded page; {size} is its file size, e.g. "1.2 MB".
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:69
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:80
 #, python-brace-format
 msgid "Load ({size})"
 msgstr "Laden ({size})"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:69
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:80
 msgid "Load"
 msgstr "Laden"
 
 #. a button that loads the page and remembers, in this browser, to load pages
 #. from
 #. {host} without asking.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:74
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:85
 #, python-brace-format
 msgid "Always load from {host}"
 msgstr "Immer von {host} laden"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:81
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:92
 msgid "Content from {host} loads without asking in this browser."
 msgstr "Inhalte von {host} werden in diesem Browser ohne Nachfrage geladen."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:83
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:94
 msgid "You will be asked again next time."
 msgstr "Sie werden beim nächsten Mal wieder gefragt."
 
 #. a button that forgets the choice to always load pages from a site.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:85
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:96
 msgid "Ask me again"
 msgstr "Wieder fragen"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:97
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:108
 #, python-brace-format
 msgid "{title} loaded"
 msgstr "{title} geladen"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:100
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:111
 msgid "This page connects to"
 msgstr "Diese Seite verbindet sich mit"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:106
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:117
 msgid "This view counts visits."
 msgstr "Diese Ansicht zählt Besuche."
 
 #. accessible name of the toolbar under an embedded web page.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:112
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:123
 msgid "Embedded page"
 msgstr "Eingebettete Seite"
 
 #. "Expand" makes the embedded page fill the window; "Fullscreen" fills the
 #. screen.
 #. Buttons.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:121
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:132
 msgid "Expand"
 msgstr "Vergrößern"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:121
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:132
 msgid "Fullscreen"
 msgstr "Vollbild"
 
 #. a button leaving the expanded (full-window) view.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:123
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:134
 msgid "Close"
 msgstr "Schließen"
 
 #. a button reloading the embedded page.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:127
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:138
 msgid "Reload"
 msgstr "Neu laden"
 
 #. a button opening the device's share sheet for this page.
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:133
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:144
 msgid "Share"
 msgstr "Teilen"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:146
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:157
 msgid ""
 "There is no PDF to show: only uploaded files and http:// or https:// "
 "links are supported."
@@ -1035,7 +1061,7 @@ msgstr ""
 "Es gibt kein PDF zum Anzeigen: Nur hochgeladene Dateien und http://- oder"
 " https://-Links werden unterstützt."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:148
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:159
 msgid "Save the view to see the PDF."
 msgstr "Speichern Sie die Ansicht, um das PDF zu sehen."
 
@@ -1043,7 +1069,7 @@ msgstr "Speichern Sie die Ansicht, um das PDF zu sehen."
 # | such as " "https://github.com/ckan/ckan, are supported."
 #. {hosts} is a list of this site's own Git servers, such as "git.example.org,
 #. gitlab.example.org".
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:152
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:163
 msgid ""
 "There is no repository to show: only public repositories on GitHub, "
 "GitLab, Codeberg, Bitbucket and {hosts}, such as "
@@ -1055,7 +1081,7 @@ msgstr ""
 
 # | msgid "" "There is no repository to show: only public GitHub repositories,
 # | such as " "https://github.com/ckan/ckan, are supported."
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:154
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:165
 msgid ""
 "There is no repository to show: only public repositories on GitHub, "
 "GitLab, Codeberg and Bitbucket, such as https://github.com/ckan/ckan, are"
@@ -1065,11 +1091,11 @@ msgstr ""
 "GitHub, GitLab, Codeberg und Bitbucket wie https://github.com/ckan/ckan "
 "werden unterstützt."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:157
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:168
 msgid "Save the view to see the repository."
 msgstr "Speichern Sie die Ansicht, um das Repository zu sehen."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:159
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:170
 msgid ""
 "This page can't be embedded: its host isn't on this site's list of "
 "allowed hosts."
@@ -1077,7 +1103,7 @@ msgstr ""
 "Diese Seite kann nicht eingebettet werden: Ihr Host steht nicht auf der "
 "Liste der erlaubten Hosts dieser Website."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:161
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:172
 msgid ""
 "This page cannot be embedded: only http:// and https:// URLs are "
 "supported."
@@ -1085,10 +1111,3 @@ msgstr ""
 "Diese Seite kann nicht eingebettet werden: Nur http://- und https://-URLs"
 " werden unterstützt."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:20
-msgid "Screenshot of {host}"
-msgstr "Bildschirmfoto von {host}"
-
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:24
-msgid "Screenshot taken {date}. The page itself can't be shown here."
-msgstr "Bildschirmfoto vom {date}. Die Seite selbst kann hier nicht angezeigt werden."

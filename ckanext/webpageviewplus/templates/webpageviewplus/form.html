@@ -160,12 +160,15 @@
   </div>
   <div class="form-group">
     <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="field-no_auto_thumbnail" name="no_auto_thumbnail" value="true" aria-describedby="help-no_auto_thumbnail" {% if data.no_auto_thumbnail in (true, 'true', 'True') %}checked{% endif %}>
+      <input class="form-check-input" type="checkbox" id="field-no_auto_thumbnail" name="no_auto_thumbnail" value="true" aria-describedby="help-no_auto_thumbnail{% if screenshots_on %} help-no_auto_thumbnail-screenshot{% endif %}" {% if data.no_auto_thumbnail in (true, 'true', 'True') %}checked{% endif %}>
       <label class="form-check-label" for="field-no_auto_thumbnail">{{ _('Don\'t make a thumbnail automatically') }}</label>
       {% if thumbnail_fetch %}
         <p class="form-text" id="help-no_auto_thumbnail">{{ _('Otherwise, when no image is chosen above, this site fetches the image the page names for link previews, once when the view is saved, and shows a small copy.') }}</p>
       {% else %}
         <p class="form-text" id="help-no_auto_thumbnail">{{ _('Otherwise, when no image is chosen above, an Office file uploaded to this dataset shows the preview picture saved inside it.') }}</p>
+      {% endif %}
+      {% if screenshots_on %}
+        <p class="form-text" id="help-no_auto_thumbnail-screenshot">{{ _('It also stops screenshots of a page that refuses to be shown here, and saving with it ticked deletes any screenshot already taken.') }}</p>
       {% endif %}
     </div>
   </div>
