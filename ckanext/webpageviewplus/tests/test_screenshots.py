@@ -76,10 +76,10 @@ def page_still_blocked(monkeypatch):
     # A hosted capture re-checks the page first; tests answer for it.
     checked = []
 
-    def check_view(view_id, url, deadline=None):
+    def recheck(url):
         checked.append(url)
         return frameability.Probe(frameability.BLOCKED, "x-frame-options", status=200)
-    monkeypatch.setattr(health, "check_view", check_view)
+    monkeypatch.setattr(screenshots, "_recheck", recheck)
     return checked
 
 
@@ -356,6 +356,7 @@ class TestCloudflare:
     @pytest.mark.parametrize("probe, result", [
         (frameability.Probe(frameability.BLOCKED, "x-frame-options", "gone", 404), "page_failed"),
         (frameability.Probe(frameability.UNKNOWN, "", "http-error", 500), "page_failed"),
+        (frameability.Probe(frameability.UNKNOWN, "", "unreachable"), "page_failed"),
         (frameability.Probe(frameability.FRAMEABLE, status=200), "skipped"),
     ])
     def test_page_rechecked_first(self, monkeypatch, probe, result):
@@ -364,10 +365,23 @@ class TestCloudflare:
         # refuses framing without an error.
         backend = Backend(lambda *a: pytest.fail("sent a page that failed its check"))
         monkeypatch.setattr(screenshots, "_send", backend)
-        monkeypatch.setattr(health, "check_view", lambda *a, **kw: probe)
+        monkeypatch.setattr(screenshots, "_recheck", lambda url: probe)
         _, _, view = _setup()
         assert screenshots.capture(view["id"]) == result
         assert backend.calls == []
+        # A gate only: the stored check is untouched, so the view stays due.
+        assert health.stored(view["id"], PAGE)["verdict"] == frameability.BLOCKED
+        assert view["id"] in dict(screenshots.due())
+
+    def test_view_deleted_while_the_backend_worked(self, monkeypatch):
+        _, _, view = _setup()
+
+        def answer(*args, **kwargs):
+            helpers.call_action("resource_view_delete",
+                                context={"user": factories.Sysadmin()["name"]}, id=view["id"])
+            return _image(_jpeg())
+        monkeypatch.setattr(screenshots, "_send", Backend(answer))
+        assert screenshots.capture(view["id"]) == "skipped"
 
     def test_daily_limit_remembered_until_tomorrow(self, monkeypatch):
         backend = Backend(lambda *a: screenshots.Answer(

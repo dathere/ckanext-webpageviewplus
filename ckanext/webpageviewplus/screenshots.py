@@ -586,6 +586,14 @@ def _view_target(view: model.ResourceView) -> Optional[str]:
                   resource.url_type or "", bool(package.private))
 
 
+def _recheck(url: str) -> frameability.Probe:
+    """The page as it answers now, with the stored check's guards. A gate
+    only: never stored, so a passing network failure doesn't replace the
+    view's "blocked" check and take it out of due()."""
+    return frameability.probe(url, frameability.ckan_identity(settings.site_url()),
+                              time.monotonic() + RECHECK_SECONDS)
+
+
 def capture(view_id: str) -> str:
     """Take and store a screenshot for one view: "taken", "skipped" (it
     doesn't qualify) or the Failure kind."""
@@ -598,7 +606,7 @@ def capture(view_id: str) -> str:
         # Cloudflare and Microlink screenshot error pages (a 404 or 500
         # comes back as an image), so check the page ourselves first:
         # still refusing framing, and not answering with an error.
-        check = health.check_view(view_id, url, time.monotonic() + RECHECK_SECONDS)
+        check = _recheck(url)
         if check.problem:  # gone, http-error, unreachable, private
             store_failure(view_id, url, backend, "page_failed")
             events.emit("screenshot_failed", kind="page_failed", backend=backend,
@@ -618,7 +626,11 @@ def capture(view_id: str) -> str:
     final = frame.url_host(shot.final_url) if frame.is_http_url(shot.final_url) else ""
     # The view may have been saved (opted out, say) while the backend
     # worked: store only what it still asks for.
-    model.Session.refresh(view)
+    try:
+        model.Session.refresh(view)
+    except sa.exc.InvalidRequestError:  # the view was deleted meanwhile
+        model.Session.rollback()
+        return "skipped"
     if _view_target(view) != url:
         return "skipped"
     store(view_id, url, backend, encoded[0], encoded[1],
