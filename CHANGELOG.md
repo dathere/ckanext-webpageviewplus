@@ -17,8 +17,8 @@
   README now say only older schematics lose their maps there; saved data still needs
   `data-schematic` and a separate domain. A new FAQ entry covers `qsv viz map` charts, whose
   default OpenStreetMap tiles Firefox can't load in a sandbox: build them with
-  `--style carto-positron`, noting CARTO's basemap terms (a CARTO API key for heavy or
-  commercial use).
+  `--style carto-positron`, noting that CARTO's basemap terms require your own CARTO API key,
+  though these styles still load without one today.
 
 ## 0.12.0 (2026-11-08)
 

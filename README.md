@@ -654,10 +654,11 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   page (`interactive`, or an upload opened from its download link). Its points and regions still
   show. Build it with `--style carto-positron` (or `carto-voyager`, `carto-darkmatter`), whose
   tiles load in every browser. Data Schematics (`qsv viz smart`) already use those tiles.
-  They're CARTO's free basemaps, under [CARTO's basemap terms](https://carto.com/legal/basemap-terms/):
-  CARTO asks for a CARTO-issued API key and may watermark, rate-limit or suspend requests without
-  one. These styles still load without a key today, but CARTO says that may change, and heavy or
-  commercial use needs a key of your own (see [qsv#5059](https://github.com/dathere/qsv/issues/5059)).
+  They're CARTO's free basemaps, and [CARTO's basemap terms](https://carto.com/legal/basemap-terms/)
+  allow free use only with your own CARTO-issued API key, within monthly limits (lower for
+  commercial use). These styles still load without a key today, but CARTO may watermark,
+  rate-limit or suspend keyless requests, and says the key may become technically required too.
+  qsv can't add a key yet (see [qsv#5059](https://github.com/dathere/qsv/issues/5059)).
 
 - **Q: Can I upload a page that uses separate CSS, JavaScript or image files?**<br>
   A: Not as separate files: a view shows one uploaded file, and a link from it to `style.css` or
