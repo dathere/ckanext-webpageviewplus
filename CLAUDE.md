@@ -130,8 +130,8 @@ order now being built:
 12. In progress (branch `screenshots`, unreleased): screenshots of pages that refuse framing
    (spec section "Proposed: Screenshots of pages that refuse framing", revision 3; its Build
    order gives the steps). Steps 1 and 2 built: `screenshots.py` below. Next: step 3, the
-   management interface, once its spec section is approved; `check-views` queuing blocked views
-   with no screenshot is specified but not built.
+   management interface, once its spec section is approved. `check-views` queues blocked views
+   with no screenshot (`after_check(..., back_off=True)`).
 
 ## The security model (read before touching frame, validator, content or download code)
 
@@ -453,7 +453,11 @@ order now being built:
   `ckan.plugins`), which queues `job` on queue `webpageviewplus` (`request_job`) only when no
   screenshot counts for the current URL. The retake limit: a Redis `pending:` mark per view
   (`PENDING_SECONDS`), and `cooldown_left` from `attempted_at` of the same page (another page:
-  no cooldown). `job` re-checks the cooldown, never raises, clears the mark. The editor's
+  no cooldown). `job` re-checks the cooldown, never raises, clears the mark. `check-views`
+  calls `after_check(view, back_off=True)` for each `refuses-embedding` Website (Plus) view
+  (not with `--no-store`, without the thumbnails plugin, or when `queue_has_worker()` is
+  False; it stops queuing after an "error"), and `back_off` skips `_backing_off` pages as
+  `due()` does. The editor's
   opt-out deletes at save (`after_save`, thumbnails chain). `webpageviewplus_screenshot_request`
   (thumbnails plugin; auth `resource_view_update` with `resource_id`) answers
   `{"state": "pending"}` or a ValidationError with `seconds_left`. The view form's panel

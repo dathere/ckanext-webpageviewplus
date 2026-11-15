@@ -452,8 +452,13 @@ def check_views(
     whose page refuses to be framed shows a card instead of a blank frame.
     With the webpage_view_plus_thumbnails plugin, their thumbnails are
     remade too, and those of pdf_view_plus views (a copy stays if remaking
-    it fails); that never changes the exit status.
+    it fails); that never changes the exit status. With screenshot_jobs on
+    and a worker reading the queue, a view whose page refuses to be framed
+    and has no screenshot of it gets a screenshot job, unless that page's
+    last attempt failed within a week.
     """
+    from ckanext.webpageviewplus import screenshots
+
     query = (
         model.Session.query(model.ResourceView, model.Resource, model.Package)
         .join(model.Resource, model.Resource.id == model.ResourceView.resource_id)
@@ -468,9 +473,25 @@ def check_views(
     probes: dict[str, frameability.Probe] = {}
     remake = thumbnails.enabled() and not no_store
     images: dict[tuple[str, str], Optional[bytes]] = {}
+    shoot = (not no_store and _plugin_loaded("webpage_view_plus_thumbnails")
+             and screenshots.jobs_on())
+    # Without a worker, each run would queue the same views again.
+    if shoot and screenshots.queue_has_worker() is False:
+        shoot = False
+        click.echo("No worker reads the {} queue, so no screenshots were queued "
+                   "(ckan jobs worker {}).".format(screenshots.QUEUE, screenshots.QUEUE),
+                   err=True)
+    queued = 0
     rows = []
     for view, resource, package in query:
         row = assess(view, resource, probes, timeout, store=not no_store)
+        if shoot and row["problem"] == "refuses-embedding" \
+                and view.view_type == screenshots.VIEW_TYPE:
+            outcome = screenshots.after_check(
+                {"id": view.id, "view_type": view.view_type}, back_off=True)
+            queued += outcome == "queued"
+            # Redis or the queue is down: one warning is enough.
+            shoot = outcome != "error"
         if remake and view.view_type in thumbnails.VIEW_TYPES:
             thumbnails.after_save(
                 dict(view.config or {}, id=view.id, view_type=view.view_type,
@@ -510,6 +531,8 @@ def check_views(
                 r["url"], r["detail"])))
         click.echo("{} view(s) checked, {} with problems.".format(len(rows), len(broken)),
                    err=True)
+    if queued:
+        click.echo("{} screenshot(s) queued.".format(queued), err=True)
     if broken:
         raise SystemExit(1)
 

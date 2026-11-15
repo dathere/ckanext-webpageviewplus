@@ -768,20 +768,28 @@ def _release(view_id: str, token: Optional[str]) -> None:
         log.debug("webpageviewplus: screenshot job's pending mark not cleared")
 
 
-def after_check(view: dict[str, Any]) -> None:
-    """After a save has checked the view's page: queue a screenshot when
-    the view qualifies and has none of its current page (a save doesn't
-    retake one that counts; the form's button and the CLI do). Never
-    fails the save."""
+def after_check(view: dict[str, Any], back_off: bool = False) -> str:
+    """After a save or ``check-views`` has checked the view's page: queue a
+    screenshot when the view qualifies and has none of its current page (a
+    save doesn't retake one that counts; the form's button and the CLI do).
+    With ``back_off`` (check-views, run from cron), a page whose own last
+    attempt failed recently is left alone, as ``due()`` leaves it. Returns
+    request_job's answer, "" if nothing was asked, or "error". Never
+    raises."""
     if view.get("view_type") != VIEW_TYPE or not jobs_on():
-        return
+        return ""
     try:
         model_view = model.ResourceView.get(view["id"])
         url = _view_target(model_view) if model_view is not None else None
-        if url and not _counts(stored_meta(view["id"]), url):
-            request_job(view["id"], url)
+        if not url:
+            return ""
+        shot = stored_meta(view["id"])
+        if _counts(shot, url) or (back_off and _backing_off(shot, url)):
+            return ""
+        return request_job(view["id"], url)
     except Exception as e:
         log.warning("webpageviewplus: couldn't queue a screenshot (%s)", type(e).__name__)
+        return "error"
 
 
 def _list_shows_other(view_id: str, config: dict[str, Any], resource: dict[str, Any]) -> bool:

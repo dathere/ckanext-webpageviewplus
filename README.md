@@ -1392,6 +1392,11 @@ Screenshots are taken in the background, never while a page renders:
   tried again only after a week, so failing pages
   can't use up a hosted backend's daily allowance. Add `--refresh` to retake them all (failed
   ones included), `--dry-run` to list them. It isn't held back by the cooldown.
+- **From `check-views`.** When [`check-views`](#finding-broken-views) finds a page refusing
+  framing whose view has no screenshot of it, it queues that view's job, with the same
+  one-at-a-time rule, cooldown and week's wait after a failure. It queues nothing with
+  `--no-store`, with `screenshot_jobs = false`, or when no worker reads the queue (each run
+  would queue the same views again).
 
 **Requirements.** The `webpage_view_plus_thumbnails` plugin, `frameability_check = true`,
 `ckan db upgrade -p webpage_view_plus`, and one backend:
@@ -1692,7 +1697,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.microlink_api_key` | empty | The `microlink` backend's optional key |
 | `ckanext.webpageviewplus.gotenberg_url` / `gotenberg_username` / `gotenberg_password` | empty | Where CKAN reaches your Gotenberg, and its basic auth |
 | `ckanext.webpageviewplus.screenshot_seconds` | `2592000` (30 days) | How old a screenshot gets before `ckan webpageviewplus screenshots` retakes it |
-| `ckanext.webpageviewplus.screenshot_jobs` | `true` | Whether a save and the view form's button queue a screenshot job (queue `webpageviewplus`: run `ckan jobs worker webpageviewplus`). `false`: only the scheduled command takes them |
+| `ckanext.webpageviewplus.screenshot_jobs` | `true` | Whether a save, the view form's button and `check-views` queue a screenshot job (queue `webpageviewplus`: run `ckan jobs worker webpageviewplus`). `false`: only the scheduled command takes them |
 | `ckanext.webpageviewplus.screenshot_cooldown_seconds` | `60` | How long after a view's last attempt before a save or the button may queue another (0: only one queued job per view). A changed page URL isn't held back |
 | `ckanext.webpageviewplus.color_scheme` | `auto` | `light` or `dark`: the colour scheme framed pages see (Firefox only so far) |
 | `ckanext.webpageviewplus.narrow_width` | `576` | View width, in px, below which aspect and viewport heights become 80% of the screen; `0` turns it off |
@@ -1716,7 +1721,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckan webpageviewplus doctor [--no-http] [--site-url URL]` | Check the site's setup and say what to fix: no content origin or sandboxed downloads, an HTML upload's download arriving without its sandbox header, the plugin's tables not upgraded, asset bundles the site doesn't serve (fetched from `ckan.site_url`, or `--site-url` inside a container), `default_views`, core views left to migrate. Exits 1 when something is broken. Run it after installing or upgrading |
 | `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME] [--dataset NAME]` | Convert `webpage_view` views, see [Migrating from webpage_view](#migrating-from-webpage_view) |
 | `ckan webpageviewplus migrate-pdf [--dry-run]` | Convert ckanext-pdfview's `pdf_view` views to PDF (Plus), see [PDF views](#pdf-views) |
-| `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails, except with `--no-store`. Run it weekly from cron |
+| `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails and queues missing screenshots, except with `--no-store`. Run it weekly from cron |
 | `ckan webpageviewplus purge-stats` | Delete view counts and reported hosts older than the retention period. Run it daily from cron |
 | `ckan webpageviewplus stats-summary [--limit N]` | Site-wide view counts, busiest first |
 | `ckan webpageviewplus connections [--limit N]` | Hosts uploaded pages were seen contacting, site-wide |

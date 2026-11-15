@@ -10,7 +10,8 @@
   provides a thumbnail. Three backends: Cloudflare Browser Run and Microlink (hosted, public
   datasets only, sent the page's URL) and a self-hosted Gotenberg 9.5+ (any dataset), which
   CKAN uses only after checking it refuses private addresses. Taken in the background by
-  `ckan webpageviewplus screenshots` (for cron), stored per view in a new table (run
+  `ckan webpageviewplus screenshots` (for cron), or queued by a save, the view form's button
+  or `check-views` (for a worker on queue `webpageviewplus`), stored per view in a new table (run
   `ckan db upgrade -p webpage_view_plus`), never as resources. `doctor` reports the backend,
   Gotenberg's private-address check and the last failure.
 

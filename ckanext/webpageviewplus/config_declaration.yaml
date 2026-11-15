@@ -160,9 +160,10 @@ groups:
         default: true
         type: bool
         description: |
-          Whether saving a view whose page refuses framing, and the view
-          form's "Take a new screenshot" button, queue a background job
-          (queue webpageviewplus; run ckan jobs worker webpageviewplus).
+          Whether saving a view whose page refuses framing, the view
+          form's "Take a new screenshot" button and check-views queue a
+          background job (queue webpageviewplus; run ckan jobs worker
+          webpageviewplus).
           Off: only ckan webpageviewplus screenshots takes them, on a
           schedule.
 

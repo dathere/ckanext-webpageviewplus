@@ -1073,6 +1073,99 @@ class TestCommand:
 
 
 @_marks(GOTENBERG)
+class TestCheckViews:
+    """check-views queues a screenshot for a blocked view with none."""
+
+    @pytest.fixture(autouse=True)
+    def checked(self, monkeypatch):
+        from ckanext.webpageviewplus import cli as wvp_cli
+        monkeypatch.setattr(wvp_cli, "_plugin_loaded", lambda name: True)
+        monkeypatch.setattr(wvp_cli.frameability, "probe", lambda url, identity, deadline:
+                            frameability.Probe(frameability.BLOCKED, "x-frame-options",
+                                               status=200, urls=(url,)))
+        monkeypatch.setattr(screenshots, "queue_has_worker", lambda: True)
+
+    def _run(self, cli, dataset, *args):
+        result = cli.invoke(ckan, ["webpageviewplus", "check-views", "--dataset",
+                                   dataset["name"], *args])
+        # The blocked page is a problem whether or not a screenshot is queued.
+        assert result.exit_code == 1, result.output
+        return result
+
+    def test_queues_one_without_a_screenshot(self, cli, jobs):
+        dataset, _, view = _setup()
+        result = self._run(cli, dataset)
+        assert [(fn.__name__, args[0]) for fn, args, _ in jobs] == [("job", view["id"])]
+        assert "1 screenshot(s) queued." in result.output
+        # Pending: the next run doesn't queue it again.
+        self._run(cli, dataset)
+        assert len(jobs) == 1
+
+    def test_not_for_a_current_screenshot(self, cli, monkeypatch, jobs):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        dataset, _, view = _setup()
+        screenshots.capture(view["id"])
+        self._run(cli, dataset)
+        assert jobs == []
+
+    def test_not_with_no_store(self, cli, jobs):
+        dataset, _, _ = _setup()
+        self._run(cli, dataset, "--no-store")
+        assert jobs == []
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.screenshot_jobs", "false")
+    def test_not_with_jobs_off(self, cli, jobs):
+        dataset, _, _ = _setup()
+        self._run(cli, dataset)
+        assert jobs == []
+
+    def test_not_without_the_thumbnails_plugin(self, cli, monkeypatch, jobs):
+        from ckanext.webpageviewplus import cli as wvp_cli
+        monkeypatch.setattr(wvp_cli, "_plugin_loaded", lambda name: False)
+        dataset, _, _ = _setup()
+        self._run(cli, dataset)
+        assert jobs == []
+
+    def test_not_without_a_worker(self, cli, monkeypatch, jobs):
+        monkeypatch.setattr(screenshots, "queue_has_worker", lambda: False)
+        dataset, _, _ = _setup()
+        result = self._run(cli, dataset)
+        assert jobs == [] and "No worker reads the webpageviewplus queue" in result.output
+
+    def test_page_failure_backs_off(self, cli, monkeypatch, jobs):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg(
+            page=lambda: screenshots.Answer(409, {}, b"")))
+        dataset, _, view = _setup()
+        assert screenshots.capture(view["id"]) == "page_failed"
+        monkeypatch.setattr(settings, "screenshot_cooldown_seconds", lambda: 0)
+        self._run(cli, dataset)
+        assert jobs == []
+
+    def test_unreachable_doesnt_back_off(self, cli, monkeypatch, jobs):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg(
+            page=lambda: screenshots.Answer(503, {}, b"")))
+        dataset, _, view = _setup()
+        assert screenshots.capture(view["id"]) == "unreachable"
+        monkeypatch.setattr(settings, "screenshot_cooldown_seconds", lambda: 0)
+        self._run(cli, dataset)
+        assert [args[0] for _, args, _ in jobs] == [view["id"]]
+
+    def test_queue_failure_stops_queuing_not_the_command(self, cli, monkeypatch):
+        calls = []
+
+        def broken(*a, **kw):
+            calls.append(a)
+            raise RuntimeError("no redis")
+        monkeypatch.setattr(screenshots.toolkit, "enqueue_job", broken)
+        dataset, resource, view = _setup()
+        second = _view(resource["id"])
+        _blocked(second["id"])
+        result = self._run(cli, dataset)
+        assert len(calls) == 1 and "queued" not in result.output
+        assert result.output.count("refuses-embedding") == 2
+
+
+@_marks(GOTENBERG)
 class TestRobustness:
     def test_unexpected_error_is_one_views_failure(self, monkeypatch):
         monkeypatch.setattr(screenshots, "_send", _gotenberg(page=lambda: ValueError("odd")))
