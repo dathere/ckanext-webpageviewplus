@@ -72,6 +72,18 @@ def redis(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def page_still_blocked(monkeypatch):
+    # A hosted capture re-checks the page first; tests answer for it.
+    checked = []
+
+    def check_view(view_id, url, deadline=None):
+        checked.append(url)
+        return frameability.Probe(frameability.BLOCKED, "x-frame-options", status=200)
+    monkeypatch.setattr(health, "check_view", check_view)
+    return checked
+
+
+@pytest.fixture(autouse=True)
 def no_save_checks(monkeypatch):
     # Saving a view with frameability_check on probes its page; tests store
     # the check themselves.
@@ -231,6 +243,13 @@ class TestGotenberg:
         assert Image.open(io.BytesIO(row["image"])).size == (1350, 940)
         assert max(Image.open(io.BytesIO(row["thumb"])).size) <= 320
 
+    def test_no_recheck(self, monkeypatch, page_still_blocked):
+        # Gotenberg fails 4xx and 5xx pages itself (409).
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        _, _, view = _setup()
+        assert screenshots.capture(view["id"]) == "taken"
+        assert page_still_blocked == []
+
     def test_canaries_never_read(self, monkeypatch):
         backend = _gotenberg()
         monkeypatch.setattr(screenshots, "_send", backend)
@@ -331,6 +350,24 @@ class TestCloudflare:
         assert kwargs["json"]["url"] == PAGE
         assert kwargs["json"]["viewport"]["width"] == 1350
         assert kwargs["json"]["screenshotOptions"]["type"] == "jpeg"
+        # Cloudflare's body refuses unknown keys: cacheTTL is a query parameter.
+        assert kwargs["params"] == {"cacheTTL": "0"} and "cacheTTL" not in kwargs["json"]
+
+    @pytest.mark.parametrize("probe, result", [
+        (frameability.Probe(frameability.BLOCKED, "x-frame-options", "gone", 404), "page_failed"),
+        (frameability.Probe(frameability.UNKNOWN, "", "http-error", 500), "page_failed"),
+        (frameability.Probe(frameability.FRAMEABLE, status=200), "skipped"),
+    ])
+    def test_page_rechecked_first(self, monkeypatch, probe, result):
+        # Cloudflare answers an error page with a screenshot of it: the
+        # page is checked first, and nothing is sent unless it still
+        # refuses framing without an error.
+        backend = Backend(lambda *a: pytest.fail("sent a page that failed its check"))
+        monkeypatch.setattr(screenshots, "_send", backend)
+        monkeypatch.setattr(health, "check_view", lambda *a, **kw: probe)
+        _, _, view = _setup()
+        assert screenshots.capture(view["id"]) == result
+        assert backend.calls == []
 
     def test_daily_limit_remembered_until_tomorrow(self, monkeypatch):
         backend = Backend(lambda *a: screenshots.Answer(
@@ -344,8 +381,8 @@ class TestCloudflare:
         assert screenshots.capture(view["id"]) == "rate_limited"
         assert len(backend.calls) == 1
 
-    @pytest.mark.parametrize("status, kind", [(401, "backend_error"), (500, "backend_error"),
-                                              (422, "page_failed")])
+    @pytest.mark.parametrize("status, kind", [(400, "backend_error"), (401, "backend_error"),
+                                              (500, "backend_error"), (422, "page_failed")])
     def test_failures(self, monkeypatch, status, kind):
         monkeypatch.setattr(screenshots, "_send",
                             Backend(lambda *a: screenshots.Answer(status, {}, b"{}")))

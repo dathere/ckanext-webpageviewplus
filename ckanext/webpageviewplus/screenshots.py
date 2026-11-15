@@ -70,6 +70,8 @@ KINDS = ("page_failed", "rate_limited", "backend_error", "no_image", "unsafe_bac
 # Gotenberg must refuse these, or it's never used.
 CANARIES = ("http://127.0.0.1/", "http://169.254.169.254/")
 SAFE_SECONDS = 60 * 60
+# The page re-checked before a hosted capture (capture()).
+RECHECK_SECONDS = 10
 UNSAFE_SECONDS = 5 * 60
 _REDIS_PREFIX = "webpageviewplus:screenshots:"
 # Common cookie-consent banners, hidden on backends that don't block them.
@@ -207,12 +209,14 @@ def _cloudflare(url: str) -> Shot:
         "screenshotOptions": {"type": "jpeg", "quality": CAPTURE_QUALITY},
         "gotoOptions": {"waitUntil": "networkidle2", "timeout": 45000},
         "addStyleTag": [{"content": BANNER_CSS}],
-        "cacheTTL": 0,
     }
     answer = _send(
         "POST", endpoint, guarded=True, seconds=SECONDS["cloudflare"],
         max_bytes=MAX_ANSWER_BYTES,
         headers={"Authorization": "Bearer " + settings.cloudflare_api_token()},
+        # A query parameter, not a body field (the body refuses unknown
+        # keys); 0 turns off Cloudflare's own cache of the answer.
+        params={"cacheTTL": "0"},
         json=body,
     )
     if answer.status == 200 and _is_image(answer):
@@ -222,7 +226,9 @@ def _cloudflare(url: str) -> Shot:
         # 10 seconds; only the daily limit says "today".
         daily = b"today" in answer.body[:2048].lower()
         raise Failure("rate_limited", _next_utc_day() if daily else _retry_at(answer, 10))
-    if answer.status in (401, 403, 404) or answer.status >= 500:
+    # 400: Cloudflare refused the request's body, which is ours to fix;
+    # a page that can't load is a 422.
+    if answer.status in (400, 401, 403, 404) or answer.status >= 500:
         raise Failure("backend_error")
     if answer.status == 200:
         raise Failure("no_image")
@@ -588,6 +594,18 @@ def capture(view_id: str) -> str:
     if not url:
         return "skipped"
     backend = settings.screenshot_backend()
+    if hosted():
+        # Cloudflare and Microlink screenshot error pages (a 404 or 500
+        # comes back as an image), so check the page ourselves first:
+        # still refusing framing, and not answering with an error.
+        check = health.check_view(view_id, url, time.monotonic() + RECHECK_SECONDS)
+        if check.problem:  # gone, http-error, unreachable, private
+            store_failure(view_id, url, backend, "page_failed")
+            events.emit("screenshot_failed", kind="page_failed", backend=backend,
+                        host=frame.url_host(url))
+            return "page_failed"
+        if check.verdict != frameability.BLOCKED:
+            return "skipped"
     try:
         shot = take(url)
         encoded = encode(shot.data)
