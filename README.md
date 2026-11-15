@@ -111,8 +111,8 @@ address and settings. Optional next steps, each a section below:
   ([Views made automatically](#views-made-automatically)).
 - Move existing core Website views over: `ckan webpageviewplus migrate --dry-run`
   ([Migrating from webpage_view](#migrating-from-webpage_view)).
-- Let uploaded qsv Data Schematics run fully (maps, saved data), and turn on PDF (Plus): set up
-  [a separate domain for uploads](#a-separate-domain-for-uploads). `doctor` says when that's
+- Let uploaded qsv Data Schematics run fully (saved data, and maps in schematics made before
+  qsv 29.0.0), and turn on PDF (Plus): set up [a separate domain for uploads](#a-separate-domain-for-uploads). `doctor` says when that's
   missing. YouTube, Vimeo, Tableau Public and the other `external` services don't need one.
 - Thumbnails in the resource list, PDF (Plus) and Repository (Plus): the other plugins, in
   [Installation](#installation).
@@ -242,7 +242,7 @@ Add a "Website (Plus)" view to an HTML resource and pick a security preset:
 | `strict` | show its HTML, with no scripts | static HTML: reports, notebooks without JavaScript |
 | `interactive` (the default) | run scripts, submit forms, open popups and downloads, but keep no logins or saved data | charts and other scripted pages |
 | `external` | everything it could do on its own site | third-party sites you trust (dashboards, apps, videos). Needs [sandboxed downloads](#uploaded-html-downloads-are-sandboxed) (on by default); with `harden_downloads` off it runs as `interactive`. Never used for uploads or CKAN's own pages |
-| `data-schematic` | what `interactive` allows, plus a real origin (saved data, maps) and popups that leave the sandbox | qsv Data Schematics (maps, Tour, Explore). Needs a separate domain for uploads; without one it runs as `interactive` and maps stay blank |
+| `data-schematic` | what `interactive` allows, plus a real origin (saved data, maps) and popups that leave the sandbox | qsv Data Schematics (maps, Tour, Explore). Needs a separate domain for uploads; without one it runs as `interactive`, without saved data, and the maps of schematics made before qsv 29.0.0 stay blank |
 
 Editors pick the preset and the height. Sysadmins can also fine-tune a view's sandbox and
 browser features (see [How the protection works](#how-the-protection-works)).
@@ -327,7 +327,8 @@ trackers (see the [consent card](#privacy-and-telemetry)).
 
 **Downloads change too.** With this extension enabled, an uploaded HTML page opened from its
 download link runs sandboxed, so a page that needs saved data or a real web address (for
-example a qsv Data Schematic's maps) loses those features there. With a separate domain for
+example a qsv Data Schematic's saved data, or its maps if it was made before qsv 29.0.0) loses
+those features there. With a separate domain for
 uploads, downloads go there instead and work fully. See
 [Uploaded HTML downloads are sandboxed](#uploaded-html-downloads-are-sandboxed).
 
@@ -346,7 +347,8 @@ through your web server, and it takes two settings. The steps are under
 [Deploying a content origin](#deploying-a-content-origin). It serves uploads on CKAN's own
 disk, and on **CKAN 2.12**, uploads in cloud storage too. On CKAN 2.10 and 2.11, uploads kept by
 a cloud storage extension (ckanext-s3filestore, ckanext-cloudstorage) can't be served from it:
-they stay sandboxed on CKAN's own address, without maps or saved data. Upgrading to 2.12 and
+they stay sandboxed on CKAN's own address, without saved data (or maps, in qsv Data Schematics
+made before qsv 29.0.0). Upgrading to 2.12 and
 its file storage removes that limit.
 
 It's also what the [PDF (Plus) view](#pdf-views) needs: its viewer runs only from this domain.
@@ -464,8 +466,8 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   CKAN sandboxes the uploads it serves (`harden_downloads`, on by default). Without one, every
   upload stays sandboxed, which keeps your visitors' logins out of reach (already safer than
   `webpage_view`) but holds some things back:
-  - **Uploaded apps.** `data-schematic` runs as `interactive` too, so qsv Data Schematics lose
-    their maps and uploaded pages can't keep saved data.
+  - **Uploaded apps.** `data-schematic` runs as `interactive` too, so uploaded pages can't keep
+    saved data, and qsv Data Schematics made before qsv 29.0.0 lose their maps.
   - **PDF (Plus).** It's never offered: its viewer runs only from that domain.
   - **Fake sign-in forms.** An uploaded page still opens on your site's own address, so it can
     show a convincing one there.
@@ -512,7 +514,7 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   A: On CKAN 2.12, yes: uploads in any `ckan.files` storage that can stream, S3 included, are
   served from your separate domain. On CKAN 2.10 and 2.11, uploads kept by ckanext-s3filestore
   or ckanext-cloudstorage stay sandboxed on CKAN's own address, so schematics run as
-  `interactive` and lose their maps there. Upgrading to 2.12 lifts that. See [Deploying a content
+  `interactive` and lose their saved data there (and their maps, if made before qsv 29.0.0). Upgrading to 2.12 lifts that. See [Deploying a content
   origin](#deploying-a-content-origin).
 
 - **Q: Can I control what editors embed?**<br>
@@ -611,7 +613,7 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   scripts run, but it can't reach CKAN, the visitor's login or other tabs. A preset is a
   ready-made sandbox. Under `strict` nothing runs; under `interactive` scripts, forms, popups
   and downloads work, but the page can't keep logins or saved settings; `data-schematic` adds
-  saved data and maps for qsv Data Schematics; `external` lifts the sandbox for third-party
+  saved data for qsv Data Schematics (and maps, in those made before qsv 29.0.0); `external` lifts the sandbox for third-party
   sites you trust. Both run as `interactive` unless your site sandboxes downloads (on by default), and
   `data-schematic` also needs a separate domain for uploads. If something in your page doesn't work, check what its preset
   allows. See [How the protection works](#how-the-protection-works).
@@ -640,9 +642,18 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
   recognised links](#well-known-services-recognised-links).
 
 - **Q: Why are my qsv Data Schematic's maps blank?**<br>
-  A: Maps and saved data need the `data-schematic` preset and a separate domain for uploads.
-  Without one, the schematic runs as `interactive`: its charts work, its maps don't. On CKAN
-  2.10 and 2.11 with cloud storage it runs that way too.
+  A: The schematic was made with a qsv older than 29.0.0, whose maps need the `data-schematic`
+  preset and a separate domain for uploads. Without one, the schematic runs as `interactive`:
+  its charts work, its maps don't. On CKAN 2.10 and 2.11 with cloud storage it runs that way
+  too. Rebuild it with qsv 29.0.0 or later, whose maps work under `interactive` as well. Saved
+  data still needs `data-schematic` and a separate domain.
+
+- **Q: Why does my qsv map say "Access blocked" in Firefox?**<br>
+  A: A chart made with `qsv viz map` or `qsv viz choropleth --map` draws its background from
+  OpenStreetMap's tile servers by default, and they refuse Firefox's requests from a sandboxed
+  page (`interactive`, or an upload opened from its download link). Its points and regions still
+  show. Build it with `--style carto-positron` (or `carto-voyager`, `carto-darkmatter`), whose
+  tiles load in every browser. Data Schematics (`qsv viz smart`) already use those tiles.
 
 - **Q: Can I upload a page that uses separate CSS, JavaScript or image files?**<br>
   A: Not as separate files: a view shows one uploaded file, and a link from it to `style.css` or
@@ -776,7 +787,7 @@ text/html` (or `text/plain; charset=UTF-8, text/html`) as HTML, and guess HTML f
 `X-Content-Type-Options: nosniff`. Pages still
 render and run scripts, but in an isolated origin. **This changes core behaviour:** opened
 from its download link, a page that needs storage or a real origin (for example a qsv Data
-Schematic's maps) loses those features. With a content origin, HTML upload downloads redirect
+Schematic's saved data, or its maps if it was made before qsv 29.0.0) loses those features. With a content origin, HTML upload downloads redirect
 there instead, and work fully. Turn the header off with `ckanext.webpageviewplus.harden_downloads
 = false` only if you trust everyone who can upload. Doing so also makes `external` and
 `data-schematic` run as `interactive`.

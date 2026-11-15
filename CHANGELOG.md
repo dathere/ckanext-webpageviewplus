@@ -10,6 +10,15 @@
   External runs unsandboxed, else to linking the PDF. The view shows a PDF when its page URL
   ends in `.pdf`, or with no page URL, when the resource's format or URL says PDF.
 
+### Changed
+
+- qsv Data Schematics made with qsv 29.0.0 or later show their maps under `interactive`, so
+  without a separate domain for uploads too (qsv PR #5033). The view form's notice and the
+  README now say only older schematics lose their maps there; saved data still needs
+  `data-schematic` and a separate domain. A new FAQ entry covers `qsv viz map` charts, whose
+  default OpenStreetMap tiles Firefox can't load in a sandbox: build them with
+  `--style carto-positron`.
+
 ## 0.12.0 (2026-11-08)
 
 ### Added

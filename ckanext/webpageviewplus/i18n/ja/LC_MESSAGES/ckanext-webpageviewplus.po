@@ -439,8 +439,8 @@ msgid ""
 msgstr "このプリセットにはアップロード用の別のドメインが必要ですが、このサイトにはまだないため、ビューはインタラクティブとして動作します。必要な場合はサイト管理者にお問い合わせください。"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:114
-msgid "Charts, the Tour and Explore work, but maps stay blank."
-msgstr "グラフ、ツアー、Explore は動作しますが、地図は空白のままです。"
+msgid "Charts, the Tour and Explore work. Maps work only in Data Schematics made with qsv 29.0.0 or later."
+msgstr "グラフ、ツアー、Explore は動作します。地図が動作するのは、qsv 29.0.0 以降で作成された Data Schematic のみです。"
 
 # | msgid "" "This view's sandbox would let scripts keep a real origin, which
 # | isn't " "allowed here, so it runs as Strict."

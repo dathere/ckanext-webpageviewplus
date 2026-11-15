@@ -111,7 +111,7 @@
     {% else %}
     {{ _('This preset needs a separate domain for uploads, which this site doesn\'t have yet, so the view runs as Interactive. Ask your site administrator if you need it.') }}
     {% endif %}
-    {% if (data.preset or default_preset) == 'data-schematic' %}{{ _('Charts, the Tour and Explore work, but maps stay blank.') }}{% endif %}
+    {% if (data.preset or default_preset) == 'data-schematic' %}{{ _('Charts, the Tour and Explore work. Maps work only in Data Schematics made with qsv 29.0.0 or later.') }}{% endif %}
   </div>
 {% endif %}
 {% if frame and 'same_origin_fallback' in frame.notices %}
