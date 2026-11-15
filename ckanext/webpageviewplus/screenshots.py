@@ -78,6 +78,10 @@ RECHECK_SECONDS = 10
 # queued after this.
 PENDING_SECONDS = 15 * 60
 QUEUE = "webpageviewplus"
+# A page whose own failure (PAGE_FAULTS) ended its last attempt waits this
+# long before ckan webpageviewplus screenshots tries it again.
+FAILED_RETRY_SECONDS = 7 * 24 * 60 * 60
+PAGE_FAULTS = ("page_failed", "no_image")
 UNSAFE_SECONDS = 5 * 60
 _REDIS_PREFIX = "webpageviewplus:screenshots:"
 # Common cookie-consent banners, hidden on backends that don't block them.
@@ -608,6 +612,9 @@ def capture(view_id: str) -> str:
     if not url:
         return "skipped"
     backend = settings.screenshot_backend()
+    # End the transaction the lookups opened: the backend may take a minute,
+    # and nothing here holds the database meanwhile.
+    model.Session.commit()
     if hosted():
         # Cloudflare and Microlink screenshot error pages (a 404 or 500
         # comes back as an image), so check the page ourselves first:
@@ -1005,6 +1012,21 @@ def due(refresh: bool = False) -> list[tuple[str, str]]:
         if not url or url != row.checked_url:
             continue
         shot = stored_meta(row.id)
+        if not refresh and _backing_off(shot, url):
+            continue
         if refresh or not _counts(shot, url) or shot["taken_at"] < oldest:
-            found.append((row.id, url))
-    return found
+            found.append((shot["attempted_at"] if shot else None, row.id, url))
+    # Never-tried views first, then the longest since their last attempt,
+    # so views that keep failing can't use up a run's allowance.
+    found.sort(key=lambda f: (f[0] is not None, f[0] or datetime.datetime.min))
+    return [(view_id, url) for _, view_id, url in found]
+
+
+def _backing_off(shot: Optional[dict[str, Any]], url: str) -> bool:
+    """Whether the page's last attempt failed because of the page itself
+    (it didn't load, or gave no image) less than FAILED_RETRY_SECONDS ago:
+    it's left alone until then, except by --refresh."""
+    return bool(
+        shot and shot["source"] == source(url) and shot["last_error"] in PAGE_FAULTS
+        and shot["attempted_at"] and shot["attempted_at"] > datetime.datetime.utcnow()
+        - datetime.timedelta(seconds=FAILED_RETRY_SECONDS))

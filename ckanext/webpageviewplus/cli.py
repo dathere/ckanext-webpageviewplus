@@ -306,6 +306,7 @@ def take_screenshots(refresh: bool, dry_run: bool):
             # seconds) is waited out; a daily one ends the run below.
             wait = screenshots.limited_until(settings.screenshot_backend()) - time.time()
             if 0 < wait <= SHORT_WAIT_SECONDS:
+                model.Session.commit()  # no transaction held while waiting
                 time.sleep(wait + 1)
                 outcome = screenshots.capture(view_id)
         counts[outcome] = counts.get(outcome, 0) + 1

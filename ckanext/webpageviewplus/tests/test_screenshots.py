@@ -394,9 +394,10 @@ class TestCloudflare:
         _, _, view = _setup()
         assert screenshots.capture(view["id"]) == result
         assert backend.calls == []
-        # A gate only: the stored check is untouched, so the view stays due.
+        # A gate only: the stored check is untouched, so the view stays
+        # eligible (a page that failed waits out its back-off first).
         assert health.stored(view["id"], PAGE)["verdict"] == frameability.BLOCKED
-        assert view["id"] in dict(screenshots.due())
+        assert view["id"] in dict(screenshots.due(refresh=True))
 
     def test_view_deleted_while_the_backend_worked(self, monkeypatch):
         _, _, view = _setup()
@@ -604,8 +605,17 @@ class TestSend:
                 screenshots._send("POST", "http://gotenberg:3000/x", guarded=False,
                                   seconds=5, max_bytes=100)
 
-    def test_guarded_refuses_private_hosts(self, monkeypatch):
-        monkeypatch.setattr(frameability, "_resolve", lambda host, port: ["10.0.0.5"])
+    @pytest.mark.parametrize("resolved", [["10.0.0.5"], ["127.0.0.1"], ["169.254.169.254"],
+                                          ["93.184.215.14", "10.0.0.5"], OSError("no DNS answer")])
+    def test_guarded_refuses_before_any_request(self, monkeypatch, resolved):
+        # Private, mixed or unresolvable: refused before a connection is made.
+        def resolve(host, port):
+            if isinstance(resolved, Exception):
+                raise resolved
+            return resolved
+        monkeypatch.setattr(frameability, "_resolve", resolve)
+        monkeypatch.setattr(frameability, "_http_request",
+                            lambda *a, **kw: pytest.fail("sent a request"))
         with pytest.raises(screenshots.Failure, match="backend_error"):
             screenshots._send("GET", "https://api.microlink.io/", guarded=True,
                               seconds=5, max_bytes=100)
@@ -681,6 +691,28 @@ class TestShowing:
         listing = app.get(url_for("dataset.read", id=dataset["name"])).body
         assert "webpageviewplus/screenshot/" in listing
         assert "logos/vimeo.svg" not in listing
+
+
+@_marks(GOTENBERG)
+class TestDueOrder:
+    def test_never_tried_first_and_failures_back_off(self, monkeypatch):
+        failing = _gotenberg(page=lambda: screenshots.Answer(409, {}, b""))
+        monkeypatch.setattr(screenshots, "_send", failing)
+        _, _, failed = _setup()
+        screenshots.capture(failed["id"])  # page_failed: backs off for a week
+        _, _, fresh = _setup(url=OTHER)
+        due = [view_id for view_id, _ in screenshots.due()]
+        assert fresh["id"] in due and failed["id"] not in due
+        # --refresh tries it anyway, after the never-tried views.
+        due = [view_id for view_id, _ in screenshots.due(refresh=True)]
+        assert due.index(fresh["id"]) < due.index(failed["id"])
+
+    def test_backend_failures_dont_back_off(self, monkeypatch):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg(
+            page=lambda: screenshots.Answer(500, {}, b"")))
+        _, _, view = _setup()
+        assert screenshots.capture(view["id"]) == "backend_error"
+        assert view["id"] in dict(screenshots.due())
 
 
 # --- The opt-out ------------------------------------------------------------------
