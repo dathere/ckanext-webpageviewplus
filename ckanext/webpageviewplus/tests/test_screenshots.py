@@ -629,6 +629,19 @@ class TestOptOut:
         _save(view, no_auto_thumbnail="")
         assert view["id"] in dict(screenshots.due())
 
+    def test_opted_out_while_the_backend_worked(self, monkeypatch):
+        _, _, view = _setup()
+        backend = _gotenberg()
+
+        def slow(*args, **kwargs):
+            answer = backend(*args, **kwargs)
+            if "files" in kwargs:
+                _save(view, no_auto_thumbnail="true")
+            return answer
+        monkeypatch.setattr(screenshots, "_send", slow)
+        assert screenshots.capture(view["id"]) == "skipped"
+        assert screenshots.stored(view["id"]) is None
+
     def test_other_saves_keep_it(self, monkeypatch):
         monkeypatch.setattr(screenshots, "_send", _gotenberg())
         _, _, view = _setup()

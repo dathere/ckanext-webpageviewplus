@@ -598,6 +598,11 @@ def capture(view_id: str) -> str:
         events.emit("screenshot_failed", kind=e.kind, backend=backend, host=frame.url_host(url))
         return e.kind
     final = frame.url_host(shot.final_url) if frame.is_http_url(shot.final_url) else ""
+    # The view may have been saved (opted out, say) while the backend
+    # worked: store only what it still asks for.
+    model.Session.refresh(view)
+    if _view_target(view) != url:
+        return "skipped"
     store(view_id, url, backend, encoded[0], encoded[1],
           final if final and final != frame.url_host(url) else "")
     return "taken"
