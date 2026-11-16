@@ -1440,6 +1440,31 @@ the site puts one in front of datacentre visitors. A screenshot stops being show
 can be framed again, the view points elsewhere, or the view opts out of automatic thumbnails or
 picks one.
 
+### Managing thumbnails and screenshots
+
+With the `webpage_view_plus_thumbnails` plugin, two pages show what each Website (Plus) and PDF
+(Plus) view has, and what the resource list shows for it. Both work without JavaScript.
+
+- **A dataset's Thumbnails tab** (on its edit pages, `/dataset/<name>/thumbnails`, for anyone who
+  may edit the dataset): one row per view, with the stored thumbnail and where it came from, the
+  screenshot's state (in use, pending, failed and why, or not in use and why), and buttons to
+  take a new screenshot (with the view form's wait between tries), remake the thumbnail, remove
+  the stored copies, turn automatic thumbnails off or on, and pick one of the dataset's images.
+- **A Thumbnails tab in the admin pages** (`/ckan-admin/thumbnails`, sysadmins): the screenshot
+  service's state (whether a worker reads the queue, whether its allowance is used up, the last
+  screenshot and failure, and for Gotenberg whether it refuses private addresses, with a button
+  to check again), and every view, 50 to a page, filtered by failed screenshots, old ones,
+  pages refusing framing with no screenshot, private datasets skipped by a hosted service, or
+  automatic thumbnails off, and searched by dataset. Take new screenshots, remake thumbnails or
+  remove the copies for the ticked views, or for up to 500 views a filter shows at a time;
+  removing a whole filter's copies asks first. A sysadmin's requests skip the wait between
+  screenshots of a view.
+
+A removed copy is made again at the view's next save, `check-views` run or refresh, unless the
+view turns automatic thumbnails off. Removing a screenshot doesn't reset the wait before the
+next one. Remaking several thumbnails at once, like taking screenshots, needs a worker on the
+`webpageviewplus` queue (`ckan jobs worker webpageviewplus`); one at a time works without.
+
 ### PDF views
 
 The `pdf_view_plus` plugin adds a **PDF (Plus)** view type for resources whose format is PDF
@@ -1734,6 +1759,15 @@ API actions: `webpageviewplus_frameability` and `webpageviewplus_service_suggest
 resource, and with `pdf_view_plus` and thumbnails, `webpageviewplus_pdf_thumbnail` (`id` of a PDF
 view, `image` in base64; for those who may edit the view), which the view form uses to store a
 picture of the PDF's first page.
+
+With thumbnails, the [management pages](#managing-thumbnails-and-screenshots) use four actions
+an API client can call too: `webpageviewplus_thumbnail_status` (`id` of a dataset, for those who
+may edit it; without `id`, every view for sysadmins, with `filter`, `q`, `page` and `start`),
+and, taking `ids` (at most 500 view ids) and checking each view as `resource_view_update` does,
+`webpageviewplus_screenshot_request` (with `id` instead, the view form's one-view request),
+`webpageviewplus_thumbnail_refresh` and `webpageviewplus_thumbnail_delete` (`remove`:
+`thumbnail`, `screenshot` or `both`). A view the caller can't update answers `not_found`, as
+one that doesn't exist does.
 
 ### Contributing
 

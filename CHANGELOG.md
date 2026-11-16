@@ -15,6 +15,14 @@
   `ckan db upgrade -p webpage_view_plus`), never as resources. `doctor` reports the backend,
   Gotenberg's private-address check and the last failure.
 
+- Managing thumbnails and screenshots (with the thumbnails plugin): a Thumbnails tab on each
+  dataset's edit pages, for its editors, and one in the admin pages, for sysadmins, with
+  filters and bulk actions (up to 500 views at a time; removing a whole filter's copies asks
+  first). Four new actions behind them: `webpageviewplus_thumbnail_status`,
+  `webpageviewplus_thumbnail_refresh`, `webpageviewplus_thumbnail_delete`, and `ids` for
+  `webpageviewplus_screenshot_request`. Both pages check CSRF themselves, as CKAN exempts
+  extensions' pages by default.
+
 - The Website (Plus) form warns when the view shows a PDF in a sandboxed frame, which
   Chrome and Edge leave blank as they don't run their PDF viewer in a sandbox. It points to
   PDF (Plus) where the site offers it, else to the External preset for a linked PDF where

@@ -130,8 +130,8 @@ order now being built:
 12. In progress (branch `screenshots`, unreleased): screenshots of pages that refuse framing
    (spec section "Proposed: Screenshots of pages that refuse framing", revision 3; its Build
    order gives the steps). Steps 1 and 2 built: `screenshots.py` below. Next: step 3, the
-   management interface (approved 2026-11-15, question 10): actions and the dataset's
-   Thumbnails page built (`manage.py` below); next the admin tab, browser tests with axe. `check-views` queues blocked
+   management interface (approved 2026-11-15, question 10): actions, the dataset's Thumbnails
+   tab and the admin tab built (`manage.py` below); next browser tests with axe. `check-views` queues blocked
    views with no screenshot (`after_check(..., back_off=True)`).
 
 ## The security model (read before touching frame, validator, content or download code)
@@ -501,6 +501,14 @@ order now being built:
   `app.test_client()` so the session keeping the `_csrf_token` survives. Narrow screens stack
   rows by CSS (`thumbnails.css`, `data-label`). Strings under `thumbnail_templates/` are
   extracted since `setup.py` lists that folder.
+  The admin tab (`/ckan-admin/thumbnails`, `_sysadmin_only`; added by overriding
+  `thumbnail_templates/admin/base.html`, as CKAN 2.11 dropped `ckan.admin_tabs`) renders
+  `manage_admin.html`: `backend` from the status action (never calls the backend on a GET;
+  `do=recheck` POSTs `gotenberg_safe(force=True)`), a GET filter form, and bulk POSTs for ticked
+  `ids` or `scope=all` (the status action's `ids`, `MAX_IDS` from `start`; the page offers a
+  range picker past 500). A whole filter's Remove renders `manage_confirm.html` first
+  (`confirmed=1`). `_summary` turns outcomes into "label: count" (`OUTCOMES`). Both pages share
+  `manage_macros.html` (`shows`, `stored`, `screenshot`).
 - `tests/fixtures/qsv_protocol.html` speaks the qsv messages; `resize_message.html` reports its
   height with the generic message only (both seeded in `wvp-browser` by `browser_tests/seed.py`). It's uploaded to the `wvp-demo`
   dataset with three views (`data-schematic` auto, `interactive` auto, `interactive` fixed),
