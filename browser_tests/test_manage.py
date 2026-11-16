@@ -60,8 +60,11 @@ def test_narrow_screen(login):
 
 def test_admin_page(login):
     page = login("sysadmin")
-    page.goto(ADMIN_PAGE)
+    page.goto("{}?q={}".format(ADMIN_PAGE, DATASET))
     assert page.get_by_role("heading", name="Screenshot service").is_visible()
+    # With rows, so the table and the bulk forms are checked too.
+    assert page.locator(".webpageviewplus-manage-table tbody tr").count() > 0
+    _no_violations(page)
     page.select_option("#field-filter", "opted_out")
     page.fill("#field-q", DATASET)
     with page.expect_navigation():

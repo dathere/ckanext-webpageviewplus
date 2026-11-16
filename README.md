@@ -1461,7 +1461,8 @@ With the `webpage_view_plus_thumbnails` plugin, two pages show what each Website
   screenshots of a view.
 
 A removed copy is made again at the view's next save, `check-views` run or refresh, unless the
-view turns automatic thumbnails off. Removing a screenshot doesn't reset the wait before the
+view turns automatic thumbnails off. A PDF's first page is the exception: it's drawn in the
+browser, so open the view's form to draw it again. Removing a screenshot doesn't reset the wait before the
 next one. Remaking several thumbnails at once, like taking screenshots, needs a worker on the
 `webpageviewplus` queue (`ckan jobs worker webpageviewplus`); one at a time works without.
 
