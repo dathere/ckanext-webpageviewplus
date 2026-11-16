@@ -127,12 +127,11 @@ order now being built:
    #3); see `repos.py` below. Next: `check-views` reporting, and the Website (Plus) form
    offering a Repository view for repository links (separate issues).
 
-12. In progress (branch `screenshots`, unreleased): screenshots of pages that refuse framing
-   (spec section "Proposed: Screenshots of pages that refuse framing", revision 3; its Build
-   order gives the steps). Steps 1 and 2 built: `screenshots.py` below. Next: step 3, the
-   management interface (approved 2026-11-15, question 10): actions, the dataset's Thumbnails
-   tab and the admin tab built (`manage.py` below); next browser tests with axe. `check-views` queues blocked
-   views with no screenshot (`after_check(..., back_off=True)`).
+12. Done (0.13.0): screenshots of pages that refuse framing (spec section "Proposed: Screenshots
+   of pages that refuse framing", revision 3, every open question decided; its Build order gives
+   the steps), `screenshots.py` below, and the management interface (the dataset's and the
+   admin's Thumbnails tabs, `manage.py` below), with browser tests and axe. `check-views` queues
+   blocked views with no screenshot (`after_check(..., back_off=True)`).
 
 ## The security model (read before touching frame, validator, content or download code)
 

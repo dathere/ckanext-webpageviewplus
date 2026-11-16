@@ -58,8 +58,11 @@
 /* The dataset's Thumbnails page (manage_dataset.html). */
 .webpageviewplus-manage-image {
   display: block;
+  width: 160px;
   max-width: 100%;
-  height: auto;
+  height: 90px;
+  /* Logos are square, screenshots wide: every image fits the same box. */
+  object-fit: contain;
   border: 1px solid #ccc;
   background: #f5f5f5;
 }

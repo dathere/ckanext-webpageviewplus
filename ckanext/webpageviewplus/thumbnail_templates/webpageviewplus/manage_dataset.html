@@ -30,7 +30,7 @@
             <tr id="view-{{ row.view_id }}">
               <th scope="row">
                 <a href="{{ h.url_for(pkg.type ~ '_resource.edit_view', id=pkg.name, resource_id=row.resource_id, view_id=row.view_id) }}">{{ row.title or row.resource_name }}</a>
-                <br><span class="text-muted">{{ row.resource_name }}</span>
+                {% if row.title and row.title != row.resource_name %}<br><span class="text-muted">{{ row.resource_name }}</span>{% endif %}
               </th>
               <td data-label="{{ _('In the resource list') }}">{{ m.shows(row) }}</td>
               <td data-label="{{ _('Stored thumbnail') }}">{{ m.stored(row) }}</td>
