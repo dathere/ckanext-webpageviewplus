@@ -130,8 +130,9 @@ order now being built:
 12. In progress (branch `screenshots`, unreleased): screenshots of pages that refuse framing
    (spec section "Proposed: Screenshots of pages that refuse framing", revision 3; its Build
    order gives the steps). Steps 1 and 2 built: `screenshots.py` below. Next: step 3, the
-   management interface, once its spec section is approved. `check-views` queues blocked views
-   with no screenshot (`after_check(..., back_off=True)`).
+   management interface (approved 2026-11-15, question 10): actions built (`manage.py` below);
+   next the dataset page, the admin tab, browser tests with axe. `check-views` queues blocked
+   views with no screenshot (`after_check(..., back_off=True)`).
 
 ## The security model (read before touching frame, validator, content or download code)
 
@@ -475,6 +476,22 @@ order now being built:
   never-called `gotenberg_url` and `screenshot_jobs = false`; seed.py turns off save-time
   checks). The form's button is tested without a login: the test adds its markup to a public
   view page and stubs the action.
+- `manage.py` (owned by `webpage_view_plus_thumbnails`): the management interface's actions.
+  `webpageviewplus_thumbnail_status` (side-effect free; `id` = a dataset, auth `package_update`;
+  no `id` = site-wide, sysadmins, with `filter` in `FILTERS`, `q`, `page` of `PAGE_SIZE`, and
+  `backend` from `screenshots.backend_status()`, which never calls the backend: Gotenberg's
+  answer comes from `gotenberg_safe_cached()`). `webpageviewplus_screenshot_request` with `ids`
+  (`manage.request_screenshots`; the one-view `id` form is unchanged), `..._thumbnail_refresh`
+  (one view at once via `refresh_now`, several queued as `refresh_job` with a Redis
+  `refresh-pending:` mark, refused when `queue_has_worker()` is False; `pdf-page:` sources answer
+  `first_page`) and `..._thumbnail_delete` (`remove` = thumbnail/screenshot/both;
+  `screenshots.clear` keeps `attempted_at`, so Remove never resets the cooldown). Changes take
+  `ids` (at most `MAX_IDS`), auth any logged-in user (`change_auth`), then `resource_view_update`
+  per view with a fresh context (`_authorized`); an id the caller can't update answers
+  `not_found`. A sysadmin's `ids` request skips the cooldown, passed into `job(...,
+  skip_cooldown)`. Rows read `thumbnails.for_resource` for what the list shows and
+  `screenshots.panel` for the screenshot state; both cache on `g`, so tests drop
+  `g.webpageviewplus_thumbnails`/`_screenshots` between calls (`tests/test_manage.py`).
 - `tests/fixtures/qsv_protocol.html` speaks the qsv messages; `resize_message.html` reports its
   height with the generic message only (both seeded in `wvp-browser` by `browser_tests/seed.py`). It's uploaded to the `wvp-demo`
   dataset with three views (`data-schematic` auto, `interactive` auto, `interactive` fixed),

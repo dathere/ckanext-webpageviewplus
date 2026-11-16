@@ -369,11 +369,15 @@ def check_gotenberg() -> bool:
     return True
 
 
+def _gotenberg_key() -> str:
+    return _REDIS_PREFIX + "gotenberg-safe:" + hashlib.sha256(
+        settings.gotenberg_url().encode()).hexdigest()[:16]
+
+
 def gotenberg_safe(force: bool = False) -> bool:
     """check_gotenberg, remembered in Redis: a pass for SAFE_SECONDS, a
     failure for UNSAFE_SECONDS. Without Redis it never passes."""
-    key = _REDIS_PREFIX + "gotenberg-safe:" + hashlib.sha256(
-        settings.gotenberg_url().encode()).hexdigest()[:16]
+    key = _gotenberg_key()
     try:
         redis = _redis()
         if not force:
@@ -388,6 +392,49 @@ def gotenberg_safe(force: bool = False) -> bool:
     if not safe:
         events.emit("screenshot_backend_unsafe", backend="gotenberg")
     return safe
+
+
+def gotenberg_safe_cached() -> Optional[bool]:
+    """The remembered answer of gotenberg_safe, without asking Gotenberg:
+    None if there's none (or no Redis). For pages, which must not make
+    CKAN call the backend on a GET."""
+    try:
+        cached = _redis().get(_gotenberg_key())
+    except Exception:
+        return None
+    return None if cached is None else cached in (b"1", "1")
+
+
+def backend_status() -> dict[str, Any]:
+    """What the admin page shows about the backend, read from settings,
+    Redis and the table only: nothing here calls the backend."""
+    backend = settings.screenshot_backend()
+    found: dict[str, Any] = {
+        "backend": backend, "jobs": jobs_on(), "worker": None, "limited_until": None,
+        "last_success": None, "last_failure": None, "gotenberg_safe": None,
+    }
+    if backend == "none":
+        return found
+    if found["jobs"]:
+        found["worker"] = queue_has_worker()
+    until = limited_until(backend)
+    if until > time.time():
+        found["limited_until"] = datetime.datetime.utcfromtimestamp(until)
+    if backend == "gotenberg":
+        found["gotenberg_safe"] = gotenberg_safe_cached()
+    try:
+        with model.meta.engine.connect() as connection:
+            found["last_success"] = connection.execute(
+                sa.select(sa.func.max(table.c.taken_at))).scalar()
+            failure = connection.execute(
+                sa.select(table.c.last_error, table.c.attempted_at)
+                .where(table.c.last_error != "")
+                .order_by(table.c.attempted_at.desc()).limit(1)).first()
+    except sa.exc.SQLAlchemyError:
+        return found
+    if failure:
+        found["last_failure"] = {"kind": failure.last_error, "at": failure.attempted_at}
+    return found
 
 
 # --- Rate limits ------------------------------------------------------------
@@ -575,6 +622,21 @@ def delete(view_id: str) -> None:
         log.debug("webpageviewplus: screenshot not deleted")
 
 
+def clear(view_id: str) -> bool:
+    """Remove a view's screenshot image (the management interface's
+    Remove), keeping the row's attempt, so the cooldown still counts from
+    it. False if there was no image."""
+    try:
+        with model.meta.engine.begin() as connection:
+            done = connection.execute(
+                table.update().where(table.c.view_id == view_id, table.c.digest.isnot(None))
+                .values(image=None, thumb=None, digest=None, taken_at=None, final_host=""))
+    except sa.exc.SQLAlchemyError:
+        log.debug("webpageviewplus: screenshot not cleared")
+        return False
+    return bool(done.rowcount)
+
+
 def after_save(view: dict[str, Any]) -> None:
     """The editor's opt-out deletes the view's screenshot. Changes that
     aren't the editor's choice (the page becomes frameable, the dataset
@@ -700,12 +762,13 @@ def pending(view_id: str) -> bool:
         return False
 
 
-def request_job(view_id: str, url: str) -> str:
+def request_job(view_id: str, url: str, skip_cooldown: bool = False) -> str:
     """Queue a screenshot job for a view whose page is ``url``, within the
     retake limit: "queued", "pending" (one is queued or running already)
-    or "cooldown" (see cooldown_left). Raises if Redis or the queue
-    fails; callers decide what that means."""
-    if cooldown_left(view_id, url):
+    or "cooldown" (see cooldown_left). ``skip_cooldown`` (a sysadmin's bulk
+    request) leaves only the one-at-a-time rule, in the job too. Raises if
+    Redis or the queue fails; callers decide what that means."""
+    if not skip_cooldown and cooldown_left(view_id, url):
         return "cooldown"
     redis = _redis()
     key = _pending_key(view_id)
@@ -715,28 +778,29 @@ def request_job(view_id: str, url: str) -> str:
     if not redis.set(key, token, nx=True, ex=PENDING_SECONDS):
         return "pending"
     try:
-        toolkit.enqueue_job(job, [view_id, token], title="webpageviewplus screenshot",
-                            queue=QUEUE)
+        toolkit.enqueue_job(job, [view_id, token] + ([True] if skip_cooldown else []),
+                            title="webpageviewplus screenshot", queue=QUEUE)
     except Exception:
         redis.delete(key)
         raise
     events.emit("screenshot_requested", backend=settings.screenshot_backend(),
-                host=frame.url_host(url))
+                host=frame.url_host(url), view_id=view_id)
     return "queued"
 
 
-def job(view_id: str, token: Optional[str] = None) -> None:
+def job(view_id: str, token: Optional[str] = None, skip_cooldown: bool = False) -> None:
     """The background job: take one view's screenshot if it still
-    qualifies. Checks the cooldown again, as a job may have waited long
-    in a queue no worker read; never raises, so nothing that could hold
-    a URL reaches the worker's log. If the view was saved with another
-    page meanwhile (its job was held back by this one's mark), queues
-    that page's job once this one's mark is cleared."""
+    qualifies. Checks the cooldown again (unless a sysadmin's bulk request
+    skipped it), as a job may have waited long in a queue no worker read;
+    never raises, so nothing that could hold a URL reaches the worker's
+    log. If the view was saved with another page meanwhile (its job was
+    held back by this one's mark), queues that page's job once this one's
+    mark is cleared."""
     url = None
     try:
         view = model.ResourceView.get(view_id)
         url = _view_target(view) if view is not None else None
-        if url and not cooldown_left(view_id, url):
+        if url and (skip_cooldown or not cooldown_left(view_id, url)):
             capture(view_id)
     except Exception as e:
         log.warning("webpageviewplus: a screenshot job failed (%s)", type(e).__name__)

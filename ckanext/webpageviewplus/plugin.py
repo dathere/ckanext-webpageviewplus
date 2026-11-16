@@ -19,6 +19,7 @@ from ckanext.webpageviewplus import (
     downloads,
     events,
     health,
+    manage,
     pdf,
     repos,
     screenshots,
@@ -508,12 +509,20 @@ class WebpageviewplusThumbnailsPlugin(plugins.SingletonPlugin):
             "resource_update": actions.thumbnails_resource_update,
             "resource_delete": actions.thumbnails_resource_delete,
             "webpageviewplus_screenshot_request": actions.webpageviewplus_screenshot_request,
+            "webpageviewplus_thumbnail_status": manage.webpageviewplus_thumbnail_status,
+            "webpageviewplus_thumbnail_refresh": manage.webpageviewplus_thumbnail_refresh,
+            "webpageviewplus_thumbnail_delete": manage.webpageviewplus_thumbnail_delete,
         }
 
     # IAuthFunctions
 
     def get_auth_functions(self):
-        return {"webpageviewplus_screenshot_request": actions.screenshot_request_auth}
+        return {
+            "webpageviewplus_screenshot_request": actions.screenshot_request_auth,
+            "webpageviewplus_thumbnail_status": manage.status_auth,
+            "webpageviewplus_thumbnail_refresh": manage.change_auth,
+            "webpageviewplus_thumbnail_delete": manage.change_auth,
+        }
 
     # ITemplateHelpers
 

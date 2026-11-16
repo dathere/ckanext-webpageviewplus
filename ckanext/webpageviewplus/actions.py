@@ -371,7 +371,11 @@ def _plus_view(data_dict: dict[str, Any]) -> model.ResourceView:
 
 
 def screenshot_request_auth(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:
-    """Anyone who may edit the view."""
+    """Anyone who may edit the view. With ``ids``, any logged-in user: each
+    view is checked in the action."""
+    if "ids" in data_dict:
+        from ckanext.webpageviewplus import manage
+        return manage.change_auth(context, data_dict)
     try:
         view = _plus_view(data_dict)
         toolkit.check_access("resource_view_update", context,
@@ -387,8 +391,12 @@ def webpageviewplus_screenshot_request(
     """Queue a new screenshot of a Website (Plus) view's page (the view
     form's "Take a new screenshot"), within the retake limit. Answers
     {"state": "pending"}; refused with the seconds left inside the
-    cooldown."""
+    cooldown. With ``ids`` instead of ``id``: one request per view
+    (manage.request_screenshots)."""
     toolkit.check_access("webpageviewplus_screenshot_request", context, data_dict)
+    if "ids" in data_dict:
+        from ckanext.webpageviewplus import manage
+        return manage.request_screenshots(context, data_dict)
     view = _plus_view(data_dict)
     if not screenshots.jobs_on():
         raise toolkit.ValidationError(
