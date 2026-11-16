@@ -19,8 +19,10 @@ from ckanext.webpageviewplus import (
     downloads,
     events,
     health,
+    manage,
     pdf,
     repos,
+    screenshots,
     stats,
     frame,
     services,
@@ -29,6 +31,13 @@ from ckanext.webpageviewplus import (
     validators as v,
 )
 from ckanext.webpageviewplus.frame import is_http_url  # noqa: F401 (re-export)
+
+def _thumbnails_loaded() -> bool:
+    """Whether webpage_view_plus_thumbnails, which owns screenshots, is on.
+    A function of its own so tests can patch it (patching
+    plugins.plugin_loaded confuses with_plugins' teardown on CKAN 2.10)."""
+    return plugins.plugin_loaded(thumbnails.PLUGIN)
+
 
 ignore_empty = toolkit.get_validator("ignore_empty")
 ignore_missing = toolkit.get_validator("ignore_missing")
@@ -254,6 +263,16 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             ),
             # The page's own preview image may be fetched (thumbnails.auto).
             "thumbnail_fetch": thumbnails.enabled() and settings.thumbnail_fetch(),
+            # The opt-out stops screenshots too (screenshots.target).
+            "screenshots_on": _thumbnails_loaded() and screenshots.enabled(),
+            # The view form's Screenshot panel, from the form's own values.
+            "screenshot_panel": (
+                screenshots.panel(resource_view.get("id"), resource_view, resource,
+                                  data_dict.get("package") or {})
+                if _thumbnails_loaded() and has_request_context()
+                and (request.endpoint or "").endswith("edit_view")
+                else None
+            ),
             # Only the view's edit form shows them.
             "view_counts": (
                 stats.totals_or_none(resource_view["id"], 30)
@@ -425,6 +444,11 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             frame_error=None,
             refused=refused,
             refused_host=frame.url_host(url),
+            screenshot=(
+                screenshots.for_card(resource_view.get("id"), resource_view, resource,
+                                     data_dict.get("package") or {})
+                if refused == "blocked" and _thumbnails_loaded() else None
+            ),
             open_url=open_url,
             controls=settings.controls(),
             show_controls=not toolkit.asbool(resource_view.get("hide_controls")),
@@ -449,6 +473,7 @@ class WebpageviewplusThumbnailsPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IConfigurable)
     plugins.implements(plugins.IBlueprint)
     plugins.implements(plugins.IActions)
+    plugins.implements(plugins.IAuthFunctions)
     plugins.implements(plugins.ITemplateHelpers)
 
     # IConfigurer
@@ -473,7 +498,7 @@ class WebpageviewplusThumbnailsPlugin(plugins.SingletonPlugin):
     # IBlueprint
 
     def get_blueprint(self):
-        return [thumbnails.thumbnail]
+        return [thumbnails.thumbnail, screenshots.screenshot, manage.blueprint]
 
     # IActions
 
@@ -483,6 +508,20 @@ class WebpageviewplusThumbnailsPlugin(plugins.SingletonPlugin):
             "resource_view_update": actions.thumbnails_view_update,
             "resource_update": actions.thumbnails_resource_update,
             "resource_delete": actions.thumbnails_resource_delete,
+            "webpageviewplus_screenshot_request": actions.webpageviewplus_screenshot_request,
+            "webpageviewplus_thumbnail_status": manage.webpageviewplus_thumbnail_status,
+            "webpageviewplus_thumbnail_refresh": manage.webpageviewplus_thumbnail_refresh,
+            "webpageviewplus_thumbnail_delete": manage.webpageviewplus_thumbnail_delete,
+        }
+
+    # IAuthFunctions
+
+    def get_auth_functions(self):
+        return {
+            "webpageviewplus_screenshot_request": actions.screenshot_request_auth,
+            "webpageviewplus_thumbnail_status": manage.status_auth,
+            "webpageviewplus_thumbnail_refresh": manage.change_auth,
+            "webpageviewplus_thumbnail_delete": manage.change_auth,
         }
 
     # ITemplateHelpers

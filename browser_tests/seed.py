@@ -88,6 +88,9 @@ PICKED_PAGE = b"<!doctype html><title>Picked thumbnail</title><p>Its view picks 
 
 # repo_view_plus: a copy of each repository's page is written where CKAN
 # keeps it, so the views never ask the sites (ci.ini keeps copies for a year).
+# Never fetched: its "refuses framing" check is stored by the seed.
+SCREENSHOT_PAGE = "https://example.com/refuses-framing"
+SCREENSHOT_COLOUR = (0, 110, 130)
 REPO = "https://github.com/wvp-browser/example"
 MISSING_REPO = "https://github.com/wvp-browser/missing"
 # One per other kind of site, each with a Markdown README rendered here as
@@ -129,6 +132,10 @@ def _upload(body, filename, content_type):
 
 def main():
     app = make_app(load_config(os.environ["CKAN_INI"]))
+    # With frameability_check on, every save would fetch its page: seeding
+    # stays off the network, and stores the one check it needs itself.
+    from ckanext.webpageviewplus import health
+    health.after_save = lambda view: None
     with app._wsgi_app.test_request_context():
         act = tk.get_action
         site_user = act("get_site_user")({"ignore_auth": True}, {})["name"]
@@ -195,8 +202,15 @@ def main():
                 {"name": name, "url": url}, "{} ({})".format(found.service, found.preset),
                 **fields)
 
+        _seed_logins(act, ctx, org)
+
         if plugins.plugin_loaded("repo_view_plus"):
             _seed_repos(act, ctx, pkg)
+
+        if plugins.plugin_loaded("webpage_view_plus_thumbnails"):
+            from ckanext.webpageviewplus import screenshots
+            if screenshots.enabled():
+                _seed_screenshot(act, ctx, pkg)
 
         # pdf_view_plus: an uploaded PDF, shown by PDF.js from the content origin.
         if plugins.plugin_loaded("pdf_view_plus"):
@@ -213,6 +227,53 @@ def main():
                 "resource_id": resource["id"], "view_type": "pdf_view_plus",
                 "title": "PDF fixture",
             })
+
+
+def _seed_screenshot(act, ctx, pkg):
+    """A view whose page "refuses framing" (a stored check, never fetched)
+    with a screenshot: a solid colour the tests can recognise."""
+    from PIL import Image
+
+    from ckanext.webpageviewplus import frameability, health, screenshots
+
+    resource = act("resource_create")(ctx(), {
+        "package_id": pkg["id"], "name": "Screenshot example", "url": SCREENSHOT_PAGE})
+    for v in act("resource_view_list")(ctx(), {"id": resource["id"]}):
+        act("resource_view_delete")(ctx(), {"id": v["id"]})
+    view = act("resource_view_create")(ctx(), {
+        "resource_id": resource["id"], "view_type": "webpage_view_plus",
+        "title": "Refuses framing"})
+    health.store(view["id"], SCREENSHOT_PAGE,
+                 frameability.Probe(frameability.BLOCKED, "x-frame-options", status=200))
+    picture = io.BytesIO()
+    Image.new("RGB", (1350, 940), SCREENSHOT_COLOUR).save(picture, "PNG")
+    card, thumb = screenshots.encode(picture.getvalue())
+    screenshots.store(view["id"], SCREENSHOT_PAGE, "gotenberg", card, thumb)
+
+
+# Logins for the management pages' tests, made only when WVP_TEST_PASSWORD
+# is set: CI sets a random one per run on its throwaway database. The tests
+# that need them skip without it (browser_tests/conftest.py, login).
+EDITOR = "wvp-test-editor"
+SYSADMIN = "wvp-test-sysadmin"
+
+
+def _seed_logins(act, ctx, org):
+    import ckan.model as model
+    password = os.environ.get("WVP_TEST_PASSWORD")
+    if not password:
+        return
+    for name in (EDITOR, SYSADMIN):
+        try:
+            act("user_show")(ctx(), {"id": name})
+            act("user_patch")(ctx(), {"id": name, "password": password})
+        except tk.ObjectNotFound:
+            act("user_create")(ctx(), {"name": name, "email": name + "@example.com",
+                                       "password": password})
+    model.User.by_name(SYSADMIN).sysadmin = True
+    model.Session.commit()
+    act("organization_member_create")(ctx(), {"id": org["id"], "username": EDITOR,
+                                              "role": "editor"})
 
 
 def _seed_repos(act, ctx, pkg):

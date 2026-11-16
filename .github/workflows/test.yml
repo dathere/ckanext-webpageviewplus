@@ -59,6 +59,80 @@ jobs:
         name: coverage
         path: coverage.xml
 
+  gotenberg:
+    # Screenshots' self-hosted backend, for real: the private-address check
+    # passes against a Gotenberg with CHROMIUM_DENY_PRIVATE_IPS and fails
+    # against one without, and what a page loads is refused too.
+    name: Gotenberg (live)
+    runs-on: ubuntu-26.04
+    container:
+      image: ckan/ckan-dev:2.11
+      options: --user root
+    services:
+      gotenberg:
+        image: gotenberg/gotenberg:9.5.1
+        env:
+          CHROMIUM_DENY_PRIVATE_IPS: "true"
+      gotenberg-unsafe:
+        image: gotenberg/gotenberg:9.5.1
+      # CKAN's test setup needs its database, even for tests that don't.
+      solr:
+        image: ckan/ckan-solr:2.11-solr9
+      postgres:
+        image: ckan/ckan-postgres-dev:2.11
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+          image: redis:7
+    env:
+      WVP_GOTENBERG_URL: http://gotenberg:3000
+      WVP_GOTENBERG_UNSAFE_URL: http://gotenberg-unsafe:3000
+      CKAN_SQLALCHEMY_URL: postgresql://ckan_default:pass@postgres/ckan_test
+      CKAN_DATASTORE_WRITE_URL: postgresql://datastore_write:pass@postgres/datastore_test
+      CKAN_DATASTORE_READ_URL: postgresql://datastore_read:pass@postgres/datastore_test
+      CKAN_SOLR_URL: http://solr:8983/solr/ckan
+      CKAN_REDIS_URL: redis://redis:6379/1
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install requirements
+      run: |
+        pip install -r requirements.txt
+        pip install -r dev-requirements.txt
+        pip install -e .
+        ckan -c test.ini db init
+    - name: Wait for Gotenberg
+      run: |
+        python - <<'EOF'
+        import time, requests
+        for base in ("http://gotenberg:3000", "http://gotenberg-unsafe:3000"):
+            for _ in range(60):
+                try:
+                    if requests.get(base + "/health", timeout=2).ok:
+                        break
+                except requests.RequestException:
+                    pass
+                time.sleep(2)
+            else:
+                raise SystemExit(base + " never came up")
+        EOF
+    - name: Run the live tests
+      run: pytest --ckan-ini=test.ini --disable-warnings -p no:cacheprovider ckanext/webpageviewplus/tests/test_gotenberg_live.py
+
+  gotenberg-redirects:
+    # Gotenberg's docs don't say whether a redirect's target is checked
+    # against CHROMIUM_DENY_PRIVATE_IPS. This checks it, with a redirector on
+    # a public-range Docker network (no CKAN, so no job container: the
+    # script needs Docker itself).
+    name: Gotenberg redirects (live)
+    runs-on: ubuntu-26.04
+    steps:
+    - uses: actions/checkout@v4
+    - name: Redirects to a private address are refused
+      run: sh scripts/gotenberg_redirects/check.sh
+
   coverage:
     # Sends coverage to Codacy. A separate job because the ckan-dev image has
     # no curl, which the reporter needs. Skipped without the secret (forks).
@@ -122,6 +196,11 @@ jobs:
         pip install -e ".[thumbnails,repos]"
         pip install -r browser_tests/requirements.txt
         python -m playwright install --with-deps chromium firefox webkit
+    - name: A throwaway login for the management pages' tests
+      run: |
+        password="$(python -c 'import secrets; print(secrets.token_urlsafe(18))')"
+        echo "::add-mask::$password"
+        echo "WVP_TEST_PASSWORD=$password" >> "$GITHUB_ENV"
     - name: Start CKAN with seeded data
       run: |
         ckan -c "$CKAN_INI" db init

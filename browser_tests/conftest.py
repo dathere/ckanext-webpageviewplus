@@ -8,6 +8,9 @@ Environment:
   WVP_CHROMIUM_CHANNEL, WVP_FIREFOX_CHANNEL
                  an installed browser to use instead of Playwright's build,
                  e.g. "chrome" and "moz-firefox"
+  WVP_TEST_PASSWORD
+                 the password seed.py gave its test editor and sysadmin; tests
+                 needing a login skip without it (CI sets a random one)
 """
 import json
 import os
@@ -101,3 +104,26 @@ def touch_page(browser):
     yield page
     context.close()
     assert page.errors == []
+
+
+@pytest.fixture
+def login(page):
+    """Log ``page`` in as seed.py's test editor ("editor") or sysadmin
+    ("sysadmin") through CKAN's login form."""
+    password = os.environ.get("WVP_TEST_PASSWORD")
+    if not password:
+        pytest.skip("WVP_TEST_PASSWORD isn't set: seed.py made no test logins")
+
+    def log_in(role):
+        page.goto(BASE_URL + "/user/login")
+        page.fill("#field-login", "wvp-test-" + role)
+        page.fill("#field-password", password)
+        with page.expect_navigation():
+            page.locator("form button[type=submit].btn-primary").click()
+        # A refused login renders the login page again, with a message.
+        if "/user/login" in page.url:
+            error = page.locator(".alert, .error-explanation, .flash-messages").all_inner_texts()
+            pytest.fail("couldn't log in as wvp-test-{} ({}): {}".format(
+                role, page.url, " ".join(error) or page.title()))
+        return page
+    return log_in

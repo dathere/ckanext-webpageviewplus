@@ -54,3 +54,92 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* The dataset's Thumbnails page (manage_dataset.html). */
+.webpageviewplus-manage-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+}
+.webpageviewplus-manage-actions .btn {
+  margin: 0 0.25rem 0.25rem 0;
+}
+.webpageviewplus-manage-pick {
+  margin-top: 0.5rem;
+}
+.webpageviewplus-manage-pick select {
+  display: inline-block;
+  width: auto;
+  max-width: 100%;
+}
+/* Narrow screens: each view is a card, each cell labelled by its column. */
+@media (max-width: 767.98px) {
+  .webpageviewplus-manage-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .webpageviewplus-manage-table,
+  .webpageviewplus-manage-table tbody,
+  .webpageviewplus-manage-table tr,
+  .webpageviewplus-manage-table th,
+  .webpageviewplus-manage-table td {
+    display: block;
+    width: 100%;
+  }
+  .webpageviewplus-manage-table tr {
+    border-bottom: 1px solid #ddd;
+    padding: 0.5rem 0;
+  }
+  .webpageviewplus-manage-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: bold;
+  }
+}
+
+/* The admin tab (manage_admin.html). */
+.webpageviewplus-manage-backend dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+}
+.webpageviewplus-manage-backend dd {
+  margin: 0;
+}
+.webpageviewplus-manage-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.webpageviewplus-manage-filter select,
+.webpageviewplus-manage-filter input {
+  width: auto;
+  max-width: 100%;
+}
+.webpageviewplus-manage-bulk {
+  margin: 0.5rem 0 1rem;
+}
+.webpageviewplus-manage-bulk legend {
+  font-size: 1rem;
+  font-weight: bold;
+}
+.webpageviewplus-manage-pages {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+@media (max-width: 767.98px) {
+  .webpageviewplus-manage-backend dl {
+    grid-template-columns: 1fr;
+  }
+}
+.webpageviewplus-manage section {
+  margin-bottom: 1.5rem;
+}

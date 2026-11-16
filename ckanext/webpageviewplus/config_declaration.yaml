@@ -93,6 +93,89 @@ groups:
           API. It never overwrites any other format, and isn't reverted if
           the view changes later.
 
+      - key: ckanext.webpageviewplus.screenshot_backend
+        default: none
+        description: |
+          With the webpage_view_plus_thumbnails plugin and frameability_check:
+          take a screenshot of each third-party page that refuses to be
+          framed, shown on its view's card and, when it has no other
+          thumbnail, in the resource list. none (the default) is off;
+          cloudflare (Cloudflare Browser Run) and microlink are hosted
+          services, which are sent the page's URL, so they only take public
+          datasets' pages; gotenberg is a Gotenberg 9.5+ container you run,
+          which takes private datasets' pages too. Screenshots are taken in
+          the background (ckan webpageviewplus screenshots), never while a
+          page renders. Needs ckan db upgrade -p webpage_view_plus.
+
+      - key: ckanext.webpageviewplus.cloudflare_account_id
+        default: ""
+        description: |
+          screenshot_backend = cloudflare: the Cloudflare account that runs
+          Browser Run (the id in dash.cloudflare.com's URL).
+
+      - key: ckanext.webpageviewplus.cloudflare_api_token
+        default: ""
+        description: |
+          screenshot_backend = cloudflare: an API token for that account with
+          only the "Browser Run - Edit" permission. Sent only to
+          api.cloudflare.com, in a header. Workers Free allows 10 browser
+          minutes a day, about 30 to 60 screenshots.
+
+      - key: ckanext.webpageviewplus.microlink_api_key
+        default: ""
+        description: |
+          screenshot_backend = microlink: an optional Microlink API key, sent
+          only to pro.microlink.io, in a header. Without one, Microlink's
+          free allowance (25 requests a day) applies.
+
+      - key: ckanext.webpageviewplus.gotenberg_url
+        default: ""
+        description: |
+          screenshot_backend = gotenberg: where CKAN reaches your Gotenberg
+          container, e.g. http://gotenberg:3000. Run it with
+          CHROMIUM_DENY_PRIVATE_IPS=true and without --chromium-proxy-server,
+          and never publish its port: CKAN checks that Gotenberg refuses
+          private addresses before using it, and takes no screenshots until
+          it does.
+
+      - key: ckanext.webpageviewplus.gotenberg_username
+        default: ""
+        description: |
+          screenshot_backend = gotenberg: the basic auth user, if Gotenberg
+          runs with API_ENABLE_BASIC_AUTH.
+
+      - key: ckanext.webpageviewplus.gotenberg_password
+        default: ""
+        description: |
+          screenshot_backend = gotenberg: the basic auth password.
+
+      - key: ckanext.webpageviewplus.screenshot_seconds
+        default: 2592000
+        type: int
+        description: |
+          How old a screenshot gets, in seconds, before ckan webpageviewplus
+          screenshots takes it again (30 days by default).
+
+      - key: ckanext.webpageviewplus.screenshot_jobs
+        default: true
+        type: bool
+        description: |
+          Whether saving a view whose page refuses framing, the view
+          form's "Take a new screenshot" button and check-views queue a
+          background job (queue webpageviewplus; run ckan jobs worker
+          webpageviewplus).
+          Off: only ckan webpageviewplus screenshots takes them, on a
+          schedule.
+
+      - key: ckanext.webpageviewplus.screenshot_cooldown_seconds
+        default: 60
+        type: int
+        description: |
+          How long, in seconds, after an attempt at a view's screenshot
+          before a save or the form's button may queue another. 0 leaves
+          only the rule of one queued job per view. A changed page URL
+          isn't held back, and the CLI is never limited.
+
       - key: ckanext.webpageviewplus.editor_can_loosen
         default: false
         type: bool

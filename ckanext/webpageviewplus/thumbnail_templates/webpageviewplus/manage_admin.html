@@ -1,0 +1,171 @@
+{% extends "admin/base.html" %}
+
+{% block subtitle %}{{ _('Thumbnails') }} {{ g.template_title_delimiter }} {{ super() }}{% endblock %}
+
+{% block secondary_content %}
+  <div class="module module-narrow module-shallow">
+    <h2 class="module-heading">{{ _('Thumbnails') }}</h2>
+    <div class="module-content">
+      <p>{{ _("Every Website (Plus) and PDF (Plus) view's thumbnail and screenshot. Editors manage a dataset's own on its Thumbnails tab.") }}</p>
+      <p>{{ _("Your requests skip the wait between screenshots of a view, but a view still gets one at a time. A removed copy is made again at the view's next save or refresh, unless automatic thumbnails are off.") }}</p>
+    </div>
+  </div>
+{% endblock %}
+
+{% block primary_content_inner %}
+  {% asset 'webpageviewplus/thumbnails-css' %}
+  {% import 'webpageviewplus/manage_macros.html' as m with context %}
+  {% set filter_labels = {
+    'all': _('All views'),
+    'failed': _('Failed screenshots'),
+    'stale': _('Old screenshots'),
+    'blocked': _('Refusing framing, no screenshot'),
+    'skipped': _('Skipped: private dataset, hosted service'),
+    'opted_out': _('Automatic thumbnails off'),
+  } %}
+  {% set reasons = {
+    'page_failed': _("the page didn't load"),
+    'unreachable': _("the page couldn't be reached"),
+    'backend_error': _('the screenshot service refused the request'),
+    'rate_limited': _("the screenshot service's allowance is used up for now"),
+    'no_image': _("the answer wasn't an image"),
+    'unsafe_backend': _("the screenshot service isn't set up safely"),
+  } %}
+  <div class="webpageviewplus-manage">
+    <h2>{{ _('Thumbnails and screenshots') }}</h2>
+
+    <section aria-labelledby="webpageviewplus-backend-heading" class="webpageviewplus-manage-backend">
+      <h3 id="webpageviewplus-backend-heading">{{ _('Screenshot service') }}</h3>
+      {% if backend.backend == 'none' %}
+        <p>{{ _('Screenshots are off (ckanext.webpageviewplus.screenshot_backend is none).') }}</p>
+      {% else %}
+        <dl>
+          <dt>{{ _('Service') }}</dt>
+          <dd>{{ backend.backend }}</dd>
+          <dt>{{ _('Taken after saves and on request') }}</dt>
+          <dd>
+            {%- if not backend.jobs -%}{{ _('No: only on the schedule (ckan webpageviewplus screenshots).') }}
+            {%- elif backend.worker -%}{{ _('Yes, and a worker reads the queue.') }}
+            {%- elif backend.worker is none -%}{{ _("Yes, but it couldn't be told whether a worker reads the queue.") }}
+            {%- else -%}{{ _('Yes, but no worker reads the queue: run ckan jobs worker webpageviewplus.') }}
+            {%- endif -%}
+          </dd>
+          <dt>{{ _('Allowance') }}</dt>
+          <dd>{% if backend.limited_until %}{{ _('Used up until {date}.').format(date=h.render_datetime(backend.limited_until, with_hours=True)) }}{% else %}{{ _('Not used up.') }}{% endif %}</dd>
+          <dt>{{ _('Last screenshot') }}</dt>
+          <dd>{% if backend.last_success %}{{ h.render_datetime(backend.last_success, with_hours=True) }}{% else %}{{ _('None yet') }}{% endif %}</dd>
+          <dt>{{ _('Last failure') }}</dt>
+          <dd>{% if backend.last_failure %}{{ h.render_datetime(backend.last_failure.at, with_hours=True) }}: {{ reasons.get(backend.last_failure.kind, backend.last_failure.kind) }}{% else %}{{ _('None') }}{% endif %}</dd>
+          {% if backend.backend == 'gotenberg' %}
+            <dt>{{ _('Refuses private addresses') }}</dt>
+            <dd>
+              {%- if backend.gotenberg_safe -%}{{ _('Yes, checked in the last hour.') }}
+              {%- elif backend.gotenberg_safe is none -%}{{ _('Not checked recently.') }}
+              {%- else -%}{{ _('No, so no screenshots are taken.') }}
+              {%- endif -%}
+            </dd>
+          {% endif %}
+        </dl>
+        {% if backend.backend == 'gotenberg' %}
+          <form method="post" action="{{ h.url_for('webpageviewplus_manage.admin') }}">
+            {{ h.csrf_input() }}
+            <button type="submit" name="do" value="recheck" class="btn btn-default btn-secondary btn-sm">{{ _('Check Gotenberg now') }}</button>
+          </form>
+        {% endif %}
+      {% endif %}
+    </section>
+
+    <section aria-labelledby="webpageviewplus-views-heading">
+      <h3 id="webpageviewplus-views-heading">{{ _('Views') }}</h3>
+      <form method="get" action="{{ h.url_for('webpageviewplus_manage.admin') }}" class="webpageviewplus-manage-filter">
+        <label for="field-filter">{{ _('Show') }}</label>
+        <select id="field-filter" name="filter" class="form-control form-select">
+          {% for key in filters %}
+            <option value="{{ key }}" {% if args.filter == key %}selected{% endif %}>{{ filter_labels[key] }}</option>
+          {% endfor %}
+        </select>
+        <label for="field-q">{{ _('Dataset') }}</label>
+        <input id="field-q" type="search" name="q" value="{{ args.q }}" class="form-control">
+        <button type="submit" class="btn btn-default btn-secondary btn-sm">{{ _('Show') }}</button>
+      </form>
+
+      <p>{{ ungettext('{count} view.', '{count} views.', status.count).format(count=status.count) }}</p>
+
+      {% if status.rows %}
+        <form method="post" action="{{ h.url_for('webpageviewplus_manage.admin') }}">
+          {{ h.csrf_input() }}
+          <input type="hidden" name="filter" value="{{ args.filter }}">
+          <input type="hidden" name="q" value="{{ args.q }}">
+          <input type="hidden" name="page" value="{{ status.page }}">
+          <fieldset class="webpageviewplus-manage-bulk">
+            <legend>{{ _('For the ticked views') }}</legend>
+            <button type="submit" name="do" value="screenshot" class="btn btn-default btn-secondary btn-sm">{{ _('Take new screenshots') }}</button>
+            <button type="submit" name="do" value="refresh" class="btn btn-default btn-secondary btn-sm">{{ _('Remake thumbnails') }}</button>
+            <button type="submit" name="do" value="remove" class="btn btn-default btn-secondary btn-sm">{{ _('Remove the copies') }}</button>
+          </fieldset>
+          <table class="table table-striped webpageviewplus-manage-table">
+            <caption class="visually-hidden sr-only">{{ filter_labels[args.filter] }}</caption>
+            <thead>
+              <tr>
+                <th scope="col"><span class="visually-hidden sr-only">{{ _('Tick') }}</span></th>
+                <th scope="col">{{ _('View') }}</th>
+                <th scope="col">{{ _('In the resource list') }}</th>
+                <th scope="col">{{ _('Stored thumbnail') }}</th>
+                <th scope="col">{{ _('Screenshot') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in status.rows %}
+                <tr>
+                  <td>
+                    <input type="checkbox" name="ids" value="{{ row.view_id }}" id="tick-{{ row.view_id }}">
+                    <label for="tick-{{ row.view_id }}" class="visually-hidden sr-only">{{ _('Tick {view}').format(view=row.title or row.resource_name) }}</label>
+                  </td>
+                  <th scope="row">
+                    <a href="{{ h.url_for('webpageviewplus_manage.dataset', id=row.dataset) }}#view-{{ row.view_id }}">{{ row.title or row.resource_name }}</a>
+                    <br><span class="text-muted">{{ row.dataset_title }}{% if row.private %} ({{ _('Private') }}){% endif %}</span>
+                  </th>
+                  <td data-label="{{ _('In the resource list') }}">{{ m.shows(row) }}</td>
+                  <td data-label="{{ _('Stored thumbnail') }}">{{ m.stored(row) }}</td>
+                  <td data-label="{{ _('Screenshot') }}">{{ m.screenshot(row.screenshot) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </form>
+
+        <form method="post" action="{{ h.url_for('webpageviewplus_manage.admin') }}">
+          {{ h.csrf_input() }}
+          <input type="hidden" name="filter" value="{{ args.filter }}">
+          <input type="hidden" name="q" value="{{ args.q }}">
+          <input type="hidden" name="page" value="{{ status.page }}">
+          <input type="hidden" name="scope" value="all">
+          <fieldset class="webpageviewplus-manage-bulk">
+            <legend>{{ ungettext('For the {count} view this filter shows', 'For all {count} views this filter shows', status.count).format(count=status.count) }}</legend>
+            <button type="submit" name="do" value="screenshot" class="btn btn-default btn-secondary btn-sm">{{ _('Take new screenshots') }}</button>
+            <button type="submit" name="do" value="refresh" class="btn btn-default btn-secondary btn-sm">{{ _('Remake thumbnails') }}</button>
+            <button type="submit" name="do" value="remove" class="btn btn-default btn-secondary btn-sm">{{ _('Remove the copies') }}</button>
+            {% if status.count > max_ids %}
+              <p class="form-text">
+                <label for="field-start">{{ _('At most {count} views at a time:').format(count=max_ids) }}</label>
+                <select id="field-start" name="start" class="form-control form-select">
+                  {% for first in range(0, status.count, max_ids) %}
+                    <option value="{{ first }}">{{ _('views {first} to {last}').format(first=first + 1, last=[first + max_ids, status.count]|min) }}</option>
+                  {% endfor %}
+                </select>
+              </p>
+            {% endif %}
+          </fieldset>
+        </form>
+
+        {% if pages > 1 %}
+          <nav aria-label="{{ _('Pages') }}" class="webpageviewplus-manage-pages">
+            {% if status.page > 1 %}<a href="{{ h.url_for('webpageviewplus_manage.admin', filter=args.filter, q=args.q or None, page=status.page - 1) }}">{{ _('Previous') }}</a>{% endif %}
+            <span>{{ _('Page {page} of {pages}').format(page=status.page, pages=pages) }}</span>
+            {% if status.page < pages %}<a href="{{ h.url_for('webpageviewplus_manage.admin', filter=args.filter, q=args.q or None, page=status.page + 1) }}">{{ _('Next') }}</a>{% endif %}
+          </nav>
+        {% endif %}
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

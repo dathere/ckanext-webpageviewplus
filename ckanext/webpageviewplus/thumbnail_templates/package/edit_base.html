@@ -1,0 +1,7 @@
+{% ckan_extends %}
+
+{% block content_primary_nav %}
+  {{ super() }}
+  {# TRANSLATORS: tab on a dataset's edit pages: its views' thumbnails and screenshots. #}
+  {{ h.build_nav_icon('webpageviewplus_manage.dataset', _('Thumbnails'), id=pkg.name, icon='image') }}
+{% endblock %}

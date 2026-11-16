@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+import datetime
 import json
 import time
 from typing import Iterable, Optional
 
 import click
+import sqlalchemy as sa
 
 import ckan.model as model
 
 from ckanext.webpageviewplus import content, frame, frameability, health, pdf, settings, thumbnails
 
 SCHEMATIC_MARKER = b"qsv-schematic-source"
+# The longest rate limit `screenshots` waits out instead of stopping.
+SHORT_WAIT_SECONDS = 60
 # Stop scanning large uploads after this many bytes.
 SCAN_LIMIT = 64 * 1024 * 1024
 
@@ -275,6 +279,48 @@ def purge_stats():
     click.echo("{} host(s) not reported in {} days deleted.".format(deleted, days))
 
 
+@webpageviewplus.command("screenshots")
+@click.option("--refresh", is_flag=True,
+              help="Retake every qualifying view's screenshot, not only missing or old ones.")
+@click.option("--dry-run", is_flag=True, help="List the views, take nothing.")
+def take_screenshots(refresh: bool, dry_run: bool):
+    """Take screenshots of pages that refuse to be framed, for views that
+    have none or an old one (screenshot_seconds). Run it from cron. Stops
+    when the backend says its limit is used up."""
+    from ckanext.webpageviewplus import screenshots
+
+    if not _plugin_loaded("webpage_view_plus_thumbnails"):
+        raise click.ClickException("screenshots need the webpage_view_plus_thumbnails plugin")
+    if not screenshots.enabled():
+        raise click.ClickException(
+            "ckanext.webpageviewplus.screenshot_backend is none: screenshots are off")
+    views = screenshots.due(refresh)
+    counts: dict[str, int] = {}
+    for view_id, url in views:
+        if dry_run:
+            click.echo("{}\t{}".format(view_id, url))
+            continue
+        outcome = screenshots.capture(view_id)
+        if outcome == "rate_limited":
+            # A short limit (Cloudflare's free tier: one request every 10
+            # seconds) is waited out; a daily one ends the run below.
+            wait = screenshots.limited_until(settings.screenshot_backend()) - time.time()
+            if 0 < wait <= SHORT_WAIT_SECONDS:
+                model.Session.commit()  # no transaction held while waiting
+                time.sleep(wait + 1)
+                outcome = screenshots.capture(view_id)
+        counts[outcome] = counts.get(outcome, 0) + 1
+        click.echo("{}\t{}\t{}".format(view_id, outcome, url))
+        if outcome in ("rate_limited", "unsafe_backend"):
+            # Every later view would fail the same way.
+            break
+    if dry_run:
+        click.echo("{} view(s) due.".format(len(views)))
+    else:
+        click.echo("{} view(s) due: {}.".format(len(views), ", ".join(
+            "{} {}".format(n, k) for k, n in sorted(counts.items())) or "none taken"))
+
+
 @webpageviewplus.command("stats-summary")
 @click.option("--limit", default=20, show_default=True, help="Views to list.")
 def stats_summary(limit: int):
@@ -406,8 +452,13 @@ def check_views(
     whose page refuses to be framed shows a card instead of a blank frame.
     With the webpage_view_plus_thumbnails plugin, their thumbnails are
     remade too, and those of pdf_view_plus views (a copy stays if remaking
-    it fails); that never changes the exit status.
+    it fails); that never changes the exit status. With screenshot_jobs on
+    and a worker reading the queue, a view whose page refuses to be framed
+    and has no screenshot of it gets a screenshot job, unless that page's
+    last attempt failed within a week.
     """
+    from ckanext.webpageviewplus import screenshots
+
     query = (
         model.Session.query(model.ResourceView, model.Resource, model.Package)
         .join(model.Resource, model.Resource.id == model.ResourceView.resource_id)
@@ -422,9 +473,25 @@ def check_views(
     probes: dict[str, frameability.Probe] = {}
     remake = thumbnails.enabled() and not no_store
     images: dict[tuple[str, str], Optional[bytes]] = {}
+    shoot = (not no_store and _plugin_loaded("webpage_view_plus_thumbnails")
+             and screenshots.jobs_on())
+    # Without a worker, each run would queue the same views again.
+    if shoot and screenshots.queue_has_worker() is False:
+        shoot = False
+        click.echo("No worker reads the {} queue, so no screenshots were queued "
+                   "(ckan jobs worker {}).".format(screenshots.QUEUE, screenshots.QUEUE),
+                   err=True)
+    queued = 0
     rows = []
     for view, resource, package in query:
         row = assess(view, resource, probes, timeout, store=not no_store)
+        if shoot and row["problem"] == "refuses-embedding" \
+                and view.view_type == screenshots.VIEW_TYPE:
+            outcome = screenshots.after_check(
+                {"id": view.id, "view_type": view.view_type}, back_off=True)
+            queued += outcome == "queued"
+            # Redis or the queue is down: one warning is enough.
+            shoot = outcome != "error"
         if remake and view.view_type in thumbnails.VIEW_TYPES:
             thumbnails.after_save(
                 dict(view.config or {}, id=view.id, view_type=view.view_type,
@@ -464,6 +531,8 @@ def check_views(
                 r["url"], r["detail"])))
         click.echo("{} view(s) checked, {} with problems.".format(len(rows), len(broken)),
                    err=True)
+    if queued:
+        click.echo("{} screenshot(s) queued.".format(queued), err=True)
     if broken:
         raise SystemExit(1)
 
@@ -527,6 +596,48 @@ def diagnose() -> list[tuple[str, str]]:
                           "this server 60 requests an hour, about 20 repositories, shared by "
                           "every visitor. Set ckanext.webpageviewplus.github_token (a "
                           "fine-grained token with no permissions) for 5,000."))
+    found.extend(_screenshot_findings())
+    return found
+
+
+def _screenshot_findings() -> list[tuple[str, str]]:
+    from ckanext.webpageviewplus import screenshots
+
+    backend = settings.screenshot_backend()
+    if backend == "none":
+        return []
+    if not _plugin_loaded("webpage_view_plus_thumbnails"):
+        return [("warn", "screenshot_backend is " + backend + " but the "
+                 "webpage_view_plus_thumbnails plugin isn't loaded, so no screenshots "
+                 "are taken or shown.")]
+    found = [("ok", "Screenshots are taken by " + backend + "; run ckan webpageviewplus "
+              "screenshots from cron to take them.")]
+    if screenshots.jobs_on():
+        listening = screenshots.queue_has_worker()
+        if listening is False:
+            found.append(("warn", "screenshot_jobs is on but no worker reads the "
+                          + screenshots.QUEUE + " queue, so screenshots queued by saves and "
+                          "the view form wait unread: run ckan jobs worker "
+                          + screenshots.QUEUE + ", or set screenshot_jobs = false."))
+        elif listening is None:
+            found.append(("note", "Couldn't tell whether a worker reads the "
+                          + screenshots.QUEUE + " queue (ckan jobs worker "
+                          + screenshots.QUEUE + ")."))
+    until = screenshots.limited_until(backend)
+    if until > time.time():
+        found.append(("note", "{} said its limit is used up, until {} UTC.".format(
+            backend, datetime.datetime.utcfromtimestamp(until).strftime("%Y-%m-%d %H:%M"))))
+    try:
+        last = model.Session.execute(
+            sa.select(screenshots.table.c.last_error, screenshots.table.c.attempted_at)
+            .where(screenshots.table.c.last_error != "")
+            .order_by(screenshots.table.c.attempted_at.desc()).limit(1)).first()
+    except sa.exc.ProgrammingError:
+        model.Session.rollback()
+        return found  # the tables check above already says to upgrade
+    if last:
+        found.append(("note", "The last failed screenshot ({:%Y-%m-%d %H:%M} UTC): {}.".format(
+            last.attempted_at, last.last_error)))
     return found
 
 
@@ -659,6 +770,16 @@ def doctor(no_http: bool, site_url: str):
                               "every CKAN process, then clear any CDN or proxy cache."))
             else:
                 found.append(("ok", "The asset bundles load from " + site_url + "."))
+        if settings.screenshot_backend() == "gotenberg":
+            from ckanext.webpageviewplus import screenshots
+            if screenshots.gotenberg_safe(force=True):
+                found.append(("ok", "Gotenberg refuses private addresses, so its browser "
+                              "stays off this site's network."))
+            else:
+                found.append(("fail", "Gotenberg didn't refuse private addresses (or "
+                              "couldn't be reached), so no screenshots are taken. Run it "
+                              "with CHROMIUM_DENY_PRIVATE_IPS=true and without "
+                              "--chromium-proxy-server, at gotenberg_url."))
         if settings.harden_downloads():
             try:
                 found.append(download_finding(site_url))

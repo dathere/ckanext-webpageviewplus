@@ -755,7 +755,52 @@
     if (select.value === FIRST_PAGE && status.getAttribute("data-ready") !== "true") make();
   }
 
+  // The view form's "Take a new screenshot": queue a job through
+  // webpageviewplus_screenshot_request without leaving the form, so unsaved
+  // edits stay. Texts come from the template (this script has none).
+  function setupScreenshotRequest() {
+    var button = document.querySelector("[data-webpageviewplus-screenshot-request]");
+    if (!button) return;
+    var panel = button.closest("[data-webpageviewplus-screenshot]");
+    var status = panel && panel.querySelector(".webpageviewplus-screenshot-status");
+    var wait = document.getElementById("webpageviewplus-screenshot-wait");
+    // Enabled again once a wait is over (the cooldown shown, or the one a
+    // refusal names), so the editor needn't reload the form.
+    function enableAfter(seconds) {
+      setTimeout(function () {
+        button.disabled = false;
+        if (wait) wait.textContent = "";
+      }, Math.max(0, seconds) * 1000);
+    }
+    var initial = parseInt(button.getAttribute("data-cooldown") || "0", 10);
+    if (initial > 0) enableAfter(initial);
+    button.addEventListener("click", function () {
+      button.disabled = true;
+      fetch(button.getAttribute("data-api"), {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken()},
+        body: JSON.stringify({id: button.getAttribute("data-view-id")})
+      }).then(function (response) {
+        return response.json().then(function (answer) {
+          if (response.ok && answer.success) return button.getAttribute("data-pending");
+          var error = (answer && answer.error) || {};
+          var left = error.seconds_left && parseInt(error.seconds_left[0], 10);
+          enableAfter(left || 0);
+          // The action's own (translated) refusal, e.g. the seconds left.
+          return (error.id && error.id[0]) || button.getAttribute("data-failed");
+        });
+      }).then(function (text) {
+        if (status) status.textContent = text;
+      }, function () {
+        if (status) status.textContent = button.getAttribute("data-failed");
+        button.disabled = false;
+      });
+    });
+  }
+
   function init() {
+    setupScreenshotRequest();
     setupFrameabilityCheck();
     setupServiceSuggest();
     setupPdfFirstPage();

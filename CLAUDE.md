@@ -127,6 +127,13 @@ order now being built:
    #3); see `repos.py` below. Next: `check-views` reporting, and the Website (Plus) form
    offering a Repository view for repository links (separate issues).
 
+12. In progress (branch `screenshots`, unreleased): screenshots of pages that refuse framing
+   (spec section "Proposed: Screenshots of pages that refuse framing", revision 3; its Build
+   order gives the steps). Steps 1 and 2 built: `screenshots.py` below. Next: step 3, the
+   management interface (approved 2026-11-15, question 10): actions, the dataset's Thumbnails
+   tab and the admin tab built (`manage.py` below); next browser tests with axe. `check-views` queues blocked
+   views with no screenshot (`after_check(..., back_off=True)`).
+
 ## The security model (read before touching frame, validator, content or download code)
 
 - **Invariant:** while uploaded HTML could still run on CKAN's origin, no frame may let scripts
@@ -422,6 +429,86 @@ order now being built:
   every view type, since logos and names need the resource's only view to be a known
   service's. Logos are Simple Icons SVGs in `public/webpageviewplus/logos/`, named in
   `services.LOGOS` by the name `suggest()` gives a stored embed URL.
+- `screenshots.py` (owned by `webpage_view_plus_thumbnails`): a screenshot per Website (Plus)
+  view whose third-party page's stored check is `blocked` (`target()`: not opted out, no
+  picked image, and with a hosted backend a public dataset only), taken by
+  `ckan webpageviewplus screenshots` (`due()`, `capture()`), never at render. Backends
+  (`screenshot_backend`): `cloudflare` (Browser Run, Bearer token), `microlink` (`x-api-key`;
+  its image URL from the JSON must be https on a `microlink.io` host and goes through
+  `fetch_body`), `gotenberg` (the site's own container: unguarded, so only ever
+  `gotenberg_url`). Every call goes through `_send` (redirects off, a byte cap, failures
+  become a `Failure` kind and nothing that could hold a URL or token is logged); tests fake
+  `_send` and Redis (`tests/test_screenshots.py`). Gotenberg is used only while
+  `gotenberg_safe()` holds: it must answer exactly 403 for `CANARIES` (127.0.0.1 and
+  169.254.169.254, bodies never read), cached in Redis an hour; no Redis means not safe.
+  Checked for real: an unprotected Gotenberg screenshots CKAN's own internal address.
+  Stored in `webpage_view_plus_screenshots` (fifth migration) with `source`
+  `screenshot:<url>`; a copy counts only while `target()` still gives that URL. The card gets
+  it through `setup_template_variables` (`screenshot`, gated by `plugin._thumbnails_loaded`,
+  which tests patch), the resource list through `thumbnails.for_resource` (after a stored
+  copy, before a service logo; one query per dataset, `_rows`), both from
+  `/webpageviewplus/screenshot/<view_id>` (`?size=thumb`), with the thumbnail route's checks.
+  A failed attempt keeps a screenshot of the same page and drops one of another.
+  Step 2: the main plugin's `resource_view_create`/`_update` chain calls `after_check` right
+  after `health.after_save` (not the thumbnails plugin's chain: chained-action order follows
+  `ckan.plugins`), which queues `job` on queue `webpageviewplus` (`request_job`) only when no
+  screenshot counts for the current URL. The retake limit: a Redis `pending:` mark per view
+  (`PENDING_SECONDS`), and `cooldown_left` from `attempted_at` of the same page (another page:
+  no cooldown). `job` re-checks the cooldown, never raises, clears the mark. `check-views`
+  calls `after_check(view, back_off=True)` for each `refuses-embedding` Website (Plus) view
+  (not with `--no-store`, without the thumbnails plugin, or when `queue_has_worker()` is
+  False; it stops queuing after an "error"), and `back_off` skips `_backing_off` pages as
+  `due()` does. The editor's
+  opt-out deletes at save (`after_save`, thumbnails chain). `webpageviewplus_screenshot_request`
+  (thumbnails plugin; auth `resource_view_update` with `resource_id`) answers
+  `{"state": "pending"}` or a ValidationError with `seconds_left`. The view form's panel
+  (`panel()`, `screenshot_panel`, edit form only, never queues) shows the stored image through
+  `serve(..., form=1)`: editors only, even when not in use, `private, no-store`. Hosted
+  captures re-check the page first (`_recheck`, a gate never stored). `doctor` warns when
+  `screenshot_jobs` is on and no RQ worker reads the queue (`queue_has_worker`). Tests fake
+  `toolkit.enqueue_job` (autouse `jobs`) and Redis (`FakeRedis`). `due()` puts never-tried
+  views first and backs off a page's own failures (`PAGE_FAULTS`) for `FAILED_RETRY_SECONDS`.
+  Gotenberg redirects: `scripts/gotenberg_redirects/check.sh` (Docker; CI job "Gotenberg
+  redirects (live)", no job container) puts a redirector on a public-range network
+  (11.0.0.0/24) and expects a protected Gotenberg to refuse every 3xx to a private page that an
+  unprotected one reaches. Browser tests: `browser_tests/test_screenshots.py` on seed.py's
+  "Refuses framing" view (stored check and screenshot, `ci.ini` sets `frameability_check`, a
+  never-called `gotenberg_url` and `screenshot_jobs = false`; seed.py turns off save-time
+  checks). The form's button is tested without a login: the test adds its markup to a public
+  view page and stubs the action.
+- `manage.py` (owned by `webpage_view_plus_thumbnails`): the management interface's actions.
+  `webpageviewplus_thumbnail_status` (side-effect free; `id` = a dataset, auth `package_update`;
+  no `id` = site-wide, sysadmins, with `filter` in `FILTERS`, `q`, `page` of `PAGE_SIZE`, and
+  `backend` from `screenshots.backend_status()`, which never calls the backend: Gotenberg's
+  answer comes from `gotenberg_safe_cached()`). `webpageviewplus_screenshot_request` with `ids`
+  (`manage.request_screenshots`; the one-view `id` form is unchanged), `..._thumbnail_refresh`
+  (one view at once via `refresh_now`, several queued as `refresh_job` with a Redis
+  `refresh-pending:` mark, refused when `queue_has_worker()` is False; `pdf-page:` sources answer
+  `first_page`) and `..._thumbnail_delete` (`remove` = thumbnail/screenshot/both;
+  `screenshots.clear` keeps `attempted_at`, so Remove never resets the cooldown). Changes take
+  `ids` (at most `MAX_IDS`), auth any logged-in user (`change_auth`), then `resource_view_update`
+  per view with a fresh context (`_authorized`); an id the caller can't update answers
+  `not_found`. A sysadmin's `ids` request skips the cooldown, passed into `job(...,
+  skip_cooldown)`. Rows read `thumbnails.for_resource` for what the list shows and
+  `screenshots.panel` for the screenshot state; both cache on `g`, so tests drop
+  `g.webpageviewplus_thumbnails`/`_screenshots` between calls (`tests/test_manage.py`).
+  The dataset page (`manage.blueprint`, `/dataset/<id>/thumbnails`, `package_update`; a tab added
+  by `thumbnail_templates/package/edit_base.html` after `super()`) renders
+  `thumbnail_templates/webpageviewplus/manage_dataset.html` and posts one form per row (`do` =
+  screenshot/refresh/remove/pick/auto_off/auto_on) back to itself, then redirects. CKAN exempts
+  extension blueprints from CSRF by default, so every POST view calls `manage.protect_form()`
+  (skipped for API-token requests, as CKAN does); tests post with `REMOTE_USER` and one
+  `app.test_client()` so the session keeping the `_csrf_token` survives. Narrow screens stack
+  rows by CSS (`thumbnails.css`, `data-label`). Strings under `thumbnail_templates/` are
+  extracted since `setup.py` lists that folder.
+  The admin tab (`/ckan-admin/thumbnails`, `_sysadmin_only`; added by overriding
+  `thumbnail_templates/admin/base.html`, as CKAN 2.11 dropped `ckan.admin_tabs`) renders
+  `manage_admin.html`: `backend` from the status action (never calls the backend on a GET;
+  `do=recheck` POSTs `gotenberg_safe(force=True)`), a GET filter form, and bulk POSTs for ticked
+  `ids` or `scope=all` (the status action's `ids`, `MAX_IDS` from `start`; the page offers a
+  range picker past 500). A whole filter's Remove renders `manage_confirm.html` first
+  (`confirmed=1`). `_summary` turns outcomes into "label: count" (`OUTCOMES`). Both pages share
+  `manage_macros.html` (`shows`, `stored`, `screenshot`).
 - `tests/fixtures/qsv_protocol.html` speaks the qsv messages; `resize_message.html` reports its
   height with the generic message only (both seeded in `wvp-browser` by `browser_tests/seed.py`). It's uploaded to the `wvp-demo`
   dataset with three views (`data-schematic` auto, `interactive` auto, `interactive` fixed),

@@ -1363,6 +1363,113 @@ too (not with `--no-store`), so run
 from cron it picks up changed pages and images replaced through `package_update`. When
 remaking one fails, it keeps the copy it has.
 
+### Screenshots of pages that refuse framing
+
+Some pages can't be framed at all: they send `X-Frame-Options` or a CSP `frame-ancestors` that
+no preset gets around. With [the frameability check](#frameability-check) on, their views show a
+card with Open in new tab. With a screenshot backend, that card also shows a picture of the
+page, and the resource list uses it as the thumbnail when nothing else provides one (a picked
+image or the page's own preview image comes first; the screenshot comes before a service's
+logo). No resources are added: screenshots are stored per view, like thumbnails.
+
+Screenshots are taken in the background, never while a page renders:
+
+- **After a save.** Saving a view whose page refuses framing, and that has no screenshot of
+  that page yet, queues a job on its own queue, `webpageviewplus`. CKAN's usual
+  `ckan jobs worker` reads only the default queue, so **run a second worker for it**:
+  `ckan jobs worker webpageviewplus` (one is enough: screenshots are taken one at a time).
+  Without that worker the jobs wait in Redis and editors see "will be taken in the background"
+  indefinitely; `ckan webpageviewplus doctor` warns when no worker reads the queue. A site that
+  won't run one sets `screenshot_jobs = false` and relies on the command below.
+- **From the view form.** The form's Screenshot panel shows the view's screenshot and its state
+  (in use, not in use and why, pending, failed and why), with a **Take a new screenshot**
+  button that queues the same job. A view gets one queued job at a time, and another only
+  `screenshot_cooldown_seconds` (60) after its last attempt, unless its page URL changed.
+- **On a schedule.** `ckan webpageviewplus screenshots`, from cron, for example daily: it takes
+  views that have none, or one older than `screenshot_seconds` (30 days), and stops when the
+  backend says its limit is used up. Views never tried go first, and a page that failed by
+  itself (it answered with an error, or gave no image; not one that couldn't be reached) is
+  tried again only after a week, so failing pages
+  can't use up a hosted backend's daily allowance. Add `--refresh` to retake them all (failed
+  ones included), `--dry-run` to list them. It isn't held back by the cooldown.
+- **From `check-views`.** When [`check-views`](#finding-broken-views) finds a page refusing
+  framing whose view has no screenshot of it, it queues that view's job, with the same
+  one-at-a-time rule, cooldown and week's wait after a failure. It queues nothing with
+  `--no-store`, with `screenshot_jobs = false`, or when no worker reads the queue (each run
+  would queue the same views again).
+
+**Requirements.** The `webpage_view_plus_thumbnails` plugin, `frameability_check = true`,
+`ckan db upgrade -p webpage_view_plus`, and one backend:
+
+| `screenshot_backend` | What it is | Datasets | Cost |
+| --- | --- | --- | --- |
+| `cloudflare` | [Cloudflare Browser Run](https://developers.cloudflare.com/browser-run/) on your Cloudflare account | public only | Workers Free: 10 browser minutes a day (about 30 to 60 screenshots); Workers Paid ($5 a month) includes 10 hours |
+| `microlink` | The [Microlink API](https://microlink.io/) | public only | 25 a day without a key; paid plans from $49 a month |
+| `gotenberg` | [Gotenberg](https://gotenberg.dev/) 9.5+ (MIT), a container you run | public and private | the container |
+
+The hosted two are sent each page's URL (never anything about your visitors), which is why
+they only take public datasets' pages. You agree to that provider's terms:
+[Cloudflare](https://www.cloudflare.com/terms/), [Microlink](https://microlink.io/terms)
+(with its [DPA](https://microlink.io/dpa)). Gotenberg sends nothing to anyone but the page's own
+site.
+
+- **Cloudflare:** set `cloudflare_account_id` (the id in dash.cloudflare.com's URL) and
+  `cloudflare_api_token`, a token you create under My Profile, API Tokens, with only the
+  "Browser Run - Edit" permission on that account.
+- **Microlink:** optionally set `microlink_api_key`.
+- **Gotenberg:** it runs a browser on your network, so it must refuse private addresses, or a
+  page an editor links could show (and the screenshot would keep) an internal service's page:
+
+  ```yaml
+  gotenberg:
+    image: gotenberg/gotenberg:9.5.1
+    environment:
+      CHROMIUM_DENY_PRIVATE_IPS: "true"
+    # No ports: only CKAN reaches it. Never set --chromium-proxy-server.
+  ```
+
+  Then set `gotenberg_url = http://gotenberg:3000` (and `gotenberg_username`/`gotenberg_password`
+  if it runs with `API_ENABLE_BASIC_AUTH`). CKAN checks that Gotenberg refuses
+  `http://127.0.0.1/` and `http://169.254.169.254/` before using it, again every hour, and in
+  `ckan webpageviewplus doctor`; until it does, no screenshots are taken.
+
+**What a screenshot shows.** The top of the page at 1350 x 940, as an anonymous visitor from
+wherever the backend runs sees it: cookie banners included sometimes (Microlink blocks most;
+for Cloudflare a short built-in list tries to hide the common ones; Gotenberg's aren't hidden).
+A bot challenge, which sites may put in front of datacentre visitors, isn't kept when the page
+answers the screenshot service's browser with an error status, as Cloudflare's and most others
+do (and, with `cloudflare`, when the page has a well-known challenge title): that counts as a
+failed attempt. One served as an ordinary page can still be captured; turn the view's automatic
+thumbnails off, pick an image, or remove the screenshot on the dataset's Thumbnails tab. A screenshot stops being shown when the page
+can be framed again, the view points elsewhere, or the view opts out of automatic thumbnails or
+picks one.
+
+### Managing thumbnails and screenshots
+
+With the `webpage_view_plus_thumbnails` plugin, two pages show what each Website (Plus) and PDF
+(Plus) view has, and what the resource list shows for it. Both work without JavaScript.
+
+- **A dataset's Thumbnails tab** (on its edit pages, `/dataset/<name>/thumbnails`, for anyone who
+  may edit the dataset): one row per view, with the stored thumbnail and where it came from, the
+  screenshot's state (in use, pending, failed and why, or not in use and why), and buttons to
+  take a new screenshot (with the view form's wait between tries), remake the thumbnail, remove
+  the stored copies, turn automatic thumbnails off or on, and pick one of the dataset's images.
+- **A Thumbnails tab in the admin pages** (`/ckan-admin/thumbnails`, sysadmins): the screenshot
+  service's state (whether a worker reads the queue, whether its allowance is used up, the last
+  screenshot and failure, and for Gotenberg whether it refuses private addresses, with a button
+  to check again), and every view, 50 to a page, filtered by failed screenshots, old ones,
+  pages refusing framing with no screenshot, private datasets skipped by a hosted service, or
+  automatic thumbnails off, and searched by dataset. Take new screenshots, remake thumbnails or
+  remove the copies for the ticked views, or for up to 500 views a filter shows at a time;
+  removing a whole filter's copies asks first. A sysadmin's requests skip the wait between
+  screenshots of a view.
+
+A removed copy is made again at the view's next save, `check-views` run or refresh, unless the
+view turns automatic thumbnails off. A PDF's first page is the exception: it's drawn in the
+browser, so open the view's form to draw it again. Removing a screenshot doesn't reset the wait before the
+next one. Remaking several thumbnails at once, like taking screenshots, needs a worker on the
+`webpageviewplus` queue (`ckan jobs worker webpageviewplus`); one at a time works without.
+
 ### PDF views
 
 The `pdf_view_plus` plugin adds a **PDF (Plus)** view type for resources whose format is PDF
@@ -1615,6 +1722,13 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckanext.webpageviewplus.frameability_check` | `false` | Warn editors as they type a page URL that refuses framing, check pages when views are saved, and show a card for those that refuse. Makes CKAN request editor-typed URLs, see [Frameability check](#frameability-check) |
 | `ckanext.webpageviewplus.thumbnail_fetch` | `false` | With the `webpage_view_plus_thumbnails` plugin, fetch thumbnails when views are saved: the page's own preview image, and linked images editors pick. Makes CKAN request page and image URLs, see [Thumbnails in the resource list](#thumbnails-in-the-resource-list) |
 | `ckanext.webpageviewplus.service_format` | `false` | With the `webpage_view_plus_thumbnails` plugin, set an empty or `HTML` format to the service's name when a resource's only view is a well-known service's, see [Thumbnails in the resource list](#thumbnails-in-the-resource-list) |
+| `ckanext.webpageviewplus.screenshot_backend` | `none` | `cloudflare`, `microlink` or `gotenberg`: screenshots of pages that refuse framing, see [Screenshots of pages that refuse framing](#screenshots-of-pages-that-refuse-framing) |
+| `ckanext.webpageviewplus.cloudflare_account_id` / `cloudflare_api_token` | empty | The `cloudflare` backend's account and its "Browser Run - Edit" token |
+| `ckanext.webpageviewplus.microlink_api_key` | empty | The `microlink` backend's optional key |
+| `ckanext.webpageviewplus.gotenberg_url` / `gotenberg_username` / `gotenberg_password` | empty | Where CKAN reaches your Gotenberg, and its basic auth |
+| `ckanext.webpageviewplus.screenshot_seconds` | `2592000` (30 days) | How old a screenshot gets before `ckan webpageviewplus screenshots` retakes it |
+| `ckanext.webpageviewplus.screenshot_jobs` | `true` | Whether a save, the view form's button and `check-views` queue a screenshot job (queue `webpageviewplus`: run `ckan jobs worker webpageviewplus`). `false`: only the scheduled command takes them |
+| `ckanext.webpageviewplus.screenshot_cooldown_seconds` | `60` | How long after a view's last attempt before a save or the button may queue another (0: only one queued job per view). A changed page URL isn't held back |
 | `ckanext.webpageviewplus.color_scheme` | `auto` | `light` or `dark`: the colour scheme framed pages see (Firefox only so far) |
 | `ckanext.webpageviewplus.narrow_width` | `576` | View width, in px, below which aspect and viewport heights become 80% of the screen; `0` turns it off |
 | `ckanext.webpageviewplus.privacy_profile` | `default` | `eu` puts the consent card on every third-party page, whatever its preset |
@@ -1637,7 +1751,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckan webpageviewplus doctor [--no-http] [--site-url URL]` | Check the site's setup and say what to fix: no content origin or sandboxed downloads, an HTML upload's download arriving without its sandbox header, the plugin's tables not upgraded, asset bundles the site doesn't serve (fetched from `ckan.site_url`, or `--site-url` inside a container), `default_views`, core views left to migrate. Exits 1 when something is broken. Run it after installing or upgrading |
 | `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME] [--dataset NAME]` | Convert `webpage_view` views, see [Migrating from webpage_view](#migrating-from-webpage_view) |
 | `ckan webpageviewplus migrate-pdf [--dry-run]` | Convert ckanext-pdfview's `pdf_view` views to PDF (Plus), see [PDF views](#pdf-views) |
-| `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails, except with `--no-store`. Run it weekly from cron |
+| `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails and queues missing screenshots, except with `--no-store`. Run it weekly from cron |
 | `ckan webpageviewplus purge-stats` | Delete view counts and reported hosts older than the retention period. Run it daily from cron |
 | `ckan webpageviewplus stats-summary [--limit N]` | Site-wide view counts, busiest first |
 | `ckan webpageviewplus connections [--limit N]` | Hosts uploaded pages were seen contacting, site-wide |
@@ -1650,6 +1764,15 @@ API actions: `webpageviewplus_frameability` and `webpageviewplus_service_suggest
 resource, and with `pdf_view_plus` and thumbnails, `webpageviewplus_pdf_thumbnail` (`id` of a PDF
 view, `image` in base64; for those who may edit the view), which the view form uses to store a
 picture of the PDF's first page.
+
+With thumbnails, the [management pages](#managing-thumbnails-and-screenshots) use four actions
+an API client can call too: `webpageviewplus_thumbnail_status` (`id` of a dataset, for those who
+may edit it; without `id`, every view for sysadmins, with `filter`, `q`, `page` and `start`),
+and, taking `ids` (at most 500 view ids) and checking each view as `resource_view_update` does,
+`webpageviewplus_screenshot_request` (with `id` instead, the view form's one-view request),
+`webpageviewplus_thumbnail_refresh` and `webpageviewplus_thumbnail_delete` (`remove`:
+`thumbnail`, `screenshot` or `both`). A view the caller can't update answers `not_found`, as
+one that doesn't exist does.
 
 ### Contributing
 
