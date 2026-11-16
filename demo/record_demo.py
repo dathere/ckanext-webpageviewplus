@@ -305,18 +305,21 @@ def main():
         page.goto(view_url("wvp-features", "A page that refuses to be framed",
                            "Interactive preset"))
         page.wait_for_timeout(800)
-        shot = page.locator(".webpageviewplus-screenshot img")
-        if shot.count():
-            caption(page, "GitHub refuses to be framed: instead of a blank frame, a card "
-                          "with a screenshot taken in the background")
-        else:
-            caption(page, "GitHub refuses to be framed: instead of a blank frame, a card "
-                          "that says so, with Open in new tab")
-        page.locator(".webpageviewplus-refused").evaluate(
-            "c => window.scrollTo(0, c.getBoundingClientRect().top + window.scrollY - 70)")
-        page.wait_for_timeout(1500)
-        scroll(page, 500, steps=20, pause=60)
-        page.wait_for_timeout(2000)
+        card = page.locator(".webpageviewplus-refused")
+        # No card without frameability_check (or before the check is stored):
+        # the view is a blank frame then, so leave the scene out.
+        if card.count():
+            if page.locator(".webpageviewplus-screenshot img").count():
+                caption(page, "GitHub refuses to be framed: instead of a blank frame, a card "
+                              "with a screenshot taken in the background")
+            else:
+                caption(page, "GitHub refuses to be framed: instead of a blank frame, a card "
+                              "that says so, with Open in new tab")
+            card.evaluate(
+                "c => window.scrollTo(0, c.getBoundingClientRect().top + window.scrollY - 70)")
+            page.wait_for_timeout(1500)
+            scroll(page, 500, steps=20, pause=60)
+            page.wait_for_timeout(2000)
 
         # 7. Thumbnails in the resource list (webpage_view_plus_thumbnails).
         page.goto(B + "/dataset/wvp-features")
