@@ -6,7 +6,7 @@
   {% if not shows %}
     {{ _('Another view of this resource decides it.') }}
   {% else %}
-    {% if shows.src %}<img src="{{ shows.src }}" width="160" height="90" alt="" class="webpageviewplus-manage-image"><br>{% endif %}
+    {% if shows.src %}<img src="{{ shows.src }}" width="160" height="90" alt="" class="webpageviewplus-manage-image">{% endif %}
     {%- if shows.kind == 'thumbnail' -%}{{ _('The stored thumbnail') }}
     {%- elif shows.kind == 'screenshot' -%}{{ _('The screenshot') }}
     {%- elif shows.kind == 'logo' -%}{{ _("{service}'s logo").format(service=shows.service) }}

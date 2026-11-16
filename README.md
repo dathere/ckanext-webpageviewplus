@@ -53,7 +53,7 @@ for everyone who opens the view, no upload needed. This extension:
 
 **It makes embedded pages look and work better.** Heights that fit the page, a control bar,
 help for editors pasting links from well-known services, and a card explaining why a page
-can't be shown instead of a blank box. It works on phones and tablets, and with keyboards and
+can't be shown instead of a blank box, optionally with a screenshot of it. It works on phones and tablets, and with keyboards and
 screen readers.
 
 **It shows PDFs everywhere.** With a separate domain for uploads, the PDF (Plus) view shows
@@ -76,9 +76,9 @@ loading third-party pages, and opt in to anonymous view counts.
 | Loading | right away | when scrolled into view; on request for visitors saving data; optionally only after the visitor agrees |
 | Controls | CKAN's Fullscreen and Embed links | the same, plus a bar under the view: Open in new tab, Fullscreen (Expand on iPhone), Reload, Share |
 | Accessibility | a generic "Webpage view" title | the view's title read out, a skip link, announcements, works at 400% zoom |
-| Pages that can't be shown | a blank frame | a card saying why, with Open in new tab |
+| Pages that can't be shown | a blank frame | a card saying why, with Open in new tab, and optionally a screenshot of the page |
 | Editor help | none | paste a link from one of 30 well-known services and the form fills in the embed settings; optional warning when a site refuses to be embedded |
-| Resource list | a format label | optionally a thumbnail: an image the editor picks, the page's own preview image, an Office file's preview picture, a PDF's first page, or the service's thumbnail or logo |
+| Resource list | a format label | optionally a thumbnail: an image the editor picks, the page's own preview image, an Office file's preview picture, a PDF's first page, a screenshot, or the service's thumbnail or logo, managed from a Thumbnails tab on each dataset and in the admin pages |
 | Finding broken views | none | one command lists views (core's too) whose page is gone or refuses to be embedded |
 | Telemetry | none | none by default; opt-in view counting |
 | Languages | CKAN's | English, German, Spanish, French, Italian, Japanese and Brazilian Portuguese |
@@ -388,8 +388,16 @@ view says it counts visits. See [Opt-in view counting](#opt-in-view-counting).
 (`pip install "ckanext-webpageviewplus[thumbnails]"`) and add `webpage_view_plus_thumbnails` to
 `ckan.plugins` after `webpage_view_plus`. A dataset's resource list then shows a small image,
 instead of the format icon, beside each resource with a Website (Plus) or PDF (Plus) view. With
-`thumbnail_fetch = true`, CKAN also takes the page's own preview image when a view is saved. See
-[Thumbnails in the resource list](#thumbnails-in-the-resource-list).
+`thumbnail_fetch = true`, CKAN also takes the page's own preview image when a view is saved.
+Editors manage them on a Thumbnails tab on each dataset, and sysadmins on one in the admin pages.
+See [Thumbnails in the resource list](#thumbnails-in-the-resource-list) and
+[Managing thumbnails and screenshots](#managing-thumbnails-and-screenshots).
+
+**Screenshots of pages that refuse framing.** With thumbnails, `frameability_check` and a
+`screenshot_backend` (Cloudflare Browser Run, Microlink, or your own Gotenberg container), a
+view whose page refuses to be embedded shows a screenshot of it on its card, and the resource
+list uses it as the thumbnail. Screenshots are taken in the background, never while a page
+renders. See [Screenshots of pages that refuse framing](#screenshots-of-pages-that-refuse-framing).
 
 **Show PDFs.** Add `pdf_view_plus` to `ckan.plugins` after `webpage_view_plus`, on a site with a
 separate domain for uploads. PDF resources then get a PDF (Plus) view: PDF.js, which ships with
@@ -1372,6 +1380,8 @@ page, and the resource list uses it as the thumbnail when nothing else provides 
 image or the page's own preview image comes first; the screenshot comes before a service's
 logo). No resources are added: screenshots are stored per view, like thumbnails.
 
+<img src="https://raw.githubusercontent.com/dathere/ckanext-webpageviewplus/main/docs/screenshot-card.png" width="715" alt="A view of github.com/ckan/ckan, which refuses to be framed: the card says github.com doesn't allow its pages to be shown inside other sites, shows a screenshot of the repository page taken on November 16, 2026, and has an Open in new tab button">
+
 Screenshots are taken in the background, never while a page renders:
 
 - **After a save.** Saving a view whose page refuses framing, and that has no screenshot of
@@ -1463,6 +1473,10 @@ With the `webpage_view_plus_thumbnails` plugin, two pages show what each Website
   remove the copies for the ticked views, or for up to 500 views a filter shows at a time;
   removing a whole filter's copies asks first. A sysadmin's requests skip the wait between
   screenshots of a view.
+
+<img src="https://raw.githubusercontent.com/dathere/ckanext-webpageviewplus/main/docs/manage-dataset.png" width="715" alt="A dataset's Thumbnails tab: for each view, what the resource list shows (a screenshot of a GitHub page, YouTube's logo, Datawrapper's name), the stored thumbnail, the screenshot's state, and buttons to take a new screenshot, remake the thumbnail, remove it, or turn automatic thumbnails off">
+
+<img src="https://raw.githubusercontent.com/dathere/ckanext-webpageviewplus/main/docs/manage-admin.png" width="715" alt="The admin pages' Thumbnails tab: the screenshot service (Gotenberg, a worker reads the queue, the allowance not used up, the last screenshot, no failures, refuses private addresses), a filter and dataset search, buttons for the ticked views, and the first view's row">
 
 A removed copy is made again at the view's next save, `check-views` run or refresh, unless the
 view turns automatic thumbnails off. A PDF's first page is the exception: it's drawn in the
@@ -1752,6 +1766,7 @@ All optional. See `ckanext/webpageviewplus/config_declaration.yaml` for details.
 | `ckan webpageviewplus migrate [--dry-run] [--uploads-only] [--preset NAME] [--dataset NAME]` | Convert `webpage_view` views, see [Migrating from webpage_view](#migrating-from-webpage_view) |
 | `ckan webpageviewplus migrate-pdf [--dry-run]` | Convert ckanext-pdfview's `pdf_view` views to PDF (Plus), see [PDF views](#pdf-views) |
 | `ckan webpageviewplus check-views [--dataset NAME] [--all] [--json] [--timeout S] [--no-store]` | List views whose page can't be shown, see [Finding broken views](#finding-broken-views); also remakes thumbnails and queues missing screenshots, except with `--no-store`. Run it weekly from cron |
+| `ckan webpageviewplus screenshots [--refresh] [--dry-run]` | Take screenshots of pages that refuse framing for views with none or an old one, see [Screenshots of pages that refuse framing](#screenshots-of-pages-that-refuse-framing). Run it daily from cron |
 | `ckan webpageviewplus purge-stats` | Delete view counts and reported hosts older than the retention period. Run it daily from cron |
 | `ckan webpageviewplus stats-summary [--limit N]` | Site-wide view counts, busiest first |
 | `ckan webpageviewplus connections [--limit N]` | Hosts uploaded pages were seen contacting, site-wide |
