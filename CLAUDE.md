@@ -130,8 +130,8 @@ order now being built:
 12. In progress (branch `screenshots`, unreleased): screenshots of pages that refuse framing
    (spec section "Proposed: Screenshots of pages that refuse framing", revision 3; its Build
    order gives the steps). Steps 1 and 2 built: `screenshots.py` below. Next: step 3, the
-   management interface (approved 2026-11-15, question 10): actions built (`manage.py` below);
-   next the dataset page, the admin tab, browser tests with axe. `check-views` queues blocked
+   management interface (approved 2026-11-15, question 10): actions and the dataset's
+   Thumbnails page built (`manage.py` below); next the admin tab, browser tests with axe. `check-views` queues blocked
    views with no screenshot (`after_check(..., back_off=True)`).
 
 ## The security model (read before touching frame, validator, content or download code)
@@ -492,6 +492,15 @@ order now being built:
   skip_cooldown)`. Rows read `thumbnails.for_resource` for what the list shows and
   `screenshots.panel` for the screenshot state; both cache on `g`, so tests drop
   `g.webpageviewplus_thumbnails`/`_screenshots` between calls (`tests/test_manage.py`).
+  The dataset page (`manage.blueprint`, `/dataset/<id>/thumbnails`, `package_update`; a tab added
+  by `thumbnail_templates/package/edit_base.html` after `super()`) renders
+  `thumbnail_templates/webpageviewplus/manage_dataset.html` and posts one form per row (`do` =
+  screenshot/refresh/remove/pick/auto_off/auto_on) back to itself, then redirects. CKAN exempts
+  extension blueprints from CSRF by default, so every POST view calls `manage.protect_form()`
+  (skipped for API-token requests, as CKAN does); tests post with `REMOTE_USER` and one
+  `app.test_client()` so the session keeping the `_csrf_token` survives. Narrow screens stack
+  rows by CSS (`thumbnails.css`, `data-label`). Strings under `thumbnail_templates/` are
+  extracted since `setup.py` lists that folder.
 - `tests/fixtures/qsv_protocol.html` speaks the qsv messages; `resize_message.html` reports its
   height with the generic message only (both seeded in `wvp-browser` by `browser_tests/seed.py`). It's uploaded to the `wvp-demo`
   dataset with three views (`data-schematic` auto, `interactive` auto, `interactive` fixed),
