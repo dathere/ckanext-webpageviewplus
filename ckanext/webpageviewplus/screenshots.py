@@ -25,6 +25,8 @@ else, the page becomes frameable, or the view stops qualifying.
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import dataclasses
 import datetime
 import hashlib
@@ -86,6 +88,17 @@ PAGE_FAULTS = ("page_failed", "no_image")
 UNSAFE_SECONDS = 5 * 60
 _REDIS_PREFIX = "webpageviewplus:screenshots:"
 # Common cookie-consent banners, hidden on backends that don't block them.
+# Titles of bot challenge pages (lower case), for the one backend that
+# reports the page's title: a challenge may answer 200.
+CHALLENGE_TITLES = frozenset((
+    "just a moment...",
+    "attention required! | cloudflare",
+    "please wait...",
+    "access denied",
+    "verifying you are human. this may take a few seconds.",
+    "ddos-guard",
+    "checking your browser before accessing",
+))
 BANNER_CSS = (
     "#onetrust-consent-sdk,#CybotCookiebotDialog,#usercentrics-root,"
     "#didomi-host,.cc-window,#cookie-law-info-bar,#cookiescript_injected,"
@@ -212,10 +225,14 @@ def _retry_at(answer: Answer, fallback: float) -> float:
 
 
 def _cloudflare(url: str) -> Shot:
-    endpoint = "https://api.cloudflare.com/client/v4/accounts/{}/browser-run/screenshot".format(
+    # /snapshot, not /screenshot: one call gives the screenshot and the
+    # page's own status and title as Cloudflare's browser saw them, so a bot
+    # challenge shown to it (and not to CKAN's re-check) is never kept.
+    endpoint = "https://api.cloudflare.com/client/v4/accounts/{}/browser-run/snapshot".format(
         settings.cloudflare_account_id())
     body = {
         "url": url,
+        "formats": ["screenshot", "markdown"],
         "viewport": {"width": VIEWPORT[0], "height": VIEWPORT[1], "deviceScaleFactor": 1},
         "screenshotOptions": {"type": "jpeg", "quality": CAPTURE_QUALITY},
         "gotoOptions": {"waitUntil": "networkidle2", "timeout": 45000},
@@ -230,8 +247,6 @@ def _cloudflare(url: str) -> Shot:
         params={"cacheTTL": "0"},
         json=body,
     )
-    if answer.status == 200 and _is_image(answer):
-        return Shot(answer.body)
     if answer.status == 429:
         # Workers Free: 10 browser minutes a UTC day, and 1 request every
         # 10 seconds; only the daily limit says "today".
@@ -241,10 +256,30 @@ def _cloudflare(url: str) -> Shot:
     # a page that can't load is a 422.
     if answer.status in (400, 401, 403, 404) or answer.status >= 500:
         raise Failure("backend_error")
-    if answer.status == 200:
+    if answer.status == 422:
+        # The page couldn't be loaded (DNS, a dropped connection).
+        raise Failure("unreachable")
+    try:
+        found = json.loads(answer.body)
+    except ValueError:
+        raise Failure("backend_error")
+    if not isinstance(found, dict) or answer.status != 200 or not found.get("success"):
+        raise Failure("backend_error")
+    meta = found.get("meta") if isinstance(found.get("meta"), dict) else {}
+    status, title = meta.get("status"), meta.get("title")
+    if isinstance(status, int) and not isinstance(status, bool) and status >= 400:
+        raise Failure("page_failed")
+    if isinstance(title, str) and title.strip().lower() in CHALLENGE_TITLES:
+        raise Failure("page_failed")
+    result = found.get("result") if isinstance(found.get("result"), dict) else {}
+    shot = result.get("screenshot")
+    try:
+        data = base64.b64decode(shot, validate=True) if isinstance(shot, str) else b""
+    except (ValueError, binascii.Error):
+        data = b""
+    if not data:
         raise Failure("no_image")
-    # 422: the page couldn't be loaded (DNS, a dropped connection).
-    raise Failure("unreachable")
+    return Shot(data)
 
 
 def _microlink_host(url: str) -> bool:

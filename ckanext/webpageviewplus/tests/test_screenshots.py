@@ -363,23 +363,37 @@ CLOUDFLARE = GOTENBERG[:2] + [
 ]
 
 
+def _snapshot(image=None, status=200, title="Report", success=True):
+    """Cloudflare's /snapshot answer: the screenshot in base64, and the
+    page's own status and title as its browser saw them."""
+    import base64
+    shot = base64.b64encode(_jpeg() if image is None else image).decode()
+    return screenshots.Answer(200, {"content-type": "application/json"}, json.dumps({
+        "success": success,
+        "result": {"screenshot": shot, "markdown": "# Report"},
+        "meta": {"status": status, "title": title},
+    }).encode())
+
+
 @_marks(CLOUDFLARE)
 class TestCloudflare:
     def test_request(self, monkeypatch):
-        backend = Backend(lambda *a: _image(_jpeg()))
+        backend = Backend(lambda *a: _snapshot())
         monkeypatch.setattr(screenshots, "_send", backend)
         _, _, view = _setup()
         assert screenshots.capture(view["id"]) == "taken"
         (method, url, kwargs), = backend.calls
         assert method == "POST" and kwargs["guarded"]
         assert url == ("https://api.cloudflare.com/client/v4/accounts/" + ACCOUNT
-                       + "/browser-run/screenshot")
+                       + "/browser-run/snapshot")
         # The token in a header, never in the URL or the body.
         assert kwargs["headers"]["Authorization"] == "Bearer secret-token"
         assert "secret-token" not in url and "secret-token" not in json.dumps(kwargs["json"])
         assert kwargs["json"]["url"] == PAGE
         assert kwargs["json"]["viewport"]["width"] == 1350
         assert kwargs["json"]["screenshotOptions"]["type"] == "jpeg"
+        assert "screenshot" in kwargs["json"]["formats"]
+        assert screenshots.stored(view["id"])["digest"]
         # Cloudflare's body refuses unknown keys: cacheTTL is a query parameter.
         assert kwargs["params"] == {"cacheTTL": "0"} and "cacheTTL" not in kwargs["json"]
 
@@ -410,7 +424,7 @@ class TestCloudflare:
         def answer(*args, **kwargs):
             helpers.call_action("resource_view_delete",
                                 context={"user": factories.Sysadmin()["name"]}, id=view["id"])
-            return _image(_jpeg())
+            return _snapshot()
         monkeypatch.setattr(screenshots, "_send", Backend(answer))
         assert screenshots.capture(view["id"]) == "skipped"
 
@@ -433,6 +447,23 @@ class TestCloudflare:
                             Backend(lambda *a: screenshots.Answer(status, {}, b"{}")))
         _, _, view = _setup()
         assert screenshots.capture(view["id"]) == kind
+
+
+    @pytest.mark.parametrize("answer, kind", [
+        # A bot challenge shown to Cloudflare's browser, not to CKAN's re-check.
+        (lambda: _snapshot(status=403), "page_failed"),
+        (lambda: _snapshot(status=503), "page_failed"),
+        (lambda: _snapshot(title="Just a moment..."), "page_failed"),
+        (lambda: _snapshot(success=False), "backend_error"),
+        (lambda: _snapshot(image=b""), "no_image"),
+        (lambda: screenshots.Answer(200, {}, json.dumps({
+            "success": True, "result": {"screenshot": "not base64!"}}).encode()), "no_image"),
+    ])
+    def test_challenges_and_odd_answers(self, monkeypatch, answer, kind):
+        monkeypatch.setattr(screenshots, "_send", Backend(lambda *a: answer()))
+        _, _, view = _setup()
+        assert screenshots.capture(view["id"]) == kind
+        assert screenshots.stored(view["id"])["image"] is None
 
 
 MICROLINK = GOTENBERG[:2] + [
