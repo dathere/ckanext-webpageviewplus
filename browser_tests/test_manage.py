@@ -46,9 +46,15 @@ def test_narrow_screen(login):
     page = login("editor")
     page.set_viewport_size({"width": 320, "height": 800})
     page.goto(DATASET_PAGE)
-    overflow = page.evaluate(
-        "document.documentElement.scrollWidth - document.documentElement.clientWidth")
-    assert overflow <= 0
+    # The extension's content only: CKAN's own page chrome isn't ours.
+    wider = page.evaluate("""() => {
+        const width = document.documentElement.clientWidth;
+        return [...document.querySelectorAll(".webpageviewplus-manage *")]
+            .filter(e => e.getBoundingClientRect().right > width + 0.5)
+            .map(e => e.tagName.toLowerCase() + "." + [...e.classList].join(".")
+                 + " " + Math.round(e.getBoundingClientRect().right));
+    }""")
+    assert wider == []
     _no_violations(page)
 
 
