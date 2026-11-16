@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+
+{% block subtitle %}{{ _('Thumbnails') }} {{ g.template_title_delimiter }} {{ super() }}{% endblock %}
+
+{% block primary_content_inner %}
+  <div class="webpageviewplus-manage">
+    <h2>{{ _('Remove the copies?') }}</h2>
+    <p>{{ ungettext('This removes the stored thumbnail and screenshot of {count} view.', 'This removes the stored thumbnails and screenshots of {count} views.', count).format(count=count) }}
+      {% if total > count %}{{ _('The other {rest} views this filter shows are left as they are.').format(rest=total - count) }}{% endif %}</p>
+    <p>{{ _("They're made again at each view's next save or refresh. A hosted screenshot service may take days to take them all again within its allowance.") }}</p>
+    <form method="post" action="{{ h.url_for('webpageviewplus_manage.admin') }}">
+      {{ h.csrf_input() }}
+      <input type="hidden" name="filter" value="{{ args.filter }}">
+      <input type="hidden" name="q" value="{{ args.q }}">
+      <input type="hidden" name="scope" value="all">
+      <input type="hidden" name="confirmed" value="1">
+      <button type="submit" name="do" value="remove" class="btn btn-danger">{{ _('Remove them') }}</button>
+      <a class="btn btn-default btn-secondary" href="{{ h.url_for('webpageviewplus_manage.admin', filter=args.filter, q=args.q or None) }}">{{ _('Cancel') }}</a>
+    </form>
+  </div>
+{% endblock %}

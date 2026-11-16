@@ -628,3 +628,110 @@ def _change(view: model.ResourceView, do: str, form: Any,
         return (_("Automatic thumbnails are off for this view.") if do == "auto_off"
                 else _("Automatic thumbnails are on for this view.")), True
     toolkit.abort(400, _("Unknown action."))
+
+
+# --- The admin tab ---------------------------------------------------------------
+
+ADMIN_PATH = "/ckan-admin/thumbnails"
+# What each bulk change's answers are called on the page, in the order shown.
+OUTCOMES = ("queued", "removed", "pending", "cooldown", "no_target", "first_page", "none",
+            "not_found", "error")
+
+
+def _sysadmin_only() -> None:
+    if not authz.is_sysadmin(current_user.name):
+        toolkit.abort(403, toolkit._("Need to be system administrator to administer"))
+
+
+def _listing_args(source: Any) -> dict[str, Any]:
+    return {"filter": source.get("filter") or "all", "q": (source.get("q") or "").strip(),
+            "page": source.get("page") or 1}
+
+
+@blueprint.route(ADMIN_PATH, methods=["GET"])
+def admin() -> str:
+    _sysadmin_only()
+    args = _listing_args(request.args)
+    try:
+        status = toolkit.get_action("webpageviewplus_thumbnail_status")(_context(), args)
+    except toolkit.ValidationError:
+        toolkit.abort(400, toolkit._("Unknown filter."))
+    pages = max(1, -(-status["count"] // status["page_size"]))
+    return toolkit.render("webpageviewplus/manage_admin.html", {
+        "status": status,
+        "backend": status["backend"],
+        "args": args,
+        "pages": pages,
+        "filters": FILTERS,
+        "max_ids": MAX_IDS,
+    })
+
+
+def _summary(results: dict[str, str]) -> str:
+    _ = toolkit._
+    labels = {
+        # TRANSLATORS: outcome labels in "label: number" pairs, so no plural forms are needed.
+        "queued": _("Queued"),
+        "removed": _("Removed"),
+        "pending": _("Already pending"),
+        "cooldown": _("Waiting for the cooldown"),
+        "no_target": _("No screenshot for this view"),
+        "first_page": _("Drawn in the view's form"),
+        "none": _("Nothing to do"),
+        "not_found": _("Not found"),
+        "error": _("Couldn't be queued"),
+    }
+    counts = {outcome: 0 for outcome in OUTCOMES}
+    for outcome in results.values():
+        counts[outcome if outcome in counts else "error"] += 1
+    return " ".join("{}: {}.".format(labels[o], counts[o]) for o in OUTCOMES if counts[o])
+
+
+@blueprint.route(ADMIN_PATH, methods=["POST"])
+def admin_change() -> Any:
+    protect_form()
+    _sysadmin_only()
+    _ = toolkit._
+    args = _listing_args(request.form)
+    back = toolkit.redirect_to("webpageviewplus_manage.admin", **{
+        key: value for key, value in args.items() if value and value not in ("all", 1, "1")})
+    do = request.form.get("do") or ""
+    if do == "recheck":
+        if settings.screenshot_backend() != "gotenberg":
+            toolkit.abort(400, _("Unknown action."))
+        if screenshots.gotenberg_safe(force=True):
+            toolkit.h.flash_success(_("Gotenberg refuses private addresses, so screenshots "
+                                      "are taken."))
+        else:
+            toolkit.h.flash_error(_("Gotenberg doesn't refuse private addresses, or couldn't "
+                                    "be reached, so no screenshots are taken."))
+        return back
+    if request.form.get("scope") == "all":
+        listing = toolkit.get_action("webpageviewplus_thumbnail_status")(
+            _context(), dict(args, page=1))
+        ids = listing["ids"]
+        # Removing a whole filter's copies can cost days of a hosted
+        # service's allowance to take again: ask first (no script needed).
+        if do == "remove" and ids and request.form.get("confirmed") != "1":
+            return toolkit.render("webpageviewplus/manage_confirm.html", {
+                "args": args, "count": len(ids), "total": listing["count"]})
+    else:
+        ids = request.form.getlist("ids")
+    if not ids:
+        toolkit.h.flash_error(_("Tick at least one view."))
+        return back
+    actions = {
+        "screenshot": ("webpageviewplus_screenshot_request", {}),
+        "refresh": ("webpageviewplus_thumbnail_refresh", {}),
+        "remove": ("webpageviewplus_thumbnail_delete", {"remove": "both"}),
+    }
+    if do not in actions:
+        toolkit.abort(400, _("Unknown action."))
+    name, extra = actions[do]
+    try:
+        answer = toolkit.get_action(name)(_context(), dict(extra, ids=ids[:MAX_IDS]))
+    except toolkit.ValidationError as e:
+        toolkit.h.flash_error(_errors(e))
+        return back
+    toolkit.h.flash_success(_summary(answer["results"]))
+    return back

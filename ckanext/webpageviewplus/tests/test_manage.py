@@ -387,3 +387,88 @@ class TestDatasetPage:
         app.post(_page(dataset), data={"view_id": view["id"], "do": "pick",
                                        "thumbnail_resource": ""}, headers=headers)
         assert not model.ResourceView.get(view["id"]).config.get("thumbnail_resource")
+
+
+ADMIN = "/ckan-admin/thumbnails"
+
+
+@_marks(GOTENBERG)
+class TestAdminPage:
+    def test_sysadmins_only(self, app):
+        dataset, _, view = _setup()
+        sysadmin = factories.SysadminWithToken()
+        body = app.get(ADMIN, headers={"Authorization": sysadmin["token"]},
+                       query_string={"q": dataset["name"]}).body
+        assert view["id"] in body and "Refuses private addresses" in body
+        assert 'href="{}"'.format(ADMIN) in app.get(
+            "/ckan-admin", headers={"Authorization": sysadmin["token"]}).body
+        editor = _member(dataset, "editor")
+        app.get(ADMIN, headers={"Authorization": editor["token"]}, status=403)
+        app.get(ADMIN, status=403)
+
+    def test_never_calls_the_backend(self, app, monkeypatch, redis):
+        backend = _gotenberg()
+        monkeypatch.setattr(screenshots, "_send", backend)
+        sysadmin = factories.SysadminWithToken()
+        assert "Not checked recently." in app.get(
+            ADMIN, headers={"Authorization": sysadmin["token"]}).body
+        assert backend.calls == []
+
+    def test_recheck_needs_its_token(self, app, monkeypatch, redis):
+        backend = _gotenberg()
+        monkeypatch.setattr(screenshots, "_send", backend)
+        sysadmin = factories.Sysadmin()
+        environ = {"REMOTE_USER": sysadmin["name"]}
+        app.post(ADMIN, data={"do": "recheck"}, extra_environ=environ, status=400)
+        assert backend.calls == []
+        client = app.test_client()
+        token = _token(client.get(ADMIN, extra_environ=environ).body)
+        client.post(ADMIN, data={"do": "recheck", "_csrf_token": token}, extra_environ=environ)
+        assert sorted(backend.form_urls()) == sorted(screenshots.CANARIES)
+        assert "Yes, checked in the last hour." in client.get(ADMIN, extra_environ=environ).body
+
+    def test_ticked_and_whole_filter(self, app, monkeypatch, jobs):
+        dataset, resource, first = _setup()
+        second = _view(resource["id"])
+        from ckanext.webpageviewplus.tests.test_screenshots import _blocked
+        _blocked(second["id"])
+        sysadmin = factories.SysadminWithToken()
+        headers = {"Authorization": sysadmin["token"]}
+        answer = app.post(ADMIN, data={"do": "screenshot", "ids": [first["id"]],
+                                       "q": dataset["name"]}, headers=headers,
+                          follow_redirects=False)
+        assert answer.status_code == 302 and "q=" in answer.headers["Location"]
+        assert [args[0] for _, args, _ in jobs] == [first["id"]]
+        app.post(ADMIN, data={"do": "screenshot", "scope": "all", "filter": "blocked",
+                              "q": dataset["name"]}, headers=headers)
+        # The first is pending already; the filter's other view is queued.
+        assert [args[0] for _, args, _ in jobs] == [first["id"], second["id"]]
+
+    def test_nothing_ticked(self, app, jobs):
+        sysadmin = factories.SysadminWithToken()
+        body = app.post(ADMIN, data={"do": "screenshot"},
+                        headers={"Authorization": sysadmin["token"]}).body
+        assert "Tick at least one view." in body and jobs == []
+
+
+@_marks(GOTENBERG)
+class TestAdminRemoveAll:
+    def test_whole_filter_asks_first(self, app, monkeypatch):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        dataset, _, view = _setup()
+        screenshots.capture(view["id"])
+        headers = {"Authorization": factories.SysadminWithToken()["token"]}
+        form = {"do": "remove", "scope": "all", "q": dataset["name"]}
+        body = app.post(ADMIN, data=form, headers=headers).body
+        assert "Remove the copies?" in body and 'name="confirmed" value="1"' in body
+        assert screenshots.stored(view["id"])["digest"]
+        app.post(ADMIN, data=dict(form, confirmed="1"), headers=headers)
+        assert screenshots.stored_meta(view["id"])["digest"] is None
+
+    def test_ticked_rows_need_no_second_step(self, app, monkeypatch):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        _, _, view = _setup()
+        screenshots.capture(view["id"])
+        headers = {"Authorization": factories.SysadminWithToken()["token"]}
+        app.post(ADMIN, data={"do": "remove", "ids": [view["id"]]}, headers=headers)
+        assert screenshots.stored_meta(view["id"])["digest"] is None

@@ -101,3 +101,45 @@
     font-weight: bold;
   }
 }
+
+/* The admin tab (manage_admin.html). */
+.webpageviewplus-manage-backend dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+}
+.webpageviewplus-manage-backend dd {
+  margin: 0;
+}
+.webpageviewplus-manage-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.webpageviewplus-manage-filter select,
+.webpageviewplus-manage-filter input {
+  width: auto;
+  max-width: 100%;
+}
+.webpageviewplus-manage-bulk {
+  margin: 0.5rem 0 1rem;
+}
+.webpageviewplus-manage-bulk legend {
+  font-size: 1rem;
+  font-weight: bold;
+}
+.webpageviewplus-manage-pages {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+@media (max-width: 767.98px) {
+  .webpageviewplus-manage-backend dl {
+    grid-template-columns: 1fr;
+  }
+}
+.webpageviewplus-manage section {
+  margin-bottom: 1.5rem;
+}
