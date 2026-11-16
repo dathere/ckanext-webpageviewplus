@@ -120,5 +120,10 @@ def login(page):
         page.fill("#field-password", password)
         with page.expect_navigation():
             page.locator("form button[type=submit].btn-primary").click()
+        # A refused login renders the login page again, with a message.
+        if "/user/login" in page.url:
+            error = page.locator(".alert, .error-explanation, .flash-messages").all_inner_texts()
+            pytest.fail("couldn't log in as wvp-test-{} ({}): {}".format(
+                role, page.url, " ".join(error) or page.title()))
         return page
     return log_in
