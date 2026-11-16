@@ -318,41 +318,62 @@ def _token(body):
     return re.search(r'name="_csrf_token" value="([^"]+)"', body).group(1)
 
 
+PASSWORD = "Correct-horse-battery-1"
+# CKAN's test config turns CSRF off (2.11 and 2.12); these tests need it on.
+CSRF = pytest.mark.ckan_config("WTF_CSRF_ENABLED", "true")
+
+
+def _session(app, user):
+    """A client logged in through the login form, so requests carry a
+    session cookie, as a browser's do (CKAN 2.12 dropped REMOTE_USER, and
+    API-token requests skip CSRF)."""
+    client = app.test_client()
+    token = _token(client.get("/user/login").body)
+    client.post("/user/login", data={"login": user["name"], "password": PASSWORD,
+                                     "_csrf_token": token})
+    return client
+
+
+def _editor_with_password(dataset):
+    user = factories.User(password=PASSWORD)
+    helpers.call_action("organization_member_create", context={"ignore_auth": True},
+                        id=dataset["owner_org"], username=user["name"], role="editor")
+    return user
+
+
 @_marks(GOTENBERG)
 class TestDatasetPage:
     def test_who_sees_it(self, app):
         dataset, _, view = _setup()
         editor = _member(dataset, "editor")
-        body = app.get(_page(dataset), extra_environ={"REMOTE_USER": editor["name"]}).body
+        body = app.get(_page(dataset), headers={"Authorization": editor["token"]}).body
         assert view["id"] in body and "Remake the thumbnail" in body
-        for user in (_member(dataset, "member"), None):
-            environ = {"REMOTE_USER": user["name"]} if user else {}
-            assert app.get(_page(dataset), extra_environ=environ, status=403)
+        member = _member(dataset, "member")
+        app.get(_page(dataset), headers={"Authorization": member["token"]}, status=403)
+        app.get(_page(dataset), status=403)
 
     def test_tab_on_the_edit_pages(self, app):
         dataset, _, _ = _setup()
         editor = _member(dataset, "editor")
         body = app.get("/dataset/edit/{}".format(dataset["name"]),
-                       extra_environ={"REMOTE_USER": editor["name"]}).body
+                       headers={"Authorization": editor["token"]}).body
         assert 'href="{}"'.format(_page(dataset)) in body
 
+    @CSRF
     def test_form_needs_its_token(self, app, monkeypatch):
         monkeypatch.setattr(screenshots, "_send", _gotenberg())
         dataset, _, view = _setup()
         screenshots.capture(view["id"])
-        editor = _member(dataset, "editor")
-        environ = {"REMOTE_USER": editor["name"]}
+        client = _session(app, _editor_with_password(dataset))
         form = {"view_id": view["id"], "do": "remove"}
-        app.post(_page(dataset), data=form, extra_environ=environ, status=400)
+        assert client.post(_page(dataset), data=form).status_code == 400
         assert screenshots.stored(view["id"])["digest"]
-        # One client, so the session holding the token is kept.
-        client = app.test_client()
-        token = _token(client.get(_page(dataset), extra_environ=environ).body)
+        token = _token(client.get(_page(dataset)).body)
         answer = client.post(_page(dataset), data=dict(form, _csrf_token=token),
-                             extra_environ=environ, follow_redirects=False)
+                             follow_redirects=False)
         assert answer.status_code == 302 and answer.headers["Location"].endswith(_page(dataset))
         assert screenshots.stored_meta(view["id"])["digest"] is None
-        assert "Removed." in client.get(_page(dataset), extra_environ=environ).body
+        assert "Removed." in client.get(_page(dataset)).body
 
     def test_api_token_needs_no_form_token(self, app, monkeypatch):
         dataset, _, view = _setup()
@@ -414,18 +435,17 @@ class TestAdminPage:
             ADMIN, headers={"Authorization": sysadmin["token"]}).body
         assert backend.calls == []
 
+    @CSRF
     def test_recheck_needs_its_token(self, app, monkeypatch, redis):
         backend = _gotenberg()
         monkeypatch.setattr(screenshots, "_send", backend)
-        sysadmin = factories.Sysadmin()
-        environ = {"REMOTE_USER": sysadmin["name"]}
-        app.post(ADMIN, data={"do": "recheck"}, extra_environ=environ, status=400)
+        client = _session(app, factories.Sysadmin(password=PASSWORD))
+        assert client.post(ADMIN, data={"do": "recheck"}).status_code == 400
         assert backend.calls == []
-        client = app.test_client()
-        token = _token(client.get(ADMIN, extra_environ=environ).body)
-        client.post(ADMIN, data={"do": "recheck", "_csrf_token": token}, extra_environ=environ)
+        token = _token(client.get(ADMIN).body)
+        client.post(ADMIN, data={"do": "recheck", "_csrf_token": token})
         assert sorted(backend.form_urls()) == sorted(screenshots.CANARIES)
-        assert "Yes, checked in the last hour." in client.get(ADMIN, extra_environ=environ).body
+        assert "Yes, checked in the last hour." in client.get(ADMIN).body
 
     def test_ticked_and_whole_filter(self, app, monkeypatch, jobs):
         dataset, resource, first = _setup()
