@@ -1435,8 +1435,11 @@ site.
 
 **What a screenshot shows.** The top of the page at 1350 x 940, as an anonymous visitor from
 wherever the backend runs sees it: cookie banners included sometimes (Microlink blocks most;
-for Cloudflare a short built-in list tries to hide the common ones; Gotenberg's aren't hidden), and a bot challenge if
-the site puts one in front of datacentre visitors. A screenshot stops being shown when the page
+for Cloudflare a short built-in list tries to hide the common ones; Gotenberg's aren't hidden).
+A bot challenge, which sites may put in front of datacentre visitors, isn't kept when the page
+answers it with an error status, as Cloudflare's and most others do: that counts as a failed
+attempt. One served as an ordinary page can still be captured; turn the view's automatic
+thumbnails off, pick an image, or remove the screenshot on the dataset's Thumbnails tab. A screenshot stops being shown when the page
 can be framed again, the view points elsewhere, or the view opts out of automatic thumbnails or
 picks one.
 

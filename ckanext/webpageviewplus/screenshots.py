@@ -284,6 +284,11 @@ def _microlink(url: str) -> Shot:
     data = found.get("data")
     if answer.status != 200 or found.get("status") != "success" or not isinstance(data, dict):
         raise Failure("page_failed")
+    # The page's own status: a bot challenge answers 403 or 503, and a
+    # screenshot of one is worse than none.
+    for code in (found.get("statusCode"), data.get("statusCode")):
+        if isinstance(code, int) and not isinstance(code, bool) and code >= 400:
+            raise Failure("page_failed")
     shot_url = ((data.get("screenshot") or {}) if isinstance(data.get("screenshot"), dict)
                 else {}).get("url") or ""
     # From an untrusted answer: only Microlink's own https hosts, guarded,
@@ -309,6 +314,9 @@ def _gotenberg_form(url: str) -> dict[str, tuple[None, str]]:
         # Wait until at most two connections are open, not for full network
         # idle, which pages that poll never reach before Gotenberg's timeout.
         "skipNetworkAlmostIdleEvent": "false",
+        # A 409 when the page itself answers 4xx or 5xx, as bot challenges
+        # do: no screenshot of a challenge. Gotenberg's default, kept explicit.
+        "failOnHttpStatusCodes": "[499,599]",
     }
     return {k: (None, v) for k, v in fields.items()}
 

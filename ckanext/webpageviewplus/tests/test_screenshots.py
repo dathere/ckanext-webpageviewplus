@@ -268,6 +268,11 @@ class TestGotenberg:
         assert Image.open(io.BytesIO(row["image"])).size == (1350, 940)
         assert max(Image.open(io.BytesIO(row["thumb"])).size) <= 320
 
+    def test_error_pages_refused(self):
+        # Gotenberg answers 409 (page_failed) when the page itself answers 4xx/5xx.
+        assert dict(screenshots._gotenberg_form(PAGE))["failOnHttpStatusCodes"] == (
+            None, "[499,599]")
+
     def test_no_recheck(self, monkeypatch, page_still_blocked):
         # Gotenberg fails 4xx and 5xx pages itself (409).
         monkeypatch.setattr(screenshots, "_send", _gotenberg())
@@ -564,6 +569,18 @@ class TestMicrolink:
             400, {}, b'{"status":"fail","code":"EFAILED"}')))
         _, _, view = _setup()
         assert screenshots.capture(view["id"]) == "page_failed"
+
+    @pytest.mark.parametrize("where", ["top", "data"])
+    def test_bot_challenge_not_kept(self, monkeypatch, where):
+        # The page answered 403, as a bot challenge does: no screenshot of it.
+        answer = json.loads(_microlink_answer(IMAGE_URL).body)
+        (answer if where == "top" else answer["data"])["statusCode"] = 403
+        backend = Backend(lambda method, url, kw: screenshots.Answer(
+            200, {"content-type": "application/json"}, json.dumps(answer).encode()))
+        monkeypatch.setattr(screenshots, "_send", backend)
+        _, _, view = _setup()
+        assert screenshots.capture(view["id"]) == "page_failed"
+        assert len(backend.calls) == 1 and screenshots.stored(view["id"])["image"] is None
 
 
 # --- The real _send -----------------------------------------------------------
