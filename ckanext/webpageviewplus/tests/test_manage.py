@@ -192,10 +192,13 @@ class TestRequestMany:
             raise RuntimeError("no redis")
         monkeypatch.setattr(screenshots.toolkit, "enqueue_job", broken)
         _, _, first = _setup()
-        _, _, second = _setup(url=OTHER)
+        _, resource, second = _setup(url=OTHER)
+        opted = _view(resource["id"], no_auto_thumbnail="true")
         answer = _call("webpageviewplus_screenshot_request", _sysadmin(),
-                       ids=[first["id"], second["id"]])
-        assert answer["results"] == {first["id"]: "error", second["id"]: "error"}
+                       ids=[first["id"], second["id"], opted["id"], "no-such-view"])
+        # Views queuing wasn't tried for still get their own answers.
+        assert answer["results"] == {first["id"]: "error", second["id"]: "error",
+                                     opted["id"]: "no_target", "no-such-view": "not_found"}
         assert len(calls) == 1
 
 

@@ -325,9 +325,6 @@ def request_screenshots(context: dict[str, Any], data_dict: dict[str, Any]) -> d
     results: dict[str, str] = {}
     broken = False
     for view_id in ids:
-        if broken:
-            results[view_id] = "error"
-            continue
         view = _authorized(view_id, context, (screenshots.VIEW_TYPE,))
         if view is None:
             results[view_id] = "not_found"
@@ -335,6 +332,9 @@ def request_screenshots(context: dict[str, Any], data_dict: dict[str, Any]) -> d
         url = screenshots._view_target(view)
         if not url:
             results[view_id] = "no_target"
+            continue
+        if broken:
+            results[view_id] = "error"
             continue
         try:
             results[view_id] = screenshots.request_job(view.id, url, skip_cooldown=skip)
