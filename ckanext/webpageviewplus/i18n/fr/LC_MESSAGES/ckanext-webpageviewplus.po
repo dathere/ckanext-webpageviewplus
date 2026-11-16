@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-16 02:20+0000\n"
+"POT-Creation-Date: 2026-11-16 02:28+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -41,20 +41,20 @@ msgstr "Les miniatures ne sont pas activées sur ce site"
 msgid "Not a usable image"
 msgstr "Image inutilisable"
 
-#: ckanext/webpageviewplus/actions.py:403 ckanext/webpageviewplus/manage.py:325
+#: ckanext/webpageviewplus/actions.py:403 ckanext/webpageviewplus/manage.py:335
 msgid "This site takes screenshots on a schedule, not on request."
 msgstr "Ce site prend des captures d'écran selon un calendrier, pas à la demande."
 
-#: ckanext/webpageviewplus/actions.py:407 ckanext/webpageviewplus/manage.py:598
+#: ckanext/webpageviewplus/actions.py:407 ckanext/webpageviewplus/manage.py:608
 msgid "This view's page doesn't get a screenshot."
 msgstr "La page de cette vue ne reçoit pas de capture d'écran."
 
-#: ckanext/webpageviewplus/actions.py:413 ckanext/webpageviewplus/manage.py:599
+#: ckanext/webpageviewplus/actions.py:413 ckanext/webpageviewplus/manage.py:609
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:219
 msgid "The screenshot couldn't be queued. Try again later."
 msgstr "La capture n'a pas pu être mise en file d'attente. Réessayez plus tard."
 
-#: ckanext/webpageviewplus/actions.py:417 ckanext/webpageviewplus/manage.py:593
+#: ckanext/webpageviewplus/actions.py:417 ckanext/webpageviewplus/manage.py:603
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:222
 #: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_macros.html:66
 #, python-brace-format
@@ -65,24 +65,25 @@ msgstr[1] "Vous pourrez prendre une nouvelle capture dans {seconds} secondes."
 
 # | msgid "Must be a whole number"
 #: ckanext/webpageviewplus/manage.py:211 ckanext/webpageviewplus/manage.py:213
+#: ckanext/webpageviewplus/manage.py:221
 msgid "Must be a whole number."
 msgstr "Doit être un nombre entier."
 
-#: ckanext/webpageviewplus/manage.py:241 ckanext/webpageviewplus/manage.py:658
+#: ckanext/webpageviewplus/manage.py:249 ckanext/webpageviewplus/manage.py:668
 msgid "Unknown filter."
 msgstr "Filtre inconnu."
 
 # | msgid "Height value"
-#: ckanext/webpageviewplus/manage.py:279 ckanext/webpageviewplus/manage.py:282
+#: ckanext/webpageviewplus/manage.py:289 ckanext/webpageviewplus/manage.py:292
 msgid "Missing value"
 msgstr "Valeur manquante"
 
-#: ckanext/webpageviewplus/manage.py:284
+#: ckanext/webpageviewplus/manage.py:294
 #, python-brace-format
 msgid "At most {count} views at a time."
 msgstr "Au plus {count} vues à la fois."
 
-#: ckanext/webpageviewplus/manage.py:444
+#: ckanext/webpageviewplus/manage.py:454
 #, python-brace-format
 msgid ""
 "No worker reads the {queue} queue, so remakes can't be queued. Remake one"
@@ -92,27 +93,27 @@ msgstr ""
 "pas être mises en file. Régénérez les vues une par une, ou lancez ckan "
 "webpageviewplus check-views."
 
-#: ckanext/webpageviewplus/manage.py:478
+#: ckanext/webpageviewplus/manage.py:488
 msgid "Unknown value."
 msgstr "Valeur inconnue."
 
 # | msgid "PDF view not found"
-#: ckanext/webpageviewplus/manage.py:511 ckanext/webpageviewplus/manage.py:517
+#: ckanext/webpageviewplus/manage.py:521 ckanext/webpageviewplus/manage.py:527
 msgid "Dataset not found"
 msgstr "Jeu de données introuvable"
 
-#: ckanext/webpageviewplus/manage.py:513 ckanext/webpageviewplus/manage.py:572
+#: ckanext/webpageviewplus/manage.py:523 ckanext/webpageviewplus/manage.py:582
 msgid "Not authorized to see this page"
 msgstr "Vous n'êtes pas autorisé à voir cette page"
 
 # | msgid "PDF view not found"
-#: ckanext/webpageviewplus/manage.py:554
+#: ckanext/webpageviewplus/manage.py:564
 msgid "View not found"
 msgstr "Vue introuvable"
 
 # | msgid "" "A screenshot will be taken in the background. Reload this form
 # | later to " "see it."
-#: ckanext/webpageviewplus/manage.py:588
+#: ckanext/webpageviewplus/manage.py:598
 msgid ""
 "A screenshot will be taken in the background. Reload this page later to "
 "see it."
@@ -120,29 +121,29 @@ msgstr ""
 "Une capture d'écran sera prise en arrière-plan. Rechargez cette page plus"
 " tard pour la voir."
 
-#: ckanext/webpageviewplus/manage.py:604
+#: ckanext/webpageviewplus/manage.py:614
 msgid "The thumbnail was remade."
 msgstr "La miniature a été régénérée."
 
-#: ckanext/webpageviewplus/manage.py:605
+#: ckanext/webpageviewplus/manage.py:615
 msgid "The thumbnail couldn't be remade, so the last one is kept."
 msgstr "La miniature n'a pas pu être régénérée, la précédente est donc conservée."
 
-#: ckanext/webpageviewplus/manage.py:606
+#: ckanext/webpageviewplus/manage.py:616
 msgid "There's nothing to make a thumbnail from."
 msgstr "Il n'y a rien à partir de quoi créer une miniature."
 
 # | msgid "The first page is ready. Save the view to use it."
-#: ckanext/webpageviewplus/manage.py:607
+#: ckanext/webpageviewplus/manage.py:617
 msgid "Draw the first page again in the view's form."
 msgstr "Redessinez la première page dans le formulaire de la vue."
 
 # | msgid "The repository couldn't be loaded. Try again later."
-#: ckanext/webpageviewplus/manage.py:608
+#: ckanext/webpageviewplus/manage.py:618
 msgid "The thumbnail couldn't be remade. Try again later."
 msgstr "La miniature n'a pas pu être régénérée. Réessayez plus tard."
 
-#: ckanext/webpageviewplus/manage.py:613
+#: ckanext/webpageviewplus/manage.py:623
 msgid ""
 "Removed. Unless automatic thumbnails are off, a new one is made at the "
 "next save or refresh."
@@ -150,92 +151,102 @@ msgstr ""
 "Supprimé. Sauf si les miniatures automatiques sont désactivées, une "
 "nouvelle est créée au prochain enregistrement ou rafraîchissement."
 
-#: ckanext/webpageviewplus/manage.py:615
+#: ckanext/webpageviewplus/manage.py:625
 msgid "There was nothing to remove."
 msgstr "Il n'y avait rien à supprimer."
 
-#: ckanext/webpageviewplus/manage.py:621
+#: ckanext/webpageviewplus/manage.py:631
 msgid "Pick one of this dataset's images."
 msgstr "Choisissez l'une des images de ce jeu de données."
 
-#: ckanext/webpageviewplus/manage.py:623
+#: ckanext/webpageviewplus/manage.py:633
 msgid "The thumbnail choice is saved."
 msgstr "Le choix de miniature est enregistré."
 
-#: ckanext/webpageviewplus/manage.py:628
+#: ckanext/webpageviewplus/manage.py:638
 msgid "Automatic thumbnails are off for this view."
 msgstr "Les miniatures automatiques sont désactivées pour cette vue."
 
 # | msgid "Thumbnails aren't enabled on this site"
-#: ckanext/webpageviewplus/manage.py:629
+#: ckanext/webpageviewplus/manage.py:639
 msgid "Automatic thumbnails are on for this view."
 msgstr "Les miniatures automatiques sont activées pour cette vue."
 
-#: ckanext/webpageviewplus/manage.py:630 ckanext/webpageviewplus/manage.py:701
-#: ckanext/webpageviewplus/manage.py:729
+#: ckanext/webpageviewplus/manage.py:640 ckanext/webpageviewplus/manage.py:716
+#: ckanext/webpageviewplus/manage.py:745
 msgid "Unknown action."
 msgstr "Action inconnue."
 
-#: ckanext/webpageviewplus/manage.py:643
+#: ckanext/webpageviewplus/manage.py:653
 msgid "Need to be system administrator to administer"
 msgstr "Vous devez être administrateur système pour administrer ceci"
 
 #. TRANSLATORS: outcome labels in "label: number" pairs, so no plural forms are
 #. needed.
-#: ckanext/webpageviewplus/manage.py:674
+#: ckanext/webpageviewplus/manage.py:684
 msgid "Queued"
 msgstr "En file"
 
 # | msgid "Remove"
-#: ckanext/webpageviewplus/manage.py:675
+#: ckanext/webpageviewplus/manage.py:685
+msgid "Remade"
+msgstr "Régénérées"
+
+# | msgid "Remove"
+#: ckanext/webpageviewplus/manage.py:686
 msgid "Removed"
 msgstr "Supprimées"
 
+# | msgid "The thumbnail couldn't be remade, so the last one is kept."
+#: ckanext/webpageviewplus/manage.py:687
+msgid "Couldn't be remade, the last one kept"
+msgstr "Pas régénérées, la précédente est conservée"
+
 # | msgid "Pending."
-#: ckanext/webpageviewplus/manage.py:676
+#: ckanext/webpageviewplus/manage.py:688
 msgid "Already pending"
 msgstr "Déjà en attente"
 
-#: ckanext/webpageviewplus/manage.py:677
+#: ckanext/webpageviewplus/manage.py:689
 msgid "Waiting for the cooldown"
 msgstr "Délai d'attente en cours"
 
 # | msgid "Thumbnails aren't enabled on this site"
 # | msgid "Automatic thumbnails are on for this view."
 # | msgid "Not taken for this view."
-#: ckanext/webpageviewplus/manage.py:678
+#: ckanext/webpageviewplus/manage.py:690
 msgid "No screenshot for this view"
 msgstr "Pas de capture pour cette vue"
 
 # | msgid "The first page is ready. Save the view to use it."
 # | msgid "Draw the first page again in the view's form."
-#: ckanext/webpageviewplus/manage.py:679
+#: ckanext/webpageviewplus/manage.py:691
 msgid "Drawn in the view's form"
 msgstr "Dessinée dans le formulaire de la vue"
 
-#: ckanext/webpageviewplus/manage.py:680
+#: ckanext/webpageviewplus/manage.py:692
 msgid "Nothing to do"
 msgstr "Rien à faire"
 
 # | msgid "PDF view not found"
 # | msgid "View not found"
-#: ckanext/webpageviewplus/manage.py:681
+#: ckanext/webpageviewplus/manage.py:693
 msgid "Not found"
 msgstr "Introuvables"
 
 # | msgid "the page couldn't be reached"
-#: ckanext/webpageviewplus/manage.py:682
+#: ckanext/webpageviewplus/manage.py:694
 msgid "Couldn't be queued"
 msgstr "Mise en file impossible"
 
 # | msgid "This dataset is private, so screenshots aren't taken."
-#: ckanext/webpageviewplus/manage.py:703
+#: ckanext/webpageviewplus/manage.py:718
 msgid "Gotenberg refuses private addresses, so screenshots are taken."
 msgstr ""
 "Gotenberg refuse les adresses privées, les captures d'écran sont donc "
 "prises."
 
-#: ckanext/webpageviewplus/manage.py:706
+#: ckanext/webpageviewplus/manage.py:721
 msgid ""
 "Gotenberg doesn't refuse private addresses, or couldn't be reached, so no"
 " screenshots are taken."
@@ -243,7 +254,7 @@ msgstr ""
 "Gotenberg ne refuse pas les adresses privées, ou n'a pas pu être joint, "
 "aucune capture d'écran n'est donc prise."
 
-#: ckanext/webpageviewplus/manage.py:721
+#: ckanext/webpageviewplus/manage.py:737
 msgid "Tick at least one view."
 msgstr "Cochez au moins une vue."
 
@@ -1722,26 +1733,31 @@ msgstr[0] "Pour la {count} vue que montre ce filtre"
 msgstr[1] "Pour les {count} vues que montre ce filtre"
 
 # | msgid "At most {count} views at a time."
-#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_admin.html:148
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_admin.html:150
 #, python-brace-format
-msgid "At most {count} views at a time: run it again for the rest."
-msgstr "Au plus {count} vues à la fois : relancez pour le reste."
+msgid "At most {count} views at a time:"
+msgstr "Au plus {count} vues à la fois :"
 
 #: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_admin.html:153
+#, python-brace-format
+msgid "views {first} to {last}"
+msgstr "vues {first} à {last}"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_admin.html:162
 msgid "Pages"
 msgstr "Pages"
 
-#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_admin.html:154
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_admin.html:163
 msgid "Previous"
 msgstr "Précédent"
 
 # | msgid "Taken {date}, of {host}."
-#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_admin.html:155
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_admin.html:164
 #, python-brace-format
 msgid "Page {page} of {pages}"
 msgstr "Page {page} sur {pages}"
 
-#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_admin.html:156
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_admin.html:165
 msgid "Next"
 msgstr "Suivant"
 
@@ -1760,10 +1776,15 @@ msgstr[1] "Ceci supprime les miniatures et captures enregistrées de {count} vue
 
 # | msgid "For the {count} view this filter shows"
 # | msgid_plural "For all {count} views this filter shows"
+# | msgid "The other {rest} views this filter shows are left as they are."
 #: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_confirm.html:9
 #, python-brace-format
-msgid "The other {rest} views this filter shows are left as they are."
-msgstr "Les {rest} autres vues que montre ce filtre restent telles quelles."
+msgid ""
+"These are views {first} to {last} of the {total} this filter shows; the "
+"others are left as they are."
+msgstr ""
+"Ce sont les vues {first} à {last} des {total} que montre ce filtre ; les "
+"autres restent telles quelles."
 
 #: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_confirm.html:10
 msgid ""
@@ -1777,11 +1798,11 @@ msgstr ""
 
 # | msgid "Save the choice"
 # | msgid "Remove the copies"
-#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_confirm.html:17
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_confirm.html:18
 msgid "Remove them"
 msgstr "Les supprimer"
 
-#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_confirm.html:18
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_confirm.html:19
 msgid "Cancel"
 msgstr "Annuler"
 
@@ -1920,4 +1941,8 @@ msgstr "En attente."
 #: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_macros.html:61
 msgid "Of a previous page address, so not in use."
 msgstr "D'une adresse de page précédente, donc non utilisée."
+
+# | msgid "At most {count} views at a time."
+#~ msgid "At most {count} views at a time: run it again for the rest."
+#~ msgstr "Au plus {count} vues à la fois : relancez pour le reste."
 

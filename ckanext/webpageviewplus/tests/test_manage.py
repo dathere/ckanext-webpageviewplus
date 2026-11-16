@@ -472,3 +472,36 @@ class TestAdminRemoveAll:
         headers = {"Authorization": factories.SysadminWithToken()["token"]}
         app.post(ADMIN, data={"do": "remove", "ids": [view["id"]]}, headers=headers)
         assert screenshots.stored_meta(view["id"])["digest"] is None
+
+
+@_marks(GOTENBERG + THUMBNAILS)
+class TestAdminBatches:
+    def test_later_batches_reach_the_rest(self, app, monkeypatch, jobs):
+        monkeypatch.setattr(manage, "MAX_IDS", 1)
+        dataset, resource, first = _setup()
+        second = _view(resource["id"])
+        from ckanext.webpageviewplus.tests.test_screenshots import _blocked
+        _blocked(second["id"])
+        headers = {"Authorization": factories.SysadminWithToken()["token"]}
+        body = app.get(ADMIN, query_string={"q": dataset["name"]}, headers=headers).body
+        assert '<option value="1">views 2 to 2</option>' in body
+        form = {"do": "screenshot", "scope": "all", "q": dataset["name"]}
+        app.post(ADMIN, data=dict(form, start="1"), headers=headers)
+        assert [args[0] for _, args, _ in jobs] == [second["id"]]
+        app.post(ADMIN, data=form, headers=headers)
+        assert [args[0] for _, args, _ in jobs] == [second["id"], first["id"]]
+
+    def test_one_remake_is_reported(self, app, monkeypatch):
+        monkeypatch.setattr(thumbnails, "_make", lambda *a, **kw: _jpeg((320, 180)))
+        _, _, view = _setup()
+        headers = {"Authorization": factories.SysadminWithToken()["token"]}
+        body = app.post(ADMIN, data={"do": "refresh", "ids": [view["id"]]},
+                        headers=headers).body
+        assert "Remade: 1." in body
+
+    def test_search_kept_whatever_it_says(self, app, jobs):
+        headers = {"Authorization": factories.SysadminWithToken()["token"]}
+        answer = app.post(ADMIN, data={"do": "screenshot", "q": "all", "page": "1"},
+                          headers=headers, follow_redirects=False)
+        location = answer.headers["Location"]
+        assert "q=all" in location and "page=" not in location and "filter=" not in location

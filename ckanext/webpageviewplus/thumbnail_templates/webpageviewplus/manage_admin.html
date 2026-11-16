@@ -145,7 +145,16 @@
             <button type="submit" name="do" value="screenshot" class="btn btn-default btn-secondary btn-sm">{{ _('Take new screenshots') }}</button>
             <button type="submit" name="do" value="refresh" class="btn btn-default btn-secondary btn-sm">{{ _('Remake thumbnails') }}</button>
             <button type="submit" name="do" value="remove" class="btn btn-default btn-secondary btn-sm">{{ _('Remove the copies') }}</button>
-            {% if status.count > max_ids %}<p class="form-text">{{ _('At most {count} views at a time: run it again for the rest.').format(count=max_ids) }}</p>{% endif %}
+            {% if status.count > max_ids %}
+              <p class="form-text">
+                <label for="field-start">{{ _('At most {count} views at a time:').format(count=max_ids) }}</label>
+                <select id="field-start" name="start" class="form-control form-select">
+                  {% for first in range(0, status.count, max_ids) %}
+                    <option value="{{ first }}">{{ _('views {first} to {last}').format(first=first + 1, last=[first + max_ids, status.count]|min) }}</option>
+                  {% endfor %}
+                </select>
+              </p>
+            {% endif %}
           </fieldset>
         </form>
 

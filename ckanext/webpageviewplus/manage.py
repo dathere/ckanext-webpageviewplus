@@ -214,6 +214,13 @@ def _page_number(value: Any) -> int:
     return page
 
 
+def _whole(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        raise toolkit.ValidationError({"start": [toolkit._("Must be a whole number.")]})
+
+
 @toolkit.side_effect_free
 def webpageviewplus_thumbnail_status(
     context: dict[str, Any], data_dict: dict[str, Any]
@@ -222,7 +229,8 @@ def webpageviewplus_thumbnail_status(
     view. With ``id`` (a dataset's name or id): that dataset's rows. Without
     it (sysadmins): every view, with ``filter`` (one of FILTERS), ``q`` (in
     the dataset's name or title) and ``page`` (PAGE_SIZE rows each), and
-    the backend's status."""
+    the backend's status. ``ids`` holds at most MAX_IDS of the matching
+    views' ids, from the ``start``-th (0 by default), for bulk changes."""
     toolkit.check_access("webpageviewplus_thumbnail_status", context, data_dict)
     oldest = datetime.datetime.utcnow() - datetime.timedelta(
         seconds=settings.screenshot_seconds())
@@ -240,6 +248,7 @@ def webpageviewplus_thumbnail_status(
     if wanted not in FILTERS:
         raise toolkit.ValidationError({"filter": [toolkit._("Unknown filter.")]})
     page = _page_number(data_dict.get("page"))
+    start = _page_number(_whole(data_dict.get("start")) + 1) - 1
     found = _candidates(q=(data_dict.get("q") or "").strip())
     thumbs, shots, checks = _metas([c.id for c in found])
     matched = []
@@ -254,7 +263,8 @@ def webpageviewplus_thumbnail_status(
         "page": page,
         "page_size": PAGE_SIZE,
         "filter": wanted,
-        "ids": [c.id for c, _ in matched][:MAX_IDS],
+        "ids": [c.id for c, _ in matched][start:start + MAX_IDS],
+        "start": start,
         "backend": _backend(),
     }
 
@@ -634,8 +644,8 @@ def _change(view: model.ResourceView, do: str, form: Any,
 
 ADMIN_PATH = "/ckan-admin/thumbnails"
 # What each bulk change's answers are called on the page, in the order shown.
-OUTCOMES = ("queued", "removed", "pending", "cooldown", "no_target", "first_page", "none",
-            "not_found", "error")
+OUTCOMES = ("queued", "remade", "removed", "kept", "pending", "cooldown", "no_target",
+            "first_page", "none", "not_found", "error")
 
 
 def _sysadmin_only() -> None:
@@ -645,7 +655,7 @@ def _sysadmin_only() -> None:
 
 def _listing_args(source: Any) -> dict[str, Any]:
     return {"filter": source.get("filter") or "all", "q": (source.get("q") or "").strip(),
-            "page": source.get("page") or 1}
+            "page": source.get("page") or 1, "start": source.get("start") or 0}
 
 
 @blueprint.route(ADMIN_PATH, methods=["GET"])
@@ -672,7 +682,9 @@ def _summary(results: dict[str, str]) -> str:
     labels = {
         # TRANSLATORS: outcome labels in "label: number" pairs, so no plural forms are needed.
         "queued": _("Queued"),
+        "remade": _("Remade"),
         "removed": _("Removed"),
+        "kept": _("Couldn't be remade, the last one kept"),
         "pending": _("Already pending"),
         "cooldown": _("Waiting for the cooldown"),
         "no_target": _("No screenshot for this view"),
@@ -693,8 +705,11 @@ def admin_change() -> Any:
     _sysadmin_only()
     _ = toolkit._
     args = _listing_args(request.form)
-    back = toolkit.redirect_to("webpageviewplus_manage.admin", **{
-        key: value for key, value in args.items() if value and value not in ("all", 1, "1")})
+    keep = {"q": args["q"] or None,
+            "filter": None if args["filter"] == "all" else args["filter"],
+            "page": None if str(args["page"]) == "1" else args["page"]}
+    back = toolkit.redirect_to("webpageviewplus_manage.admin",
+                               **{key: value for key, value in keep.items() if value})
     do = request.form.get("do") or ""
     if do == "recheck":
         if settings.screenshot_backend() != "gotenberg":
@@ -714,7 +729,8 @@ def admin_change() -> Any:
         # service's allowance to take again: ask first (no script needed).
         if do == "remove" and ids and request.form.get("confirmed") != "1":
             return toolkit.render("webpageviewplus/manage_confirm.html", {
-                "args": args, "count": len(ids), "total": listing["count"]})
+                "args": args, "count": len(ids), "total": listing["count"],
+                "first": listing["start"] + 1, "last": listing["start"] + len(ids)})
     else:
         ids = request.form.getlist("ids")
     if not ids:
