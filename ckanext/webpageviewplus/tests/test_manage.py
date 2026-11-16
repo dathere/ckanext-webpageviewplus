@@ -307,3 +307,83 @@ class TestDelete:
         with pytest.raises(toolkit.ValidationError):
             _call("webpageviewplus_thumbnail_delete", _sysadmin(), ids=[view["id"]],
                   remove="everything")
+
+
+def _page(dataset):
+    return "/dataset/{}/thumbnails".format(dataset["name"])
+
+
+def _token(body):
+    import re
+    return re.search(r'name="_csrf_token" value="([^"]+)"', body).group(1)
+
+
+@_marks(GOTENBERG)
+class TestDatasetPage:
+    def test_who_sees_it(self, app):
+        dataset, _, view = _setup()
+        editor = _member(dataset, "editor")
+        body = app.get(_page(dataset), extra_environ={"REMOTE_USER": editor["name"]}).body
+        assert view["id"] in body and "Remake the thumbnail" in body
+        for user in (_member(dataset, "member"), None):
+            environ = {"REMOTE_USER": user["name"]} if user else {}
+            assert app.get(_page(dataset), extra_environ=environ, status=403)
+
+    def test_tab_on_the_edit_pages(self, app):
+        dataset, _, _ = _setup()
+        editor = _member(dataset, "editor")
+        body = app.get("/dataset/edit/{}".format(dataset["name"]),
+                       extra_environ={"REMOTE_USER": editor["name"]}).body
+        assert 'href="{}"'.format(_page(dataset)) in body
+
+    def test_form_needs_its_token(self, app, monkeypatch):
+        monkeypatch.setattr(screenshots, "_send", _gotenberg())
+        dataset, _, view = _setup()
+        screenshots.capture(view["id"])
+        editor = _member(dataset, "editor")
+        environ = {"REMOTE_USER": editor["name"]}
+        form = {"view_id": view["id"], "do": "remove"}
+        app.post(_page(dataset), data=form, extra_environ=environ, status=400)
+        assert screenshots.stored(view["id"])["digest"]
+        # One client, so the session holding the token is kept.
+        client = app.test_client()
+        token = _token(client.get(_page(dataset), extra_environ=environ).body)
+        answer = client.post(_page(dataset), data=dict(form, _csrf_token=token),
+                             extra_environ=environ, follow_redirects=False)
+        assert answer.status_code == 302 and answer.headers["Location"].endswith(_page(dataset))
+        assert screenshots.stored_meta(view["id"])["digest"] is None
+        assert "Removed." in client.get(_page(dataset), extra_environ=environ).body
+
+    def test_api_token_needs_no_form_token(self, app, monkeypatch):
+        dataset, _, view = _setup()
+        editor = _member(dataset, "editor")
+        answer = app.post(_page(dataset), data={"view_id": view["id"], "do": "auto_off"},
+                          headers={"Authorization": editor["token"]}, follow_redirects=False)
+        assert answer.status_code == 302
+        assert model.ResourceView.get(view["id"]).config.get("no_auto_thumbnail")
+
+    def test_only_this_datasets_views(self, app):
+        dataset, _, _ = _setup()
+        _, _, elsewhere = _setup()
+        sysadmin = factories.SysadminWithToken()
+        app.post(_page(dataset), data={"view_id": elsewhere["id"], "do": "remove"},
+                 headers={"Authorization": sysadmin["token"]}, status=404)
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.thumbnail_fetch", "true")
+    def test_pick_and_back(self, app):
+        dataset, _, view = _setup()
+        image = factories.Resource(package_id=dataset["id"], url="https://img.example.com/a.png",
+                                   format="PNG", name="Chart")
+        sysadmin = factories.SysadminWithToken()
+        headers = {"Authorization": sysadmin["token"]}
+        body = app.get(_page(dataset), headers=headers).body
+        assert '<option value="{}"'.format(image["id"]) in body
+        app.post(_page(dataset), data={"view_id": view["id"], "do": "pick",
+                                       "thumbnail_resource": image["id"]}, headers=headers)
+        assert model.ResourceView.get(view["id"]).config["thumbnail_resource"] == image["id"]
+        app.post(_page(dataset), data={"view_id": view["id"], "do": "pick",
+                                       "thumbnail_resource": "not-an-image"}, headers=headers)
+        assert model.ResourceView.get(view["id"]).config["thumbnail_resource"] == image["id"]
+        app.post(_page(dataset), data={"view_id": view["id"], "do": "pick",
+                                       "thumbnail_resource": ""}, headers=headers)
+        assert not model.ResourceView.get(view["id"]).config.get("thumbnail_resource")

@@ -25,10 +25,12 @@ import uuid
 from typing import Any, Iterable, Optional
 
 import sqlalchemy as sa
+from flask import Blueprint, current_app, g, request
 
 import ckan.authz as authz
 import ckan.model as model
 import ckan.plugins.toolkit as toolkit
+from ckan.common import current_user
 
 from ckanext.webpageviewplus import events, frameability, health, screenshots, settings, \
     thumbnails
@@ -490,3 +492,139 @@ def webpageviewplus_thumbnail_delete(
         if removed:
             events.emit("thumbnail_removed", view_id=view.id, removed=",".join(removed))
     return {"removed": sum(1 for r in results.values() if r == "removed"), "results": results}
+
+
+# --- The dataset's Thumbnails page ----------------------------------------------
+
+blueprint = Blueprint("webpageviewplus_manage", __name__)
+DATASET_PATH = "/dataset/<id>/thumbnails"
+
+
+def _context() -> dict[str, Any]:
+    return {"user": current_user.name, "auth_user_obj": current_user, "for_view": True}
+
+
+def _editable_dataset(id: str) -> dict[str, Any]:
+    try:
+        toolkit.check_access("package_update", _context(), {"id": id})
+    except toolkit.ObjectNotFound:
+        toolkit.abort(404, toolkit._("Dataset not found"))
+    except toolkit.NotAuthorized:
+        toolkit.abort(403, toolkit._("Not authorized to see this page"))
+    try:
+        return toolkit.get_action("package_show")(_context(), {"id": id})
+    except (toolkit.ObjectNotFound, toolkit.NotAuthorized):
+        toolkit.abort(404, toolkit._("Dataset not found"))
+
+
+def protect_form() -> None:
+    """CSRF for a form posted to this extension's pages. CKAN exempts
+    extensions' blueprints by default (ckan.csrf_protection.ignore_extensions),
+    so the check is made here, as CKAN makes it: not for requests
+    authenticated by an API token, and not when CSRF protection is off."""
+    if g.get("login_via_auth_header") or not current_app.config.get("WTF_CSRF_ENABLED", True):
+        return
+    from ckan.config.middleware.flask_app import csrf
+    csrf.protect()
+
+
+@blueprint.route(DATASET_PATH, methods=["GET"])
+def dataset(id: str) -> str:
+    pkg_dict = _editable_dataset(id)
+    status = toolkit.get_action("webpageviewplus_thumbnail_status")(
+        _context(), {"id": pkg_dict["id"]})
+    g.pkg_dict = pkg_dict
+    return toolkit.render("webpageviewplus/manage_dataset.html", {
+        "pkg_dict": pkg_dict,
+        "dataset_type": pkg_dict.get("type") or "dataset",
+        "rows": status["rows"],
+        "choices": thumbnails.choices(pkg_dict),
+        "first_page": thumbnails.FIRST_PAGE,
+        "screenshots_on": screenshots.enabled(),
+    })
+
+
+@blueprint.route(DATASET_PATH, methods=["POST"])
+def dataset_change(id: str) -> Any:
+    protect_form()
+    pkg_dict = _editable_dataset(id)
+    view = model.ResourceView.get(request.form.get("view_id") or "")
+    if view is None or view.view_type not in thumbnails.VIEW_TYPES or view.resource_id not in {
+            r["id"] for r in pkg_dict.get("resources") or []}:
+        toolkit.abort(404, toolkit._("View not found"))
+    message, ok = _change(view, request.form.get("do") or "", request.form, pkg_dict)
+    (toolkit.h.flash_success if ok else toolkit.h.flash_error)(message)
+    return toolkit.redirect_to("webpageviewplus_manage.dataset", id=pkg_dict["name"])
+
+
+def _errors(error: toolkit.ValidationError) -> str:
+    found = error.error_dict if isinstance(error.error_dict, dict) else {}
+    return " ".join(str(m) for key, messages in found.items() if key != "seconds_left"
+                    for m in (messages if isinstance(messages, list) else [messages]))
+
+
+def _update_view(view: model.ResourceView, changes: dict[str, Any]) -> tuple[str, bool]:
+    try:
+        data = toolkit.get_action("resource_view_show")(_context(), {"id": view.id})
+        data.update(changes)
+        toolkit.get_action("resource_view_update")(_context(), data)
+    except toolkit.NotAuthorized:
+        toolkit.abort(403, toolkit._("Not authorized to see this page"))
+    except toolkit.ValidationError as e:
+        return _errors(e), False
+    return "", True
+
+
+def _change(view: model.ResourceView, do: str, form: Any,
+            pkg_dict: dict[str, Any]) -> tuple[str, bool]:
+    _ = toolkit._
+    if do == "screenshot":
+        try:
+            outcome = toolkit.get_action("webpageviewplus_screenshot_request")(
+                _context(), {"ids": [view.id]})["results"][view.id]
+        except toolkit.ValidationError as e:
+            return _errors(e), False
+        if outcome in ("queued", "pending"):
+            return _("A screenshot will be taken in the background. Reload this page later "
+                     "to see it."), True
+        if outcome == "cooldown":
+            url = screenshots._view_target(view)
+            left = max(1, screenshots.cooldown_left(view.id, url) if url else 1)
+            return toolkit.ungettext(
+                "You can take a new screenshot in {seconds} second.",
+                "You can take a new screenshot in {seconds} seconds.", left,
+            ).format(seconds=left), False
+        if outcome == "no_target":
+            return _("This view's page doesn't get a screenshot."), False
+        return _("The screenshot couldn't be queued. Try again later."), False
+    if do == "refresh":
+        outcome = toolkit.get_action("webpageviewplus_thumbnail_refresh")(
+            _context(), {"ids": [view.id]})["results"][view.id]
+        return {
+            "remade": (_("The thumbnail was remade."), True),
+            "kept": (_("The thumbnail couldn't be remade, so the last one is kept."), False),
+            "none": (_("There's nothing to make a thumbnail from."), False),
+            "first_page": (_("Draw the first page again in the view's form."), False),
+        }.get(outcome, (_("The thumbnail couldn't be remade. Try again later."), False))
+    if do == "remove":
+        outcome = toolkit.get_action("webpageviewplus_thumbnail_delete")(
+            _context(), {"ids": [view.id]})["results"][view.id]
+        if outcome == "removed":
+            return _("Removed. Unless automatic thumbnails are off, a new one is made at the "
+                     "next save or refresh."), True
+        return _("There was nothing to remove."), False
+    if do == "pick":
+        picked = form.get("thumbnail_resource") or ""
+        allowed = {c["id"] for c in thumbnails.choices(pkg_dict)}
+        current = (view.config or {}).get("thumbnail_resource") or ""
+        if picked and picked not in allowed and picked != current:
+            return _("Pick one of this dataset's images."), False
+        message, ok = _update_view(view, {"thumbnail_resource": picked})
+        return (_("The thumbnail choice is saved."), True) if ok else (message, False)
+    if do in ("auto_off", "auto_on"):
+        message, ok = _update_view(view, {"no_auto_thumbnail": "true" if do == "auto_off" else ""})
+        if not ok:
+            return message, False
+        return (_("Automatic thumbnails are off for this view.") if do == "auto_off"
+                else _("Automatic thumbnails are on for this view.")), True
+    toolkit.abort(400, _("Unknown action."))

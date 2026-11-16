@@ -1,0 +1,140 @@
+{% extends "package/edit_base.html" %}
+
+{% block subtitle %}{{ _('Thumbnails') }} {{ g.template_title_delimiter }} {{ h.dataset_display_name(pkg) }}{% endblock %}
+
+{% block page_primary_action %}{% endblock %}
+
+{% block primary_content_inner %}
+  {% asset 'webpageviewplus/thumbnails-css' %}
+  {% set kinds = {
+    'picked': _('A picked image'),
+    'page': _("The page's preview image"),
+    'service': _("The service's thumbnail"),
+    'office': _("The file's own preview"),
+    'first_page': _("The PDF's first page"),
+    'other': _('Another source'),
+  } %}
+  {% set reasons = {
+    'page_failed': _("the page didn't load"),
+    'unreachable': _("the page couldn't be reached"),
+    'backend_error': _('the screenshot service refused the request'),
+    'rate_limited': _("the screenshot service's allowance is used up for now"),
+    'no_image': _("the answer wasn't an image"),
+    'unsafe_backend': _("the screenshot service isn't set up safely"),
+  } %}
+  <div class="webpageviewplus-manage">
+    <h2>{{ _('Thumbnails') }}</h2>
+    <p>{{ _("What the resource list shows for each Website (Plus) and PDF (Plus) view, and the copies stored for it. A removed copy is made again at the view's next save or refresh, unless automatic thumbnails are off.") }}</p>
+    {% if not rows %}
+      <p class="empty">{{ _('This dataset has no Website (Plus) or PDF (Plus) views.') }}</p>
+    {% else %}
+      <table class="table table-striped webpageviewplus-manage-table">
+        <caption class="visually-hidden sr-only">{{ _('Thumbnails of this dataset\'s views') }}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{{ _('View') }}</th>
+            <th scope="col">{{ _('In the resource list') }}</th>
+            <th scope="col">{{ _('Stored thumbnail') }}</th>
+            {% if screenshots_on %}<th scope="col">{{ _('Screenshot') }}</th>{% endif %}
+            <th scope="col">{{ _('Actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            {% set shot = row.screenshot %}
+            <tr id="view-{{ row.view_id }}">
+              <th scope="row">
+                <a href="{{ h.url_for(pkg.type ~ '_resource.edit_view', id=pkg.name, resource_id=row.resource_id, view_id=row.view_id) }}">{{ row.title or row.resource_name }}</a>
+                <br><span class="text-muted">{{ row.resource_name }}</span>
+              </th>
+              <td data-label="{{ _('In the resource list') }}">
+                {% set shows = row.shows %}
+                {% if not shows %}
+                  {{ _('Another view of this resource decides it.') }}
+                {% else %}
+                  {% if shows.src %}<img src="{{ shows.src }}" width="160" height="90" alt="" class="webpageviewplus-manage-image"><br>{% endif %}
+                  {%- if shows.kind == 'thumbnail' -%}{{ _('The stored thumbnail') }}
+                  {%- elif shows.kind == 'screenshot' -%}{{ _('The screenshot') }}
+                  {%- elif shows.kind == 'logo' -%}{{ _("{service}'s logo").format(service=shows.service) }}
+                  {%- elif shows.kind == 'name' -%}{{ _('The name {service}').format(service=shows.service) }}
+                  {%- else -%}{{ _('The format label') }}
+                  {%- endif -%}
+                {% endif %}
+              </td>
+              <td data-label="{{ _('Stored thumbnail') }}">
+                {% if row.thumbnail %}
+                  {{ kinds.get(row.thumbnail.kind, kinds.other) }}, {{ h.render_datetime(row.thumbnail.created, with_hours=True) }}
+                  {% if not row.thumbnail.in_use %}<br>{{ _('Not in use: the view no longer asks for it.') }}{% endif %}
+                {% else %}
+                  {{ _('None') }}
+                {% endif %}
+                {% if row.no_auto_thumbnail %}<br>{{ _('Automatic thumbnails are off.') }}{% endif %}
+              </td>
+              {% if screenshots_on %}
+                <td data-label="{{ _('Screenshot') }}">
+                  {% if not shot %}
+                    {{ _('Not taken for this view.') }}
+                  {%- elif shot.state == 'in_use' -%}
+                    {{ _('In use, taken {date}.').format(date=h.render_datetime(shot.taken, with_hours=True)) }}
+                  {%- elif shot.state == 'pending' -%}
+                    {{ _('Pending.') }}
+                  {%- elif shot.state == 'failed' -%}
+                    {{ _('The last attempt on {date} failed: {reason}.').format(date=h.render_datetime(shot.attempted), reason=reasons.get(shot.error, shot.error)) }}
+                  {%- elif shot.state == 'not_in_use' and shot.reason == 'frameable' -%}
+                    {{ _("This page can now be shown in a frame, so the screenshot isn't used.") }}
+                  {%- elif shot.state == 'not_in_use' and shot.reason == 'picked' -%}
+                    {{ _('You picked a thumbnail, so the screenshot isn\'t used.') }}
+                  {%- elif shot.state in ('not_in_use', 'private') -%}
+                    {{ _("This dataset is private, so screenshots aren't taken.") }}
+                  {%- elif shot.state == 'other_url' -%}
+                    {{ _('Of a previous page address, so not in use.') }}
+                  {%- else -%}
+                    {{ _("A screenshot is taken after you save, if this page can't be shown in a frame.") }}
+                  {%- endif -%}
+                  {% if shot and shot.button and shot.cooldown %}
+                    <br><span class="text-muted">{{ ungettext('You can take a new screenshot in {seconds} second.', 'You can take a new screenshot in {seconds} seconds.', shot.cooldown).format(seconds=shot.cooldown) }}</span>
+                  {% endif %}
+                </td>
+              {% endif %}
+              <td data-label="{{ _('Actions') }}">
+                <form method="post" action="{{ h.url_for('webpageviewplus_manage.dataset', id=pkg.name) }}" class="webpageviewplus-manage-actions">
+                  {{ h.csrf_input() }}
+                  <input type="hidden" name="view_id" value="{{ row.view_id }}">
+                  {% if shot and shot.button %}
+                    <button type="submit" name="do" value="screenshot" class="btn btn-default btn-secondary btn-sm"{% if shot.cooldown %} disabled{% endif %}>{{ _('Take a new screenshot') }}</button>
+                  {% endif %}
+                  <button type="submit" name="do" value="refresh" class="btn btn-default btn-secondary btn-sm">{{ _('Remake the thumbnail') }}</button>
+                  {% if row.thumbnail or (shot and shot.image) %}
+                    <button type="submit" name="do" value="remove" class="btn btn-default btn-secondary btn-sm">{{ _('Remove') }}</button>
+                  {% endif %}
+                  {% if row.view_type == 'webpage_view_plus' %}
+                    {% if row.no_auto_thumbnail %}
+                      <button type="submit" name="do" value="auto_on" class="btn btn-default btn-secondary btn-sm">{{ _('Turn automatic thumbnails on') }}</button>
+                    {% else %}
+                      <button type="submit" name="do" value="auto_off" class="btn btn-default btn-secondary btn-sm">{{ _('Turn automatic thumbnails off') }}</button>
+                    {% endif %}
+                  {% endif %}
+                  {% if choices or row.thumbnail_resource %}
+                    <div class="webpageviewplus-manage-pick">
+                      <label for="pick-{{ row.view_id }}">{{ _('Picked image') }}</label>
+                      <select id="pick-{{ row.view_id }}" name="thumbnail_resource" class="form-control form-select">
+                        <option value="" {% if not row.thumbnail_resource %}selected{% endif %}>{{ _('None (automatic)') }}</option>
+                        {% if row.thumbnail_resource == first_page %}
+                          <option value="{{ first_page }}" selected>{{ kinds.first_page }}</option>
+                        {% endif %}
+                        {% for choice in choices %}
+                          <option value="{{ choice.id }}" {% if row.thumbnail_resource == choice.id %}selected{% endif %}>{{ choice.name }}</option>
+                        {% endfor %}
+                      </select>
+                      <button type="submit" name="do" value="pick" class="btn btn-default btn-secondary btn-sm">{{ _('Save the choice') }}</button>
+                    </div>
+                  {% endif %}
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </div>
+{% endblock %}

@@ -498,7 +498,7 @@ class WebpageviewplusThumbnailsPlugin(plugins.SingletonPlugin):
     # IBlueprint
 
     def get_blueprint(self):
-        return [thumbnails.thumbnail, screenshots.screenshot]
+        return [thumbnails.thumbnail, screenshots.screenshot, manage.blueprint]
 
     # IActions
 
