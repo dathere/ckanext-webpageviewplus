@@ -48,7 +48,11 @@ preview image" its view picks, and services show their logo. With
 `thumbnail_fetch` on (run the seed again after turning it on), YouTube,
 Datawrapper and others show their own thumbnail and other pages their preview
 image, except the one whose view opts out. With `service_format` on, the
-services' formats read "YouTube", "Vimeo" and so on.
+services' formats read "YouTube", "Vimeo" and so on. With a
+`screenshot_backend`, the page that refuses framing shows a screenshot of
+itself. Editors see every view's thumbnail, and change it, in the dataset's
+Thumbnails tab (Manage, then Thumbnails); sysadmins see the whole site's in
+the admin pages.
 """
 
 # Picked as the uploaded page's thumbnail (a view's `thumbnail_resource`).
@@ -132,8 +136,13 @@ RESOURCES = [
          "GitHub tells browsers never to show it inside a frame. Core CKAN would show "
          "a blank box here. With `frameability_check` on, saving the view checks the "
          "page once, and visitors see a card explaining why it can't be shown, with "
-         "Open in new tab, instead of a blank frame. (With the setting off, as on a "
-         "fresh dev site, you see the blank frame; turn it on and save the view.)"),
+         "Open in new tab, instead of a blank frame. With the thumbnails plugin and a "
+         "`screenshot_backend` too, the card shows a screenshot of the page, taken in "
+         "the background (by a worker on queue `webpageviewplus`, or "
+         "`ckan webpageviewplus screenshots` from cron), and the resource list uses it as "
+         "the thumbnail. Editors manage it from the dataset's Thumbnails tab. (With "
+         "`frameability_check` off, as on a fresh dev site, you see the blank frame; "
+         "turn it on and save the view.)"),
     ]),
     ("A page that's gone", "https://example.com/this-page-is-gone", [
         ("Interactive preset",
@@ -374,6 +383,17 @@ PDF_VIEWS = [
      "so your browser never contacts that site."),
 ]
 
+# A Website (Plus) view of a PDF in a sandbox, which Chrome and Edge leave
+# blank; its form warns about that. Seeded with or without pdf_view_plus,
+# as the warning's advice depends on it.
+PDF_IN_FRAME = (
+    "A PDF in a sandboxed frame", "Website (Plus), interactive preset",
+    "The same PDF in a Website (Plus) view under `interactive`. In Chrome and Edge "
+    "this frame stays blank: they don't run their PDF viewer in a sandbox (Firefox "
+    "shows it). Edit the view and the form says so, pointing to a PDF (Plus) view "
+    "where the site offers one, else to the External preset for a site you trust, "
+    "else to linking the PDF.")
+
 
 def main():
     app = make_app(load_config(os.environ["CKAN_INI"]))
@@ -471,6 +491,19 @@ def main():
                     "title": title, "description": description})
                 print("{}\n  {}/dataset/{}/resource/{}?view_id={}".format(
                     title, site, DATASET, res["id"], view["id"]))
+
+        name, title, description = PDF_IN_FRAME
+        res = act("resource_create")(ctx(), {
+            "package_id": pkg["id"], "name": name, "format": "PDF",
+            "url": LINKED_PDF.format(pdf.PDFJS_VERSION)})
+        for v in act("resource_view_list")(ctx(), {"id": res["id"]}):
+            act("resource_view_delete")(ctx(), {"id": v["id"]})
+        view = act("resource_view_create")(ctx(), {
+            "resource_id": res["id"], "view_type": "webpage_view_plus", "title": title,
+            "description": description, "preset": "interactive",
+            "height_mode": "fixed", "height_value": "600"})
+        print("{}\n  {}/dataset/{}/resource/{}?view_id={}".format(
+            name, site, DATASET, res["id"], view["id"]))
 
         # repo_view_plus, where it's enabled: repositories' roots, fetched by
         # CKAN and shown as a page with no scripts.
