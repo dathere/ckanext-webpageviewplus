@@ -280,6 +280,44 @@ def main():
             scroll(page, 1600, steps=40, pause=60)
             page.wait_for_timeout(1200)
 
+        # 6c. A PDF in a sandboxed Website (Plus) frame: blank in Chrome, and
+        # the view form says why.
+        if "A PDF in a sandboxed frame" in present:
+            args = ("wvp-features", "A PDF in a sandboxed frame",
+                    "Website (Plus), interactive preset")
+            page.goto(view_url(*args))
+            page.wait_for_timeout(1500)
+            caption(page, "A PDF in a sandboxed Website (Plus) frame: Chrome and Edge "
+                          "leave it blank, as they don't show PDFs in a sandbox")
+            scroll(page, 330, steps=10, pause=40)
+            page.wait_for_timeout(2800)
+            page.goto(view_url(*args, edit=True))
+            warning = page.locator(".alert-warning", has_text="this PDF stays blank")
+            warning.wait_for()
+            warning.scroll_into_view_if_needed()
+            page.mouse.wheel(0, 200)
+            page.wait_for_timeout(600)
+            caption(page, "The view form warns, and points to the PDF (Plus) view")
+            page.wait_for_timeout(3500)
+
+        # 6d. A page that refuses framing: a card, with a screenshot when the
+        # site has a screenshot backend (taken in the background).
+        page.goto(view_url("wvp-features", "A page that refuses to be framed",
+                           "Interactive preset"))
+        page.wait_for_timeout(800)
+        shot = page.locator(".webpageviewplus-screenshot img")
+        if shot.count():
+            caption(page, "GitHub refuses to be framed: instead of a blank frame, a card "
+                          "with a screenshot taken in the background")
+        else:
+            caption(page, "GitHub refuses to be framed: instead of a blank frame, a card "
+                          "that says so, with Open in new tab")
+        page.locator(".webpageviewplus-refused").evaluate(
+            "c => window.scrollTo(0, c.getBoundingClientRect().top + window.scrollY - 70)")
+        page.wait_for_timeout(1500)
+        scroll(page, 500, steps=20, pause=60)
+        page.wait_for_timeout(2000)
+
         # 7. Thumbnails in the resource list (webpage_view_plus_thumbnails).
         page.goto(B + "/dataset/wvp-features")
         page.wait_for_timeout(800)
@@ -297,6 +335,26 @@ def main():
             caption(page, "An uploaded PDF's first page, drawn by PDF.js in the editor's "
                           "browser when they pick it in the view form")
             page.wait_for_timeout(3500)
+
+        # 7b. The Thumbnails tabs: a dataset's, for its editors, and the
+        # site's, for sysadmins.
+        page.goto(B + "/dataset/wvp-features/thumbnails")
+        page.locator(".webpageviewplus-manage-table").wait_for()
+        page.wait_for_timeout(800)
+        caption(page, "The dataset's Thumbnails tab: each view's thumbnail and screenshot, "
+                      "to retake, remake, remove or pick")
+        page.wait_for_timeout(2200)
+        scroll(page, 1800, steps=60, pause=70)
+        page.wait_for_timeout(1200)
+        page.goto(B + "/ckan-admin/thumbnails")
+        page.locator(".webpageviewplus-manage").wait_for()
+        page.wait_for_timeout(800)
+        caption(page, "The admin Thumbnails tab: the screenshot service's state, "
+                      "and every view on the site, with filters and bulk actions")
+        page.wait_for_timeout(2500)
+        scroll(page, 900, steps=30, pause=70)
+        page.wait_for_timeout(1500)
+
         page.goto(B + "/dataset/wvp-schematics")
         page.wait_for_timeout(800)
         caption(page, "qsv Data Schematics with their static previews "

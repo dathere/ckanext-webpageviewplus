@@ -588,7 +588,11 @@ CKAN 2.11.5, http://localhost:5001.
   `no_auto_thumbnail`, and a view with `count_views`.
   With `pdf_view_plus` enabled it also seeds an "Uploaded PDF" (drawn with Pillow) and a
   "PDF on another site" (PDF.js's sample paper on jsDelivr, pinned to `PDFJS_VERSION`), which
-  `record_demo.py` shows after the view form. Run the seeds in the container:
+  `record_demo.py` shows after the view form. With or without it, "A PDF in a sandboxed
+  frame" (the linked PDF in a Website (Plus) `interactive` view) shows the form's PDF warning.
+  `record_demo.py` also shows the "Refuses framing" card's screenshot (start `wvp-gotenberg`
+  and run `ckan webpageviewplus screenshots` after seeding) and both Thumbnails tabs.
+  Run the seeds in the container:
   `docker exec ckan-docker-ckan-dev-1 python /srv/app/src_extensions/ckanext-webpageviewplus/demo/seed_features.py`.
   `demo/record_demo.py` (host, Playwright) records the README's `docs/demo.gif` from those datasets;
   its docstring has the ffmpeg step.
