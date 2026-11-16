@@ -12,6 +12,11 @@ from ckanext.webpageviewplus.tests.test_screenshots import (
     GOTENBERG, OTHER, FakeRedis, _gotenberg, _jpeg, _marks, _member, _setup, _view,
 )
 
+# CKAN 2.12's test-core.ini sets SESSION_COOKIE_DOMAIN = test.ckan.net, so
+# the test client (on localhost) never sends the session back: no login and
+# no flash messages across a redirect.
+pytestmark = pytest.mark.ckan_config("SESSION_COOKIE_DOMAIN", None)
+
 
 @pytest.fixture
 def redis(monkeypatch):
