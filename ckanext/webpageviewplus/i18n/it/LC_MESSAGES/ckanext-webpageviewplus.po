@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-15 22:01+0000\n"
+"POT-Creation-Date: 2026-11-16 01:47+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: it\n"
@@ -18,9 +18,9 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.15.0\n"
+"Generated-By: Babel 2.18.0\n"
 
-#: ckanext/webpageviewplus/actions.py:179 ckanext/webpageviewplus/plugin.py:188
+#: ckanext/webpageviewplus/actions.py:179 ckanext/webpageviewplus/plugin.py:189
 msgid "Website"
 msgstr "Sito web"
 
@@ -41,51 +41,167 @@ msgstr "Le miniature non sono attive su questo sito"
 msgid "Not a usable image"
 msgstr "Non è un'immagine utilizzabile"
 
-#: ckanext/webpageviewplus/actions.py:395
+#: ckanext/webpageviewplus/actions.py:403 ckanext/webpageviewplus/manage.py:325
 msgid "This site takes screenshots on a schedule, not on request."
 msgstr "Questo sito acquisisce screenshot secondo un programma, non su richiesta."
 
-#: ckanext/webpageviewplus/actions.py:399
+#: ckanext/webpageviewplus/actions.py:407 ckanext/webpageviewplus/manage.py:598
 msgid "This view's page doesn't get a screenshot."
 msgstr "La pagina di questa vista non riceve uno screenshot."
 
-#: ckanext/webpageviewplus/actions.py:405
+#: ckanext/webpageviewplus/actions.py:413 ckanext/webpageviewplus/manage.py:599
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:219
 msgid "The screenshot couldn't be queued. Try again later."
 msgstr "Non è stato possibile mettere in coda lo screenshot. Riprova più tardi."
 
-#: ckanext/webpageviewplus/actions.py:409
+#: ckanext/webpageviewplus/actions.py:417 ckanext/webpageviewplus/manage.py:593
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:222
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:95
+#, python-brace-format
 msgid "You can take a new screenshot in {seconds} second."
 msgid_plural "You can take a new screenshot in {seconds} seconds."
 msgstr[0] "Potrai acquisire un nuovo screenshot tra {seconds} secondo."
 msgstr[1] "Potrai acquisire un nuovo screenshot tra {seconds} secondi."
 
-#: ckanext/webpageviewplus/plugin.py:166
+# | msgid "Must be a whole number"
+#: ckanext/webpageviewplus/manage.py:211 ckanext/webpageviewplus/manage.py:213
+msgid "Must be a whole number."
+msgstr "Deve essere un numero intero."
+
+#: ckanext/webpageviewplus/manage.py:241
+msgid "Unknown filter."
+msgstr "Filtro sconosciuto."
+
+# | msgid "Height value"
+#: ckanext/webpageviewplus/manage.py:279 ckanext/webpageviewplus/manage.py:282
+msgid "Missing value"
+msgstr "Valore mancante"
+
+#: ckanext/webpageviewplus/manage.py:284
+#, python-brace-format
+msgid "At most {count} views at a time."
+msgstr "Al massimo {count} viste alla volta."
+
+#: ckanext/webpageviewplus/manage.py:444
+#, python-brace-format
+msgid ""
+"No worker reads the {queue} queue, so remakes can't be queued. Remake one"
+" view at a time, or run ckan webpageviewplus check-views."
+msgstr ""
+"Nessun worker legge la coda {queue}, quindi le rigenerazioni non possono "
+"essere accodate. Rigenera una vista alla volta oppure esegui ckan "
+"webpageviewplus check-views."
+
+#: ckanext/webpageviewplus/manage.py:478
+msgid "Unknown value."
+msgstr "Valore sconosciuto."
+
+# | msgid "PDF view not found"
+#: ckanext/webpageviewplus/manage.py:511 ckanext/webpageviewplus/manage.py:517
+msgid "Dataset not found"
+msgstr "Dataset non trovato"
+
+#: ckanext/webpageviewplus/manage.py:513 ckanext/webpageviewplus/manage.py:572
+msgid "Not authorized to see this page"
+msgstr "Non sei autorizzato a vedere questa pagina"
+
+# | msgid "PDF view not found"
+#: ckanext/webpageviewplus/manage.py:554
+msgid "View not found"
+msgstr "Vista non trovata"
+
+# | msgid "" "A screenshot will be taken in the background. Reload this form
+# | later to " "see it."
+#: ckanext/webpageviewplus/manage.py:588
+msgid ""
+"A screenshot will be taken in the background. Reload this page later to "
+"see it."
+msgstr ""
+"Uno screenshot verrà acquisito in background. Ricarica questa pagina più "
+"tardi per vederlo."
+
+#: ckanext/webpageviewplus/manage.py:604
+msgid "The thumbnail was remade."
+msgstr "La miniatura è stata rigenerata."
+
+#: ckanext/webpageviewplus/manage.py:605
+msgid "The thumbnail couldn't be remade, so the last one is kept."
+msgstr ""
+"Non è stato possibile rigenerare la miniatura, quindi resta quella "
+"precedente."
+
+#: ckanext/webpageviewplus/manage.py:606
+msgid "There's nothing to make a thumbnail from."
+msgstr "Non c'è nulla da cui creare una miniatura."
+
+# | msgid "The first page is ready. Save the view to use it."
+#: ckanext/webpageviewplus/manage.py:607
+msgid "Draw the first page again in the view's form."
+msgstr "Disegna di nuovo la prima pagina nel modulo della vista."
+
+# | msgid "The repository couldn't be loaded. Try again later."
+#: ckanext/webpageviewplus/manage.py:608
+msgid "The thumbnail couldn't be remade. Try again later."
+msgstr "Non è stato possibile rigenerare la miniatura. Riprova più tardi."
+
+#: ckanext/webpageviewplus/manage.py:613
+msgid ""
+"Removed. Unless automatic thumbnails are off, a new one is made at the "
+"next save or refresh."
+msgstr ""
+"Rimosso. A meno che le miniature automatiche non siano disattivate, se ne"
+" crea una nuova al prossimo salvataggio o aggiornamento."
+
+#: ckanext/webpageviewplus/manage.py:615
+msgid "There was nothing to remove."
+msgstr "Non c'era nulla da rimuovere."
+
+#: ckanext/webpageviewplus/manage.py:621
+msgid "Pick one of this dataset's images."
+msgstr "Scegli una delle immagini di questo dataset."
+
+#: ckanext/webpageviewplus/manage.py:623
+msgid "The thumbnail choice is saved."
+msgstr "La scelta della miniatura è salvata."
+
+#: ckanext/webpageviewplus/manage.py:628
+msgid "Automatic thumbnails are off for this view."
+msgstr "Le miniature automatiche sono disattivate per questa vista."
+
+# | msgid "Thumbnails aren't enabled on this site"
+#: ckanext/webpageviewplus/manage.py:629
+msgid "Automatic thumbnails are on for this view."
+msgstr "Le miniature automatiche sono attivate per questa vista."
+
+#: ckanext/webpageviewplus/manage.py:630
+msgid "Unknown action."
+msgstr "Azione sconosciuta."
+
+#: ckanext/webpageviewplus/plugin.py:167
 msgid "Website (Plus)"
 msgstr "Sito web (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:335
+#: ckanext/webpageviewplus/plugin.py:336
 msgid "Embedded web page"
 msgstr "Pagina web incorporata"
 
-#: ckanext/webpageviewplus/plugin.py:567
+#: ckanext/webpageviewplus/plugin.py:576
 msgid "PDF (Plus)"
 msgstr "PDF (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:580
+#: ckanext/webpageviewplus/plugin.py:589
 msgid "PDF"
 msgstr "PDF"
 
-#: ckanext/webpageviewplus/plugin.py:637
+#: ckanext/webpageviewplus/plugin.py:646
 msgid "PDF document"
 msgstr "Documento PDF"
 
-#: ckanext/webpageviewplus/plugin.py:745
+#: ckanext/webpageviewplus/plugin.py:754
 msgid "Repository (Plus)"
 msgstr "Repository (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:756 ckanext/webpageviewplus/plugin.py:793
+#: ckanext/webpageviewplus/plugin.py:765 ckanext/webpageviewplus/plugin.py:802
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:6
 msgid "Repository"
 msgstr "Repository"
@@ -194,6 +310,7 @@ msgstr "Scegli un'immagine di questo dataset"
 # | such as " "https://github.com/ckan/ckan, are supported."
 #. TRANSLATORS: {hosts} is a list of this site's own Git servers.
 #: ckanext/webpageviewplus/validators.py:342
+#, python-brace-format
 msgid ""
 "Not the address of a repository on GitHub, GitLab, Codeberg, Bitbucket or"
 " {hosts}, such as https://github.com/ckan/ckan"
@@ -288,6 +405,7 @@ msgstr "es. https://example.com  (se vuoto, usa l'URL della risorsa)"
 #. Vimeo,
 #. Datawrapper".
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:32
+#, python-brace-format
 msgid ""
 "Leave blank to show this resource's own address. Paste a link from "
 "{services} and the form suggests its embed address and settings."
@@ -298,6 +416,7 @@ msgstr ""
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:33
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:19
+#, python-brace-format
 msgid "This site accepts pages from these hosts only: {hosts}."
 msgstr "Questo sito accetta solo pagine da questi host: {hosts}."
 
@@ -382,6 +501,7 @@ msgstr ""
 "nell'elenco degli host consentiti di questo sito."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:56
+#, python-brace-format
 msgid ""
 "{service}'s viewer fetches the file from its own servers, so it can't "
 "show a file in a private dataset."
@@ -390,6 +510,7 @@ msgstr ""
 "non può mostrare un file di un dataset privato."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:57
+#, python-brace-format
 msgid ""
 "{service} doesn't let its pages show inside other sites, so this view "
 "would stay blank. Use the page's embed or share address if it has one, or"
@@ -427,7 +548,6 @@ msgstr ""
 # show
 # | an " "error. Consider linking to it instead."
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:85
-#, python-brace-format
 msgid ""
 "This site refuses to be embedded, so the view will show an error. "
 "Consider linking to it instead."
@@ -573,6 +693,7 @@ msgstr "Miniatura nell'elenco delle risorse"
 #. no thumbnail image chosen (the image, feminine in some languages).
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:148
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:45
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:69
 msgid "None"
 msgstr "Nessuna"
 
@@ -630,39 +751,49 @@ msgstr ""
 "già acquisito."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:180
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:18
 msgid "the page didn't load"
 msgstr "la pagina non si è caricata"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:181
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:19
 msgid "the page couldn't be reached"
 msgstr "la pagina non era raggiungibile"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:182
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:20
 msgid "the screenshot service refused the request"
 msgstr "il servizio di screenshot ha rifiutato la richiesta"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:183
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:21
 msgid "the screenshot service's allowance is used up for now"
 msgstr "la quota del servizio di screenshot è esaurita per ora"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:184
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:22
 msgid "the answer wasn't an image"
 msgstr "la risposta non era un'immagine"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:185
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:23
 msgid "the screenshot service isn't set up safely"
 msgstr "il servizio di screenshot non è configurato in modo sicuro"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:188
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:38
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:74
 msgid "Screenshot"
 msgstr "Screenshot"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:190
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:20
+#, python-brace-format
 msgid "Screenshot of {host}"
 msgstr "Screenshot di {host}"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:194
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:92
 msgid ""
 "A screenshot is taken after you save, if this page can't be shown in a "
 "frame."
@@ -671,6 +802,7 @@ msgstr ""
 "può essere mostrata in un riquadro."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:196
+#, python-brace-format
 msgid ""
 "The screenshot is of {url}. A new one is taken after you save, if the new"
 " page can't be shown in a frame."
@@ -679,16 +811,19 @@ msgstr ""
 "nuovo, se la nuova pagina non può essere mostrata in un riquadro."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:198
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:84
 msgid "This page can now be shown in a frame, so the screenshot isn't used."
 msgstr ""
 "Questa pagina ora può essere mostrata in un riquadro, quindi lo "
 "screenshot non viene usato."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:200
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:86
 msgid "You picked a thumbnail, so the screenshot isn't used."
 msgstr "Hai scelto una miniatura, quindi lo screenshot non viene usato."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:202
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:88
 msgid "This dataset is private, so screenshots aren't taken."
 msgstr "Questo dataset è privato, quindi non vengono acquisiti screenshot."
 
@@ -710,14 +845,18 @@ msgstr ""
 "modulo più tardi per vederlo."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:206
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:82
+#, python-brace-format
 msgid "The last attempt on {date} failed: {reason}."
 msgstr "L'ultimo tentativo, il {date}, non è riuscito: {reason}."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
+#, python-brace-format
 msgid "Taken {date}, of {host}."
 msgstr "Acquisito il {date}, da {host}."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:208
+#, python-brace-format
 msgid "Taken {date}."
 msgstr "Acquisito il {date}."
 
@@ -736,6 +875,7 @@ msgstr ""
 "delle risorse."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:220
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:104
 msgid "Take a new screenshot"
 msgstr "Acquisisci un nuovo screenshot"
 
@@ -854,6 +994,7 @@ msgstr ""
 "visitatori non contattano mai quel sito."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:18
+#, python-brace-format
 msgid "Files on other sites are shown up to {size} MB."
 msgstr "I file di altri siti vengono mostrati fino a {size} MB."
 
@@ -872,6 +1013,7 @@ msgstr ""
 "finestra. Vuoto vale 800 pixel."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:46
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:14
 msgid "The PDF's first page"
 msgstr "La prima pagina del PDF"
 
@@ -957,23 +1099,27 @@ msgid "Archived"
 msgstr "Archiviato"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:18
+#, python-brace-format
 msgid "{count} star"
 msgid_plural "{count} stars"
 msgstr[0] "{count} stella"
 msgstr[1] "{count} stelle"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:19
+#, python-brace-format
 msgid "{count} fork"
 msgid_plural "{count} forks"
 msgstr[0] "{count} fork"
 msgstr[1] "{count} fork"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:20
+#, python-brace-format
 msgid "Updated {date}"
 msgstr "Aggiornato il {date}"
 
 #. the branch whose files are listed, such as "main".
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:22
+#, python-brace-format
 msgid "Branch: {ref}"
 msgstr "Branch: {ref}"
 
@@ -982,6 +1128,7 @@ msgid "Files"
 msgstr "File"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:29
+#, python-brace-format
 msgid "More files on {site}"
 msgstr "Altri file su {site}"
 
@@ -989,6 +1136,7 @@ msgstr "Altri file su {site}"
 # | repository " "can't be shown here. Try again later."
 #. {site} is a code hosting site, such as GitHub or GitLab.
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:40
+#, python-brace-format
 msgid ""
 "This site has used up its requests to {site} for now, so the repository "
 "can't be shown here. Try again later."
@@ -1009,6 +1157,7 @@ msgid "The repository couldn't be loaded. Try again later."
 msgstr "Non è stato possibile caricare il repository. Riprova più tardi."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:49
+#, python-brace-format
 msgid "Open on {site}"
 msgstr "Apri su {site}"
 
@@ -1028,6 +1177,7 @@ msgstr ""
 " i browser bloccano all'interno dei siti https://."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:10
+#, python-brace-format
 msgid ""
 "This page is gone: {host} said it no longer exists when the view was last"
 " checked."
@@ -1049,6 +1199,7 @@ msgid "{host} doesn't allow its pages to be shown inside other sites."
 msgstr "{host} non consente di mostrare le sue pagine all'interno di altri siti."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:24
+#, python-brace-format
 msgid "Screenshot taken {date}. The page itself can't be shown here."
 msgstr "Screenshot acquisito il {date}. La pagina non può essere mostrata qui."
 
@@ -1072,6 +1223,7 @@ msgstr "Questa vista carica contenuti da {host}."
 
 # it
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:72
+#, python-brace-format
 msgid ""
 "Loading it lets {host} know you are visiting this site, and it may "
 "recognise you if you are signed in there."
@@ -1107,6 +1259,7 @@ msgid "Always load from {host}"
 msgstr "Carica sempre da {host}"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:92
+#, python-brace-format
 msgid "Content from {host} loads without asking in this browser."
 msgstr "I contenuti di {host} si caricano senza chiedere in questo browser."
 
@@ -1180,6 +1333,7 @@ msgstr "Salva la vista per vedere il PDF."
 #. {hosts} is a list of this site's own Git servers, such as "git.example.org,
 #. gitlab.example.org".
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:163
+#, python-brace-format
 msgid ""
 "There is no repository to show: only public repositories on GitHub, "
 "GitLab, Codeberg, Bitbucket and {hosts}, such as "
@@ -1220,4 +1374,162 @@ msgid ""
 msgstr ""
 "Questa pagina non può essere incorporata: sono supportati solo URL "
 "http:// e https://."
+
+#. tab on a dataset's edit pages: its views' thumbnails and screenshots.
+#: ckanext/webpageviewplus/thumbnail_templates/package/edit_base.html:6
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:3
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:26
+msgid "Thumbnails"
+msgstr "Miniature"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:10
+msgid "A picked image"
+msgstr "Un'immagine scelta"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:11
+msgid "The page's preview image"
+msgstr "L'immagine di anteprima della pagina"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:12
+msgid "The service's thumbnail"
+msgstr "La miniatura del servizio"
+
+# | msgid "More files on {site}"
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:13
+msgid "The file's own preview"
+msgstr "L'anteprima propria del file"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:15
+msgid "Another source"
+msgstr "Un'altra fonte"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:27
+msgid ""
+"What the resource list shows for each Website (Plus) and PDF (Plus) view,"
+" and the copies stored for it. A removed copy is made again at the view's"
+" next save or refresh, unless automatic thumbnails are off."
+msgstr ""
+"Ciò che l'elenco delle risorse mostra per ogni vista Sito web (Plus) e "
+"PDF (Plus), e le copie salvate per essa. Una copia rimossa viene ricreata"
+" al prossimo salvataggio o aggiornamento della vista, a meno che le "
+"miniature automatiche non siano disattivate."
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:29
+msgid "This dataset has no Website (Plus) or PDF (Plus) views."
+msgstr "Questo dataset non ha viste Sito web (Plus) o PDF (Plus)."
+
+# | msgid "Thumbnails aren't enabled on this site"
+# | msgid "Automatic thumbnails are on for this view."
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:32
+msgid "Thumbnails of this dataset's views"
+msgstr "Miniature delle viste di questo dataset"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:35
+msgid "View"
+msgstr "Vista"
+
+# | msgid "Thumbnail in the resource list"
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:36
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:50
+msgid "In the resource list"
+msgstr "Nell'elenco delle risorse"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:37
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:64
+msgid "Stored thumbnail"
+msgstr "Miniatura salvata"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:39
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:99
+msgid "Actions"
+msgstr "Azioni"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:53
+msgid "Another view of this resource decides it."
+msgstr "Lo decide un'altra vista di questa risorsa."
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:56
+msgid "The stored thumbnail"
+msgstr "La miniatura salvata"
+
+# | msgid "Screenshot"
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:57
+msgid "The screenshot"
+msgstr "Lo screenshot"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:58
+#, python-brace-format
+msgid "{service}'s logo"
+msgstr "Il logo di {service}"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:59
+#, python-brace-format
+msgid "The name {service}"
+msgstr "Il nome {service}"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:60
+msgid "The format label"
+msgstr "L'etichetta del formato"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:67
+msgid "Not in use: the view no longer asks for it."
+msgstr "Non in uso: la vista non la richiede più."
+
+# | msgid "Thumbnails aren't enabled on this site"
+# | msgid "Automatic thumbnails are on for this view."
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:71
+msgid "Automatic thumbnails are off."
+msgstr "Le miniature automatiche sono disattivate."
+
+# | msgid "Thumbnails aren't enabled on this site"
+# | msgid "Automatic thumbnails are on for this view."
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:76
+msgid "Not taken for this view."
+msgstr "Non viene acquisito per questa vista."
+
+# | msgid "Taken {date}."
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:78
+#, python-brace-format
+msgid "In use, taken {date}."
+msgstr "In uso, acquisito il {date}."
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:80
+msgid "Pending."
+msgstr "In attesa."
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:90
+msgid "Of a previous page address, so not in use."
+msgstr "Di un indirizzo di pagina precedente, quindi non in uso."
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:106
+msgid "Remake the thumbnail"
+msgstr "Rigenera la miniatura"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:108
+msgid "Remove"
+msgstr "Rimuovi"
+
+# | msgid "Thumbnails aren't enabled on this site"
+# | msgid "Automatic thumbnails are on for this view."
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:112
+msgid "Turn automatic thumbnails on"
+msgstr "Attiva le miniature automatiche"
+
+# | msgid "Thumbnails aren't enabled on this site"
+# | msgid "Automatic thumbnails are on for this view."
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:114
+msgid "Turn automatic thumbnails off"
+msgstr "Disattiva le miniature automatiche"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:119
+msgid "Picked image"
+msgstr "Immagine scelta"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:121
+msgid "None (automatic)"
+msgstr "Nessuna (automatica)"
+
+#: ckanext/webpageviewplus/thumbnail_templates/webpageviewplus/manage_dataset.html:129
+msgid "Save the choice"
+msgstr "Salva la scelta"
 

@@ -21,6 +21,7 @@ setup(
             ('**.py', 'babel.messages.extract:extract_python', None),
             ('**.js', 'babel.messages.extract:extract_javascript', None),
             ('**/templates/**.html', 'ckan.lib.extract:extract_ckan', None),
+            ('**/thumbnail_templates/**.html', 'ckan.lib.extract:extract_ckan', None),
         ],
     }
 )
