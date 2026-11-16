@@ -196,6 +196,11 @@ jobs:
         pip install -e ".[thumbnails,repos]"
         pip install -r browser_tests/requirements.txt
         python -m playwright install --with-deps chromium firefox webkit
+    - name: A throwaway login for the management pages' tests
+      run: |
+        password="$(python -c 'import secrets; print(secrets.token_urlsafe(18))')"
+        echo "::add-mask::$password"
+        echo "WVP_TEST_PASSWORD=$password" >> "$GITHUB_ENV"
     - name: Start CKAN with seeded data
       run: |
         ckan -c "$CKAN_INI" db init

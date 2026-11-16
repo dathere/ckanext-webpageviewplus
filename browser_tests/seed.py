@@ -202,6 +202,8 @@ def main():
                 {"name": name, "url": url}, "{} ({})".format(found.service, found.preset),
                 **fields)
 
+        _seed_logins(act, ctx, org)
+
         if plugins.plugin_loaded("repo_view_plus"):
             _seed_repos(act, ctx, pkg)
 
@@ -247,6 +249,31 @@ def _seed_screenshot(act, ctx, pkg):
     Image.new("RGB", (1350, 940), SCREENSHOT_COLOUR).save(picture, "PNG")
     card, thumb = screenshots.encode(picture.getvalue())
     screenshots.store(view["id"], SCREENSHOT_PAGE, "gotenberg", card, thumb)
+
+
+# Logins for the management pages' tests, made only when WVP_TEST_PASSWORD
+# is set: CI sets a random one per run on its throwaway database. The tests
+# that need them skip without it (browser_tests/conftest.py, login).
+EDITOR = "wvp-test-editor"
+SYSADMIN = "wvp-test-sysadmin"
+
+
+def _seed_logins(act, ctx, org):
+    import ckan.model as model
+    password = os.environ.get("WVP_TEST_PASSWORD")
+    if not password:
+        return
+    for name in (EDITOR, SYSADMIN):
+        try:
+            act("user_show")(ctx(), {"id": name})
+            act("user_patch")(ctx(), {"id": name, "password": password})
+        except tk.ObjectNotFound:
+            act("user_create")(ctx(), {"name": name, "email": name + "@example.com",
+                                       "password": password})
+    model.User.by_name(SYSADMIN).sysadmin = True
+    model.Session.commit()
+    act("organization_member_create")(ctx(), {"id": org["id"], "username": EDITOR,
+                                              "role": "editor"})
 
 
 def _seed_repos(act, ctx, pkg):
