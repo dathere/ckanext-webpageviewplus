@@ -946,6 +946,13 @@ LinkedIn's `/embed/` or Instagram's `/p/<id>/embed`, Facebook's `/plugins/`, X's
 aren't flagged, and the embeddable pages in the table above are suggested as usual. For any other page, turn on the
 [Frameability check](#frameability-check).
 
+With `repo_view_plus` on, a repository's address (on GitHub, GitLab, Codeberg, Bitbucket, or a
+site in `repo_hosts`) gets a link instead: **Make a Repository (Plus) view** opens the
+Repository form for the same resource with that address filled in. A view's type can't be
+changed, so for a Website (Plus) view already saved, the Repository form offers (ticked) to delete
+it: on save, the new view takes its place in the list of views and the old one is deleted, if
+you may delete it.
+
 #### Views made automatically
 
 CKAN can make a Website (Plus) view by itself for a resource whose link is a recognised service's
@@ -1659,8 +1666,9 @@ server reachable only inside your network shows the "couldn't be loaded" card.
   repository's host, under `privacy_profile = eu`, `consent_gate` or Global Privacy Control.
 
 `ckan webpageviewplus check-views` reports Repository views whose repository is gone or private
-(see [Finding broken views](#finding-broken-views)). Not yet: the Website (Plus) form offering a
-Repository view for repository links.
+(see [Finding broken views](#finding-broken-views)), and the Website (Plus) form offers a
+Repository view when a repository's address is pasted (see
+[Well-known services](#well-known-services-recognised-links)).
 
 ### Privacy and telemetry
 

@@ -4,6 +4,11 @@
 
 ### Added
 
+- The Website (Plus) form offers a Repository (Plus) view for a repository's address (with
+  `repo_view_plus`): its warning links to the Repository form for the same resource, with the
+  address filled in. For a saved Website (Plus) view, the Repository form offers (ticked) to
+  delete it, and the new view takes its place in the list. For a site in `repo_hosts` the
+  offer doesn't say the page can't be framed. (#17)
 - `ckan webpageviewplus check-views` checks Repository (Plus) views too (with
   `repo_view_plus`): `repo-missing` for a repository that's gone or private,
   `not-a-repository` for a link that's no longer a repository's root, and `unreachable` when

@@ -8,11 +8,21 @@
   'viewport': _('Share of the window height, in percent'),
 } %}
 
-{% call form.input('repo_url', id='field-repo_url', label=_('Repository url'), placeholder=_('eg. https://github.com/ckan/ckan or https://gitlab.com/gitlab-org/gitlab  (if blank uses resource url)'), value=data.repo_url, error=errors.repo_url, classes=['control-full', 'control-large'], attrs={'class': 'form-control', 'aria-describedby': 'help-repo_url'}) %}
+{% call form.input('repo_url', id='field-repo_url', label=_('Repository url'), placeholder=_('eg. https://github.com/ckan/ckan or https://gitlab.com/gitlab-org/gitlab  (if blank uses resource url)'), value=data.repo_url or prefill_repo_url, error=errors.repo_url, classes=['control-full', 'control-large'], attrs={'class': 'form-control', 'aria-describedby': 'help-repo_url'}) %}
   <p class="form-text" id="help-repo_url">
     {{ _("Leave blank to show the repository this resource links to, or enter another repository or branch to show instead. A public repository's name, description, files and README are fetched by this site and shown here, as the pages of GitHub, GitLab, Codeberg and Bitbucket can't be embedded. For a branch other than the default, use the address of the branch's page.") }}
   </p>
 {% endcall %}
+
+{% if replaces_view %}
+<div class="form-group">
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="field-replaces" name="replaces" value="{{ replaces_view.id }}" aria-describedby="help-replaces" {% if replaces_view.checked %}checked{% endif %}>
+    <label class="form-check-label" for="field-replaces">{{ _('Delete the Website (Plus) view "{title}", which this view replaces').format(title=replaces_view.title) }}</label>
+    <p class="form-text" id="help-replaces">{{ _('This view takes its place in the list of views.') }}</p>
+  </div>
+</div>
+{% endif %}
 
 <div class="form-group control-medium">
   <label class="form-label" for="field-height_mode">{{ _('Height') }}</label>

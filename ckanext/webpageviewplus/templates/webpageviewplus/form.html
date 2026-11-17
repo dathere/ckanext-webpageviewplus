@@ -55,7 +55,12 @@
   'host_not_allowed': _('{service} embeds come from {host}, which isn\'t on this site\'s list of allowed hosts.'),
   'private_dataset': _('{service}\'s viewer fetches the file from its own servers, so it can\'t show a file in a private dataset.'),
   'refuses_framing': _('{service} doesn\'t let its pages show inside other sites, so this view would stay blank. Use the page\'s embed or share address if it has one, or link to it instead.'),
+  'use_repo_view': _('{service} doesn\'t let its pages show inside other sites, so this view would stay blank. A Repository (Plus) view shows this repository\'s files and README instead.'),
+  'use_repo_view_self_hosted': _('This is a repository on {service}. A Repository (Plus) view shows its files and README.'),
 } %}
+{# TRANSLATORS: a link to the form for a new Repository (Plus) view of this resource. #}
+{% set repo_view_label = _('Make a Repository (Plus) view') %}
+{% set repo_view_kept = _('The Repository form offers to delete this view, which the new one replaces.') if data.id else '' %}
 {# Well-known services (YouTube, Datawrapper...): offers the embed address
    and the settings the embed needs. Filled in by the script; a problem is
    rendered here too, so it shows without the script. #}
@@ -69,11 +74,19 @@
      {# TRANSLATORS: a button accepting the suggested embed address and settings. #}
      data-apply="{{ _('Use them') }}"
      data-applied="{{ _('Using the embed address and settings for {service}. Save the view to keep them.') }}"
+     {%- if repo_view_url %}
+     data-repo-view-url="{{ repo_view_url }}"
+     data-repo-view-label="{{ repo_view_label }}"
+     data-repo-view-kept="{{ repo_view_kept }}"
+     {%- endif %}
      {%- for problem, text in problem_texts.items() %}
      data-{{ problem | replace('_', '-') }}="{{ text }}"
      {%- endfor %}>
   {%- if service_hint -%}
     {{ problem_texts[service_hint.problem].format(service=service_hint.service, preset=preset_names.get(service_hint.preset, service_hint.preset), host=service_hint.host) }}
+    {%- if service_hint.problem.startswith('use_repo_view') and repo_view_url %}
+      {% if repo_view_kept %}{{ repo_view_kept }} {% endif %}<a href="{{ repo_view_url }}{% if data.page_url %}&amp;repo_url={{ data.page_url | urlencode }}{% endif %}">{{ repo_view_label }}</a>
+    {%- endif -%}
   {%- endif -%}
 </div>
 {% if frameability_check %}

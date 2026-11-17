@@ -125,7 +125,17 @@ order now being built:
 11. Done: `repo_view_plus` (spec section "Proposed: Repository (Plus) view"; GitHub released
    in 0.11.0; Codeberg/Gitea/Forgejo, GitLab, Bitbucket and `repo_hosts` unreleased, issue
    #3); see `repos.py` below. `check-views` reports Repository views (#15, unreleased).
-   Next: the Website (Plus) form offering a Repository view for repository links.
+   The Website (Plus) form offers a Repository view (#17, unreleased):
+   `actions.service_answer(..., repo_views=)` answers `use_repo_view` (built-in sites) or
+   `use_repo_view_self_hosted` (`repo_hosts`) for a `repos.parse()` root, after `suggest()`;
+   `plugin._repo_view_url` is CKAN's new-view link (`data-repo-view-url`, the script adds
+   `repo_url`), and the Repository form prefills `repo_url` from the query on a new view's GET
+   only, for a repository link only (`prefill_repo_url`). A saved view's link adds `replaces`:
+   the Repository form shows a ticked "Delete the Website (Plus) view" box
+   (`plugin._replaced_view`: same resource, Website (Plus), `resource_view_delete` allowed), and
+   the chained `resource_view_create` pops `replaces` (never stored) and calls
+   `actions.replace_view`: delete auth checked first, then reorder into the old view's place,
+   then delete, as the saving user; it never fails the save.
 
 12. Done (0.13.0): screenshots of pages that refuse framing (spec section "Proposed: Screenshots
    of pages that refuse framing", revision 3, every open question decided; its Build order gives

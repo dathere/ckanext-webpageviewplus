@@ -481,6 +481,18 @@
       if (problem) {
         status.textContent = fill(problem, values);
         status.classList.add("alert", "alert-warning");
+        var repoView = status.getAttribute("data-repo-view-url");
+        if (repoView && found.problem.indexOf("use_repo_view") === 0) {
+          var kept = status.getAttribute("data-repo-view-kept");
+          status.appendChild(document.createTextNode(" " + (kept ? kept + " " : "")));
+          var link = document.createElement("a");
+          // A blank page URL means the resource's own link, which the
+          // Repository form uses by default.
+          var typed = input.value.trim();
+          link.href = repoView + (typed ? "&repo_url=" + encodeURIComponent(typed) : "");
+          link.textContent = status.getAttribute("data-repo-view-label");
+          status.appendChild(link);
+        }
         return;
       }
       if (inUse(found)) {
