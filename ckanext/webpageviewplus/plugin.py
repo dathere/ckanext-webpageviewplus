@@ -282,8 +282,10 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             # A PDF shows better in PDF (Plus), where it's offered.
             "suggest_pdf_view": (
                 plugins.plugin_loaded(pdf.VIEW_TYPE)
-                and pdf.offered(data_dict.get("package") or {"id": resource.get("package_id")})
-                and pdf.is_pdf_resource(resource)
+                and PdfViewPlusPlugin().can_view({
+                    "resource": resource,
+                    "package": data_dict.get("package") or {"id": resource.get("package_id")},
+                })
             ),
             # Set below once the frame is built, for a PDF framed in a
             # sandbox, where Chrome won't run its PDF viewer.

@@ -470,6 +470,9 @@ def open_viewer(view_id: str):
     frame's own signed URL may have expired."""
     if content.on_content_host():
         abort(404)
+    if on_ckan_host():
+        # As _served_here: a refusal (a private dataset now) mustn't be kept.
+        request.environ[content.CACHE_ENVIRON_KEY] = "none"
     user = toolkit.current_user
     context = {"user": user.name if getattr(user, "is_authenticated", False) else ""}
     try:

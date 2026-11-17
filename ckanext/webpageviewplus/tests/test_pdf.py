@@ -592,6 +592,19 @@ class TestOnCkanHost:
         assert not view_plugin.can_view({"resource": resource, "package": draft})
         assert not view_plugin.can_view({"resource": resource})
 
+    def test_website_form_skips_unreadable_uploads(self, app, monkeypatch):
+        # As can_view: an upload a 2.10/2.11 cloud storage keeps isn't offered.
+        dataset = factories.Dataset()
+        resource = _upload(dataset)
+        monkeypatch.setattr(content, "_readable_uploader", lambda resource: None)
+        sysadmin = factories.SysadminWithToken()
+        body = app.get(
+            url_for("dataset_resource.edit_view", id=dataset["name"],
+                    resource_id=resource["id"], view_type="webpage_view_plus"),
+            headers={"Authorization": sysadmin["token"]},
+        ).body
+        assert "Use a PDF (Plus) view instead." not in body
+
     def test_refusals_are_not_stored(self, app):
         # Marked before the route can fail: no-store and no cookie, as on the
         # content host, not CKAN's default caching of a 404.
@@ -613,9 +626,10 @@ class TestOnCkanHost:
         resource = _upload(_private_dataset())
         view = _view(resource)
         sysadmin = factories.SysadminWithToken()
-        assert app.get("/webpageviewplus/pdf-view/{}".format(view["id"]),
-                       headers={"Authorization": sysadmin["token"]},
-                       status=404).status_code == 404
+        response = app.get("/webpageviewplus/pdf-view/{}".format(view["id"]),
+                           headers={"Authorization": sysadmin["token"]}, status=404)
+        assert response.headers["Cache-Control"] == "no-store"
+        _no_cookie(response)
 
     @pytest.mark.parametrize("private, offered", [(False, True), (True, False)])
     def test_website_form_points_to_pdf_plus_where_it_shows(self, app, private, offered):
