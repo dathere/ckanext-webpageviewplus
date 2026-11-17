@@ -282,7 +282,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             # A PDF shows better in PDF (Plus), where it's offered.
             "suggest_pdf_view": (
                 plugins.plugin_loaded(pdf.VIEW_TYPE)
-                and bool(settings.isolating_content_origin())
+                and pdf.offered(data_dict.get("package") or {"id": resource.get("package_id")})
                 and pdf.is_pdf_resource(resource)
             ),
             # Set below once the frame is built, for a PDF framed in a
@@ -639,12 +639,7 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
         }
 
     def can_view(self, data_dict: dict[str, Any]) -> bool:
-        mode = settings.pdf_mode()
-        if not mode:
-            return False
-        if mode == settings.PDF_ON_CKAN_HOST and (data_dict.get("package") or {}).get(
-                "private", True):
-            # On CKAN's host the frame sends no cookies: public datasets only.
+        if not pdf.offered(data_dict.get("package")):
             return False
         resource = data_dict["resource"]
         if resource.get("url_type") == "upload" and pdf.source({}, resource) is None:

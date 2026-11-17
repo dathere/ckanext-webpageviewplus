@@ -335,8 +335,10 @@ order now being built:
   `browser_tests/test_pdf.py` checks the options took effect.
   **On CKAN's host** (`settings.pdf_mode()` = `PDF_ON_CKAN_HOST`: `pdf_without_content_origin`,
   `harden_downloads`, no isolating content origin): the same routes answer on CKAN's host only
-  (`pdf._served_here`), public datasets only (`can_view` by the package's `private`, render
-  card `pdf_private`, `serve` and `open_viewer` 404, `migrate-pdf` skips). The frame is
+  (`pdf._served_here`, which also marks the request `no-store` before anything can fail),
+  public datasets only: `pdf.offered(package)` (`content.is_public`, so drafts too) for
+  `can_view` and the Website form's `suggest_pdf_view`; render card `pdf_private`; `serve` and
+  `open_viewer` 404; `migrate-pdf` skips. The frame is
   `interactive` with `sandbox_override=pdf.HOST_SANDBOX` (adds
   `allow-popups-to-escape-sandbox`) and a relative src (`pdf._root_path`, for
   `ckan.root_path`). `pdf._headers` adds `HOST_SANDBOX_CSP` to every viewer file (the header,

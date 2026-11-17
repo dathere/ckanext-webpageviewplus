@@ -581,12 +581,23 @@ class TestOnCkanHost:
         assert "the dataset is private, and this site shows PDFs only for public datasets" in body
         assert "/webpageviewplus/pdfjs/" not in body
 
-    def test_offered_for_public_datasets_only(self):
+    def test_offered_where_anyone_may_see_the_dataset(self):
+        # The same check render and the routes use: drafts aren't public.
         view_plugin = plugin.PdfViewPlusPlugin()
         resource = {"format": "PDF", "url": "https://a.org/b.pdf"}
-        assert view_plugin.can_view({"resource": resource, "package": {"private": False}})
-        assert not view_plugin.can_view({"resource": resource, "package": {"private": True}})
+        public, private = factories.Dataset(), _private_dataset()
+        draft = factories.Dataset(state="draft")
+        assert view_plugin.can_view({"resource": resource, "package": public})
+        assert not view_plugin.can_view({"resource": resource, "package": private})
+        assert not view_plugin.can_view({"resource": resource, "package": draft})
         assert not view_plugin.can_view({"resource": resource})
+
+    def test_refusals_are_not_stored(self, app):
+        # Marked before the route can fail: no-store and no cookie, as on the
+        # content host, not CKAN's default caching of a 404.
+        response = app.get("/webpageviewplus/pdf/no-such-view/document.pdf", status=404)
+        assert response.headers["Cache-Control"] == "no-store"
+        _no_cookie(response)
 
     def test_open_viewer_stays_on_ckan_host(self, app):
         resource = _upload(factories.Dataset())
@@ -605,3 +616,15 @@ class TestOnCkanHost:
         assert app.get("/webpageviewplus/pdf-view/{}".format(view["id"]),
                        headers={"Authorization": sysadmin["token"]},
                        status=404).status_code == 404
+
+    @pytest.mark.parametrize("private, offered", [(False, True), (True, False)])
+    def test_website_form_points_to_pdf_plus_where_it_shows(self, app, private, offered):
+        dataset = _private_dataset() if private else factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=LINK, format="PDF")
+        sysadmin = factories.SysadminWithToken()
+        body = app.get(
+            url_for("dataset_resource.edit_view", id=dataset["name"],
+                    resource_id=resource["id"], view_type="webpage_view_plus"),
+            headers={"Authorization": sysadmin["token"]},
+        ).body
+        assert ("Use a PDF (Plus) view instead." in body) is offered

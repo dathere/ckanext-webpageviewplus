@@ -278,6 +278,18 @@ def on_ckan_host() -> bool:
     return settings.pdf_mode() == settings.PDF_ON_CKAN_HOST
 
 
+def offered(package: Optional[dict[str, Any]]) -> bool:
+    """Whether a PDF (Plus) view can show on this site for this dataset. On
+    CKAN's host, only where an anonymous visitor may see the dataset
+    (``content.is_public``, as render and the routes decide it: drafts and
+    permission plugins included), as the frame sends no cookies."""
+    mode = settings.pdf_mode()
+    if mode == settings.PDF_ON_CKAN_HOST:
+        package_id = (package or {}).get("id")
+        return bool(package_id) and content.is_public(package_id)
+    return bool(mode)
+
+
 def _root_path() -> str:
     """CKAN's root path (ckan.root_path) on its own host, as its links carry
     it; the content origin is always served from its root."""
@@ -363,6 +375,9 @@ def _served_here() -> None:
     if mode == settings.PDF_ON_CONTENT_ORIGIN and content.on_content_host():
         return
     if mode == settings.PDF_ON_CKAN_HOST and not content.on_content_host():
+        # Marked before anything can fail, so a refusal is no-store and sets
+        # no cookie, as on the content host; success paths set their own.
+        request.environ[content.CACHE_ENVIRON_KEY] = "none"
         return
     abort(404)
 

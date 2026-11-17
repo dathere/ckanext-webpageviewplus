@@ -1532,12 +1532,16 @@ its sandbox leaves out `allow-same-origin`, and every viewer file carries the sa
 read your visitors' cookies, their storage or the CKAN page, the same as an uploaded page under
 Interactive. What it gives up is the second layer: with a content domain, a flaw in PDF.js
 would also be on another site. Two limits:
-- **Public datasets only.** A frame with no origin sends no cookies, and without a content
-  origin there's nothing to sign its addresses with, so the view isn't offered for private
-  datasets, and a view whose dataset becomes private shows a card instead.
+- **Public datasets only.** PDF.js fetches the PDF without the visitor's cookies (it has no
+  origin of its own), and without a content origin there's nothing to sign the PDF's address
+  with. So the view is offered only for datasets anyone may see, and a view whose dataset
+  becomes private, or is still a draft, shows a card instead. (The browser may still send
+  CKAN's cookies when it loads the frame itself; the sandbox stops the viewer reading them.)
 - **PDF.js runs on the page.** Its worker can't start in a frame with no origin, so it draws on
   the page's own thread. On a fast laptop, page 1 of a 300-page PDF still took about 0.6 s,
-  and the page was busy for under 0.2 s in all; slower phones will feel more of that.
+  and the page was busy for under 0.2 s in all; slower phones will feel more of that. And
+  without its worker, PDF.js can't load its colour-management code, so a PDF with embedded
+  colour profiles (ICC) is drawn with approximate colours.
 
 Links inside a PDF open in an ordinary new tab. Setting a content origin later switches every
 PDF (Plus) view over to it, with nothing to migrate.
@@ -1611,13 +1615,13 @@ docstring.
 
 | | ckanext-pdfview (`pdf_view`) | PDF (Plus) (`pdf_view_plus`) |
 | --- | --- | --- |
-| Needs | nothing | a separate domain for uploads, recent browsers (Chrome and Edge 125+, Firefox ESR 153+, Safari 18+), and for uploads in cloud storage, CKAN 2.12 |
+| Needs | nothing | a separate domain for uploads (or, for public datasets only, `pdf_without_content_origin`), recent browsers (Chrome and Edge 125+, Firefox ESR 153+, Safari 18+), and for uploads in cloud storage, CKAN 2.12 |
 | Viewer | the browser's own, in an `<object>` tag | PDF.js 6.5.438, shipped with the extension |
 | Phones and tablets | iOS and Android don't show PDFs inline: a blank box or a download | the same viewer as on a desktop |
-| Sandbox | none: the view's PDF url can be any web address, and whatever it serves is shown unsandboxed in the CKAN page | PDF.js runs sandboxed on the separate domain; the PDF itself is sent with a CSP `sandbox` |
+| Sandbox | none: the view's PDF url can be any web address, and whatever it serves is shown unsandboxed in the CKAN page | PDF.js runs sandboxed on the separate domain (with `pdf_without_content_origin`, on CKAN's domain with no origin of its own); the PDF itself is sent with a CSP `sandbox` |
 | A PDF's own scripts | run where the browser's viewer runs them | never run in the view (Open in new tab opens the file in the browser's own viewer) |
 | PDFs on other sites | the visitor's browser fetches them, so that site sees each visitor | CKAN fetches each one (size-capped, checked to be a PDF, cached), so the site doesn't see visitors reading it in the view |
-| Private datasets | loads with the visitor's login | signed addresses, as for uploaded HTML |
+| Private datasets | loads with the visitor's login | with a separate domain, signed addresses, as for uploaded HTML; with `pdf_without_content_origin`, not shown |
 | Height | at least the window's height | per view: 800 px or a share of the window |
 | Controls | the browser viewer's | PDF.js's toolbar (page, zoom, search), and the control bar; download and print through Open in new tab |
 | Languages | the browser's | English and ten more, following the CKAN page |
