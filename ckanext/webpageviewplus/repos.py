@@ -721,20 +721,26 @@ def cached(repo: Repo, view_id: str = "") -> tuple[Optional[dict[str, Any]], str
     return None, "failed" if problem == "busy" else problem
 
 
-def check(repo: Repo) -> tuple[str, float]:
+def check(repo: Repo, fetch_now: bool = True) -> tuple[str, float]:
     """Why the repository can't be fetched now ("" if it can), and until when
     for ``rate_limited``, through the same copy, lock and failure memory as
     rendering. Unlike ``cached``, a failure is reported even while an old
     copy is still being served (the API failed or hit its limit). A copy
     within repo_cache_seconds counts as fine unfetched; ``busy`` means
-    another worker is making the first copy, so there's no answer yet."""
-    _data, problem, until = _cached(repo)
+    another worker is making the first copy, so there's no answer yet.
+    With ``fetch_now`` False (the site is rate-limited), only what's known
+    already is reported, and anything needing a fetch is ``rate_limited``."""
+    _data, problem, until = _cached(repo, fetch_now=fetch_now)
     return problem, until
 
 
-def _cached(repo: Repo, view_id: str = "") -> tuple[Optional[dict[str, Any]], str, float]:
+def _cached(
+    repo: Repo, view_id: str = "", fetch_now: bool = True
+) -> tuple[Optional[dict[str, Any]], str, float]:
     """The copy to serve (possibly stale), why the latest fetch failed (""
-    when the copy is current), and until when that failure is remembered."""
+    when the copy is current), and until when that failure is remembered.
+    With ``fetch_now`` False, only what's known already: a repository that
+    would need fetching answers ``rate_limited``."""
     folder = _folder()
     if folder is None:
         return None, "no_storage", 0.0
@@ -747,6 +753,8 @@ def _cached(repo: Repo, view_id: str = "") -> tuple[Optional[dict[str, Any]], st
     if failed is not None and time.time() < float(failed.get("until") or 0):
         kind = str(failed.get("kind"))
         return (None if kind == "missing" else stale), kind, float(failed.get("until") or 0)
+    if not fetch_now:
+        return stale, "rate_limited", 0.0
     os.makedirs(folder, exist_ok=True)
     if not pdf._lock(base + ".lock"):
         # Another worker is refreshing it: no answer yet.
@@ -756,13 +764,15 @@ def _cached(repo: Repo, view_id: str = "") -> tuple[Optional[dict[str, Any]], st
             data = fetch(repo, time.monotonic() + FETCH_SECONDS)
         except Unavailable as problem:
             until = max(time.time() + FAILED_SECONDS, problem.until)
+            if problem.kind == "missing":
+                # Deleted, or made private on purpose: stop showing it. The
+                # copy goes before the marker is written, so an interruption
+                # between the two can't leave a copy to serve later.
+                pdf._remove(path)
+                stale = None
             _write(base + ".failed", {"kind": problem.kind, "until": until})
             events.emit("repo_fetch_failed", view_id=view_id, reason=problem.kind,
                         host=repo.host.host)
-            if problem.kind == "missing":
-                # Deleted, or made private on purpose: stop showing it.
-                pdf._remove(path)
-                return None, problem.kind, until
             return stale, problem.kind, until
         _write(path, data)
         pdf._remove(base + ".failed")

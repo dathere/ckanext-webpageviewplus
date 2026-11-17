@@ -1059,6 +1059,25 @@ class TestCheckViews:
         # The second repository on the same site wasn't asked.
         assert calls == ["/repos/ckan/ckan"]
 
+    def test_known_answers_count_past_the_rate_limit(self, cli, api):
+        # A remembered missing and a fresh copy on the same site still count
+        # after the site's limit is hit; only fetching is skipped.
+        answers, calls = api
+        repos.cached(repos.Repo("ckan", "gone"))
+        repos.cached(repos.Repo("ckan", "ckan"))
+        answers["/repos/ckan/limited"] = repos.Unavailable("rate_limited", time.time() + 3600)
+        dataset, _ = self._views("https://github.com/ckan/limited",
+                                 "https://github.com/ckan/gone", REPO,
+                                 "https://github.com/ckan/unknown")
+        calls.clear()
+        result = self._run(cli, dataset, "--all")
+        assert result.exit_code == 1, result.output
+        lines = result.output.splitlines()
+        assert any(line.startswith("repo-missing") and "/ckan/gone" in line for line in lines)
+        assert any(line.startswith("ok") and line.split("\t")[4] == REPO for line in lines)
+        assert result.output.count("not checked: GitHub's rate limit") == 2
+        assert calls == ["/repos/ckan/limited"]
+
     def test_json(self, cli, api):
         dataset, (view,) = self._views("https://github.com/ckan/nope")
         out = self._run(cli, dataset, "--json").output

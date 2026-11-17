@@ -454,10 +454,9 @@ def repo_problem(
             "not a repository's root on a built-in site or one in "
             "ckanext.webpageviewplus.repo_hosts")
     if found.key not in checked:
-        if found.host.host in limited:
-            checked[found.key] = ("rate_limited", 0.0)
-        else:
-            checked[found.key] = repos.check(found)
+        # Past a site's limit, what's known already (a fresh copy, a
+        # remembered failure) still counts; only the fetch is skipped.
+        checked[found.key] = repos.check(found, fetch_now=found.host.host not in limited)
     problem, until = checked[found.key]
     if problem == "rate_limited":
         limited.add(found.host.host)
