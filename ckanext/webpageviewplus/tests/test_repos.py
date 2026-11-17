@@ -1084,3 +1084,190 @@ class TestCheckViews:
         rows = json.loads(out[out.index("[\n"):out.rindex("]") + 1])
         assert [(r["view_id"], r["view_type"], r["problem"]) for r in rows] == [
             (view["id"], repos.VIEW_TYPE, "repo-missing")]
+
+
+def _form(app, path):
+    sysadmin = factories.SysadminWithToken()
+    body = app.get(path, headers={"Authorization": sysadmin["token"]}).body
+    return BeautifulSoup(body, "html.parser")
+
+
+def _new_view(dataset, resource, view_type, **args):
+    from ckan.plugins.toolkit import url_for
+    return url_for("dataset_resource.edit_view", id=dataset["name"],
+                   resource_id=resource["id"], view_type=view_type, **args)
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus repo_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestRepoViewOffer:
+    def test_action_offers_a_repository_view(self):
+        from ckan.tests import helpers
+        resource = factories.Resource(url="https://example.com/")
+        sysadmin = factories.Sysadmin()
+        answer = helpers.call_action(
+            "webpageviewplus_service_suggest", {"user": sysadmin["name"]},
+            resource_id=resource["id"], url=REPO)
+        assert answer["problem"] == "use_repo_view" and answer["service"] == "GitHub"
+
+    @pytest.mark.parametrize("url,problem", [
+        (REPO, "use_repo_view"),
+        ("https://codeberg.org/forgejo/forgejo/src/branch/forgejo", "use_repo_view"),
+        # Not a repository's root: still the plain warning.
+        (REPO + "/issues", "refuses_framing"),
+    ])
+    def test_answers(self, url, problem):
+        from ckanext.webpageviewplus import actions
+        assert actions.service_answer(url, False, repo_views=True)["problem"] == problem
+        assert actions.service_answer(url, False)["problem"] == "refuses_framing"
+
+    @pytest.mark.ckan_config("ckanext.webpageviewplus.repo_hosts", "git.example.org gitea")
+    def test_self_hosted_site_without_the_blank_view_claim(self, app):
+        settings.check()
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"],
+                                      url="https://git.example.org/o/r")
+        region = _form(app, _new_view(dataset, resource, "webpage_view_plus")).select_one(
+            "[data-webpageviewplus-service]")
+        assert region.get_text(" ", strip=True) == (
+            "This is a repository on git.example.org. A Repository (Plus) view shows its "
+            "files and README. Make a Repository (Plus) view")
+
+    def test_new_view_form_links_to_a_repository_view(self, app):
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=REPO)
+        region = _form(app, _new_view(dataset, resource, "webpage_view_plus")).select_one(
+            "[data-webpageviewplus-service]")
+        assert region.get_text(" ", strip=True).startswith(
+            "GitHub doesn't let its pages show inside other sites, so this view would stay "
+            "blank. A Repository (Plus) view shows this repository's files and README instead.")
+        assert "stays until you delete it" not in region.get_text()
+        link = region.select_one("a")
+        # A blank page URL: the Repository form uses the resource's own link.
+        assert link["href"] == region["data-repo-view-url"] == _new_view(
+            dataset, resource, "repo_view_plus")
+        assert link.get_text(strip=True) == "Make a Repository (Plus) view"
+
+    def test_saved_view_keeps_its_page_url_and_says_it_stays(self, app):
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url="https://example.com/")
+        view = factories.ResourceView(resource_id=resource["id"],
+                                      view_type="webpage_view_plus", page_url=REPO)
+        from ckan.plugins.toolkit import url_for
+        path = url_for("dataset_resource.edit_view", id=dataset["name"],
+                       resource_id=resource["id"], view_id=view["id"])
+        region = _form(app, path).select_one("[data-webpageviewplus-service]")
+        assert ("The Repository form offers to delete this view, which the new one replaces."
+                in region.get_text())
+        from urllib.parse import parse_qs, urlsplit
+        href = urlsplit(region.select_one("a")["href"])
+        assert href.path == urlsplit(_new_view(dataset, resource, "repo_view_plus")).path
+        assert parse_qs(href.query) == {"view_type": ["repo_view_plus"], "repo_url": [REPO],
+                                        "replaces": [view["id"]]}
+
+    def test_repository_form_prefilled_from_the_offer(self, app):
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url="https://example.com/")
+        other = "https://gitlab.com/gitlab-org/gitlab"
+        page = _form(app, _new_view(dataset, resource, "repo_view_plus", repo_url=other))
+        assert page.select_one("#field-repo_url")["value"] == other
+
+    @pytest.mark.parametrize("asked", ["https://example.com/", "javascript:alert(1)",
+                                       REPO + "/issues"])
+    def test_prefill_only_for_a_repository(self, app, asked):
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url="https://example.com/")
+        page = _form(app, _new_view(dataset, resource, "repo_view_plus", repo_url=asked))
+        assert page.select_one("#field-repo_url").get("value", "") == ""
+
+
+def _website(resource, title="GitHub page"):
+    return factories.ResourceView(resource_id=resource["id"], view_type="webpage_view_plus",
+                                  title=title, page_url=REPO)
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus repo_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins")
+class TestReplaceWebsiteView:
+    def _views(self, resource):
+        from ckan.tests import helpers
+        return [(v["view_type"], v["title"])
+                for v in helpers.call_action("resource_view_list", id=resource["id"])]
+
+    def _create(self, user, resource, **fields):
+        from ckan.tests import helpers
+        return helpers.call_action(
+            "resource_view_create", {"user": user["name"]}, resource_id=resource["id"],
+            view_type=repos.VIEW_TYPE, title="Repository", repo_url=REPO, **fields)
+
+    def test_form_offers_to_delete_the_view_it_replaces(self, app):
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url="https://example.com/")
+        old = _website(resource)
+        box = _form(app, _new_view(dataset, resource, "repo_view_plus", replaces=old["id"])
+                    ).select_one("#field-replaces")
+        assert box["value"] == old["id"] and box.has_attr("checked")
+        label = box.find_next("label")
+        assert label.get_text(strip=True) == (
+            'Delete the Website (Plus) view "GitHub page", which this view replaces')
+
+    def test_no_offer_for_another_resources_or_another_types_view(self, app):
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url="https://example.com/")
+        other = _website(factories.Resource(package_id=dataset["id"], url=REPO))
+        repo_view = _view(factories.Resource(package_id=dataset["id"], url=REPO))
+        for old_id in (other["id"], repo_view["id"], "nope"):
+            page = _form(app, _new_view(dataset, resource, "repo_view_plus", replaces=old_id))
+            assert page.select_one("#field-replaces") is None
+
+    def test_takes_its_place_and_deletes_it(self):
+        resource = factories.Resource(url="https://example.com/")
+        old = _website(resource)
+        factories.ResourceView(resource_id=resource["id"], view_type="webpage_view_plus",
+                               title="Second", page_url="https://example.com/")
+        new = self._create(factories.Sysadmin(), resource, replaces=old["id"])
+        assert self._views(resource) == [(repos.VIEW_TYPE, "Repository"),
+                                         ("webpage_view_plus", "Second")]
+        assert "replaces" not in new
+
+    def test_another_resources_view_is_left_alone(self):
+        resource = factories.Resource(url="https://example.com/")
+        elsewhere = factories.Resource(url="https://example.com/")
+        other = _website(elsewhere)
+        self._create(factories.Sysadmin(), resource, replaces=other["id"])
+        assert self._views(elsewhere) == [("webpage_view_plus", "GitHub page")]
+        assert self._views(resource) == [(repos.VIEW_TYPE, "Repository")]
+
+    def test_needs_the_right_to_delete_it(self, monkeypatch):
+        from ckanext.webpageviewplus import actions
+        resource = factories.Resource(url="https://example.com/")
+        old = _website(resource)
+        real = actions.toolkit.check_access
+
+        def refuse_delete(name, context, data_dict=None):
+            if name == "resource_view_delete":
+                raise actions.toolkit.NotAuthorized()
+            return real(name, context, data_dict)
+
+        monkeypatch.setattr(actions.toolkit, "check_access", refuse_delete)
+        self._create(factories.Sysadmin(), resource, replaces=old["id"])
+        assert self._views(resource) == [("webpage_view_plus", "GitHub page"),
+                                         (repos.VIEW_TYPE, "Repository")]
+
+    @pytest.mark.parametrize("ticked", [True, False])
+    def test_through_the_form(self, app, ticked):
+        sysadmin = factories.SysadminWithToken()
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=REPO)
+        old = _website(resource)
+        form = {"title": "Repository", "repo_url": "", "height_mode": "", "height_value": "",
+                "view_type": repos.VIEW_TYPE, "save": ""}
+        if ticked:
+            form["replaces"] = old["id"]
+        app.post(_new_view(dataset, resource, "repo_view_plus", replaces=old["id"]),
+                 data=form, headers={"Authorization": sysadmin["token"]})
+        expected = [(repos.VIEW_TYPE, "Repository")] if ticked else [
+            ("webpage_view_plus", "GitHub page"), (repos.VIEW_TYPE, "Repository")]
+        assert self._views(resource) == expected

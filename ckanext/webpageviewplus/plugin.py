@@ -59,11 +59,12 @@ def vary_held_back(response: Response) -> Response:
     return response
 
 
-def _service_hint(url: str, private: bool) -> dict[str, str] | None:
+def _service_hint(url: str, private: bool, repo_views: bool = False) -> dict[str, str] | None:
     """The problem the form's service region names for a page URL (a
-    service's settings that won't work here, a site that refuses framing),
-    with the service, preset and embed host it names, else None."""
-    answer = actions.service_answer(url or "", private)
+    service's settings that won't work here, a site that refuses framing, a
+    repository a Repository (Plus) view can show), with the service, preset
+    and embed host it names, else None."""
+    answer = actions.service_answer(url or "", private, repo_views=repo_views)
     if answer is None or not answer["problem"]:
         return None
     return {
@@ -72,6 +73,50 @@ def _service_hint(url: str, private: bool) -> dict[str, str] | None:
         "preset": answer["preset"],
         "host": frame.url_host(answer["embed_url"]) if answer["embed_url"] else "",
     }
+
+
+def _repo_view_url(data_dict: dict[str, Any]) -> str | None:
+    """CKAN's new-view form for a Repository (Plus) view of the same
+    resource (``?view_type=...``; the form and its script add ``repo_url``
+    when the page URL isn't blank), naming a saved view as the one it
+    ``replaces``, or None without a request."""
+    resource = data_dict.get("resource") or {}
+    if not has_request_context() or not resource.get("id"):
+        return None
+    package = data_dict.get("package") or {}
+    params = {"view_type": "repo_view_plus"}
+    saved = (data_dict.get("resource_view") or {}).get("id")
+    if saved:
+        params["replaces"] = saved
+    return toolkit.url_for(
+        "{}_resource.edit_view".format(package.get("type") or "dataset"),
+        id=package.get("name") or resource.get("package_id"),
+        resource_id=resource["id"], **params)
+
+
+def _replaced_view(
+    resource_view: dict[str, Any], resource: dict[str, Any]
+) -> dict[str, Any] | None:
+    """The Website (Plus) view a new Repository (Plus) view's form offers to
+    delete (``?replaces=<id>``, from the Website (Plus) form's offer): only a
+    view of the same resource that the user may delete. Ticked on the
+    form's first GET; after a failed save, as it was posted."""
+    if not has_request_context() or resource_view.get("id"):
+        return None
+    old_id = (request.args.get("replaces") or "").strip()
+    if not old_id:
+        return None
+    user = toolkit.current_user
+    name = user.name if getattr(user, "is_authenticated", False) else ""
+    try:
+        old = toolkit.get_action("resource_view_show")({"user": name}, {"id": old_id})
+        toolkit.check_access("resource_view_delete", {"user": name}, {"id": old_id})
+    except (toolkit.ObjectNotFound, toolkit.NotAuthorized):
+        return None
+    if old.get("view_type") != "webpage_view_plus" or old.get("resource_id") != resource.get("id"):
+        return None
+    return {"id": old_id, "title": old.get("title") or "",
+            "checked": request.method == "GET" or bool(resource_view.get("replaces"))}
 
 
 @toolkit.blanket.config_declarations
@@ -221,6 +266,7 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
         resource = data_dict["resource"]
         page_url = resource_view.get("page_url")
         url = page_url or resource.get("url")
+        repo_views = plugins.plugin_loaded("repo_view_plus")
 
         form_vars = {
             "presets": settings.allowed_presets(),
@@ -254,7 +300,10 @@ class WebpageviewplusPlugin(plugins.SingletonPlugin, DefaultTranslation):
             # Shown without the form's script too, so a site whose asset
             # bundles fail to load still tells the editor why.
             "service_hint": _service_hint(
-                url, bool((data_dict.get("package") or {}).get("private"))),
+                url, bool((data_dict.get("package") or {}).get("private")),
+                repo_views=repo_views),
+            # Where the form offers a Repository (Plus) view instead.
+            "repo_view_url": _repo_view_url(data_dict) if repo_views else None,
             "view_counting": settings.view_counting(),
             # The images this view may use, when thumbnails are on.
             "thumbnail_choices": (
@@ -775,7 +824,17 @@ class RepoViewPlusPlugin(plugins.SingletonPlugin):
     ) -> dict[str, Any]:
         resource_view = data_dict.get("resource_view") or {}
         resource = data_dict["resource"]
-        form_vars = {"height_modes": repos.HEIGHT_MODES}
+        # The Website (Plus) form's offer links here with the page URL its
+        # editor typed. Only for a new view's first GET (a failed save keeps
+        # what was posted), and only a repository's address.
+        prefill = ""
+        if has_request_context() and request.method == "GET" \
+                and not resource_view.get("id") and not resource_view.get("repo_url"):
+            asked = (request.args.get("repo_url") or "").strip()
+            if repos.is_repo_link(asked):
+                prefill = asked
+        form_vars = {"height_modes": repos.HEIGHT_MODES, "prefill_repo_url": prefill,
+                     "replaces_view": _replaced_view(resource_view, resource)}
         url = repos.repo_url(resource_view, resource)
         found = repos.parse(url) if frame.is_http_url(url) else None
         if found is None:

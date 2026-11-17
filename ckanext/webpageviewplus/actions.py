@@ -6,6 +6,7 @@ import logging
 from typing import Any, Optional
 
 import ckan.model as model
+import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
 from ckan.types import Context
 
@@ -88,21 +89,39 @@ def webpageviewplus_service_suggest(
         ``"needs_content_origin"``, ``"needs_sandboxed_downloads"`` or
         ``"host_not_allowed"``. A page on a
         site that never allows framing (GitHub, LinkedIn...) gets problem
-        ``"refuses_framing"`` and empty settings.
+        ``"refuses_framing"`` and empty settings. With repo_view_plus on, a
+        repository's address gets ``"use_repo_view"`` (GitHub, GitLab,
+        Codeberg, Bitbucket) or ``"use_repo_view_self_hosted"`` (a site in
+        repo_hosts) instead, with the site's name as ``service``.
     """
     toolkit.check_access("webpageviewplus_service_suggest", context, data_dict)
     resource = model.Resource.get(data_dict.get("resource_id") or "")
     private = bool(resource is not None and resource.package is not None
                    and resource.package.private)
-    return service_answer(toolkit.get_or_bust(data_dict, "url"), private)
+    return service_answer(toolkit.get_or_bust(data_dict, "url"), private,
+                          repo_views=plugins.plugin_loaded("repo_view_plus"))
 
 
-def service_answer(url: str, private: bool) -> Optional[dict[str, Any]]:
+def service_answer(
+    url: str, private: bool, repo_views: bool = False
+) -> Optional[dict[str, Any]]:
     """What the view form says about a page URL: a well-known service's
-    settings and any problem with them, or a site that refuses framing."""
+    settings and any problem with them, a repository a Repository (Plus)
+    view can show (``repo_views``: that plugin is on), or a site that
+    refuses framing."""
     found = services.suggest(url or "")
     if found is not None:
         return dict(dataclasses.asdict(found), problem=suggestion_problem(found, private))
+    if repo_views:
+        from ckanext.webpageviewplus import repos
+        repo = repos.parse(url or "") if frame.is_http_url(url or "") else None
+        if repo is not None:
+            # The built-in sites are known to refuse framing; a site's own
+            # servers (repo_hosts) may not.
+            problem = "use_repo_view" if repo.host.host in repos.BUILT_IN \
+                else "use_repo_view_self_hosted"
+            return {"service": repo.host.site, "embed_url": "", "preset": "",
+                    "height_mode": "", "height_value": "", "problem": problem}
     name = services.refuses_framing(url or "")
     if name is None:
         return None
@@ -152,10 +171,46 @@ def default_view_suggestion(
 def resource_view_create(
     original: Any, context: Context, data_dict: dict[str, Any]
 ) -> dict[str, Any]:
+    replaces = ""
+    if data_dict.get("view_type") == "repo_view_plus" and "replaces" in data_dict:
+        # Never stored: it names the Website (Plus) view this one replaces.
+        data_dict = dict(data_dict)
+        replaces = str(data_dict.pop("replaces") or "")
     view = original(context, _with_service_settings(data_dict))
     health.after_save(view)
     _screenshot_after_check(view)
+    if replaces:
+        replace_view(context, view, replaces)
     return view
+
+
+def replace_view(context: Context, view: dict[str, Any], old_id: str) -> bool:
+    """Put a new Repository (Plus) view where the Website (Plus) view of the
+    same resource ``old_id`` was, and delete that one, as the user saving
+    (the form's "Delete the Website (Plus) view it replaces"). Never fails
+    the save: anything the user may not do, or a view that isn't a Website
+    (Plus) view of that resource, leaves both views as they are."""
+    old = model.ResourceView.get(old_id)
+    if old is None or old.view_type != "webpage_view_plus" \
+            or old.resource_id != view.get("resource_id"):
+        return False
+
+    def as_user() -> Context:
+        return {"user": context.get("user") or ""}
+
+    try:
+        # Checked before anything changes, so the order is never left half-done.
+        toolkit.check_access("resource_view_delete", as_user(), {"id": old_id})
+        order = [v["id"] for v in toolkit.get_action("resource_view_list")(
+            as_user(), {"id": view["resource_id"]})]
+        order = [view["id"] if i == old_id else i for i in order if i != view["id"]]
+        toolkit.get_action("resource_view_reorder")(
+            as_user(), {"id": view["resource_id"], "order": order})
+        toolkit.get_action("resource_view_delete")(as_user(), {"id": old_id})
+    except (toolkit.NotAuthorized, toolkit.ObjectNotFound, toolkit.ValidationError):
+        log.info("webpageviewplus: view %s not replaced by %s", old_id, view.get("id"))
+        return False
+    return True
 
 
 def _with_service_settings(data_dict: dict[str, Any]) -> dict[str, Any]:
