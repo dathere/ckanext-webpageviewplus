@@ -1658,8 +1658,9 @@ server reachable only inside your network shows the "couldn't be loaded" card.
   image proxies, badge services), so the consent card covers these views, naming the
   repository's host, under `privacy_profile = eu`, `consent_gate` or Global Privacy Control.
 
-Not yet: `check-views` reporting, and the Website (Plus) form offering a Repository view for
-repository links.
+`ckan webpageviewplus check-views` reports Repository views whose repository is gone or private
+(see [Finding broken views](#finding-broken-views)). Not yet: the Website (Plus) form offering a
+Repository view for repository links.
 
 ### Privacy and telemetry
 

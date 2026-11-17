@@ -1026,6 +1026,22 @@ class TestCheckViews:
         assert "not-a-repository\trepo_view_plus" in result.output
         assert calls == []
 
+    def test_another_workers_first_fetch_is_not_a_problem(self, cli, api):
+        import hashlib
+        import os
+        _, calls = api
+        repo = repos.Repo("ckan", "ckan")
+        os.makedirs(repos._folder(), exist_ok=True)
+        open(os.path.join(repos._folder(), hashlib.sha256(repo.key.encode()).hexdigest()
+                          + ".lock"), "w").close()
+        dataset, _ = self._views(REPO)
+        result = self._run(cli, dataset, "--all")
+        assert result.exit_code == 0, result.output
+        assert "not checked: another worker is fetching it" in result.output
+        assert calls == []
+        # Rendering still shows its "couldn't be loaded" card meanwhile.
+        assert repos.cached(repo) == (None, "failed")
+
     def test_view_repo_url_beats_the_resource_url(self, cli, api):
         dataset = factories.Dataset()
         resource = factories.Resource(package_id=dataset["id"], url="https://example.com/")

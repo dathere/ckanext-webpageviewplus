@@ -437,8 +437,9 @@ def repo_problem(
     """A Repository (Plus) view's problem ("" if none) and detail. Each
     repository is checked once per run (``checked``, by ``Repo.key``), and a
     site that answered rate_limited isn't asked again this run
-    (``limited``). Rate limits and a missing storage path are reported but
-    aren't problems: they say nothing about the repository."""
+    (``limited``). Rate limits, a missing storage path and another worker's
+    first fetch are reported but aren't problems: they say nothing about
+    the repository."""
     from ckanext.webpageviewplus import repos
 
     url = repos.repo_url(view.config or {}, {"url": resource.url})
@@ -466,6 +467,8 @@ def repo_problem(
         return result(detail="not checked: {}'s rate limit{}".format(found.host.site, when))
     if problem == "no_storage":
         return result(detail="not checked: ckan.storage_path isn't set")
+    if problem == "busy":
+        return result(detail="not checked: another worker is fetching it")
     if problem == "missing":
         return result("repo-missing", "no such public repository on {}".format(found.host.site))
     if problem:

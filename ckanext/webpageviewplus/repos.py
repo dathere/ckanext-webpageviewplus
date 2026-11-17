@@ -716,7 +716,9 @@ def cached(repo: Repo, view_id: str = "") -> tuple[Optional[dict[str, Any]], str
     public at its source, except when the site says the repository is gone
     or private (``missing``): then the copy is deleted."""
     data, problem, _until = _cached(repo, view_id)
-    return (data, "") if data is not None else (None, problem)
+    if data is not None:
+        return data, ""
+    return None, "failed" if problem == "busy" else problem
 
 
 def check(repo: Repo) -> tuple[str, float]:
@@ -724,7 +726,8 @@ def check(repo: Repo) -> tuple[str, float]:
     for ``rate_limited``, through the same copy, lock and failure memory as
     rendering. Unlike ``cached``, a failure is reported even while an old
     copy is still being served (the API failed or hit its limit). A copy
-    within repo_cache_seconds counts as fine unfetched."""
+    within repo_cache_seconds counts as fine unfetched; ``busy`` means
+    another worker is making the first copy, so there's no answer yet."""
     _data, problem, until = _cached(repo)
     return problem, until
 
@@ -747,7 +750,7 @@ def _cached(repo: Repo, view_id: str = "") -> tuple[Optional[dict[str, Any]], st
     os.makedirs(folder, exist_ok=True)
     if not pdf._lock(base + ".lock"):
         # Another worker is refreshing it: no answer yet.
-        return stale, "" if stale is not None else "failed", 0.0
+        return stale, "" if stale is not None else "busy", 0.0
     try:
         try:
             data = fetch(repo, time.monotonic() + FETCH_SECONDS)
