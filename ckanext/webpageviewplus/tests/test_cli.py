@@ -287,6 +287,22 @@ class TestMigratePdf:
         assert result.exit_code != 0
         assert "content_origin" in result.output
 
+    def test_on_ckan_host_skips_private_datasets(self, cli, monkeypatch):
+        # pdf_without_content_origin: public datasets only, so a private
+        # dataset's pdfview view stays as it is.
+        from ckanext.webpageviewplus import settings
+        monkeypatch.setattr(settings, "pdf_mode", lambda: settings.PDF_ON_CKAN_HOST)
+        org = factories.Organization()
+        private = factories.Dataset(owner_org=org["id"], private=True)
+        kept = _pdfview_view(factories.Resource(
+            package_id=private["id"], url="https://files.example.org/a.pdf", format="PDF"))
+        moved = _pdfview_view(factories.Resource(url="https://files.example.org/b.pdf", format="PDF"))
+        result = cli.invoke(ckan, ["webpageviewplus", "migrate-pdf"])
+        assert result.exit_code == 0, result.output
+        assert "its dataset is private" in result.output
+        assert _view_row(kept).view_type == "pdf_view"
+        assert _view_row(moved).view_type == "pdf_view_plus"
+
 
 @pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus")
 @pytest.mark.usefixtures("non_clean_db", "with_plugins")

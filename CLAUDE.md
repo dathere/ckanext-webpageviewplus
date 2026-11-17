@@ -121,6 +121,8 @@ order now being built:
    (that fools `with_plugins`' teardown on CKAN 2.10).
    Uploads `pdf.source` can't read (a cloud storage extension on 2.10/2.11) are never
    offered the view (`can_view`) and `migrate-pdf` leaves their `pdf_view` views alone.
+   Unreleased: `pdf_without_content_origin` (spec section "Proposed: PDF (Plus) without a
+   content origin", decided 2026-11-17), see `pdf.py` below.
 
 11. Done: `repo_view_plus` (spec section "Proposed: Repository (Plus) view"; GitHub released
    in 0.11.0; Codeberg/Gitea/Forgejo, GitLab, Bitbucket and `repo_hosts` unreleased, issue
@@ -155,7 +157,8 @@ order now being built:
   `external` (`Preset.needs_sandboxed_downloads`) runs as itself with no content origin.
   Uploads count as "isolated" (`settings.isolating_content_origin()`: `content_origin` AND
   `harden_downloads`) only for what runs uploads themselves: `data-schematic`
-  (`needs_content_origin`) and PDF (Plus). With `harden_downloads` off, the rule applies to
+  (`needs_content_origin`) and PDF (Plus) (unless `pdf_without_content_origin`, which runs
+  it on CKAN's host with no origin: `settings.pdf_mode()`). With `harden_downloads` off, the rule applies to
   every frame, and `external`/`data-schematic` degrade to `interactive`. It always applies to
   frames on CKAN's own host, uploads included. An upload `content.serves` refuses (a 2.10/2.11
   cloud storage) is framed with no content origin (`content.frame_content_origin`, used by
@@ -330,6 +333,25 @@ order now being built:
   is_upload=True)`; `view.html` is shared. The PDF.js webviewerloaded event reaches the
   viewer's own document only because the CKAN page is cross-origin;
   `browser_tests/test_pdf.py` checks the options took effect.
+  **On CKAN's host** (`settings.pdf_mode()` = `PDF_ON_CKAN_HOST`: `pdf_without_content_origin`,
+  `harden_downloads`, no isolating content origin): the same routes answer on CKAN's host only
+  (`pdf._served_here`), public datasets only (`can_view` by the package's `private`, render
+  card `pdf_private`, `serve` and `open_viewer` 404, `migrate-pdf` skips). The frame is
+  `interactive` with `sandbox_override=pdf.HOST_SANDBOX` (adds
+  `allow-popups-to-escape-sandbox`) and a relative src (`pdf._root_path`, for
+  `ckan.root_path`). `pdf._headers` adds `HOST_SANDBOX_CSP` to every viewer file (the header,
+  not the frame, is what stops the viewer opened on its own from running as CKAN; the PDF keeps
+  `sandbox; default-src 'none'`) and `Access-Control-Allow-Origin: *` (the frame reads its own
+  files cross-origin, without cookies). `content._revalidate_if_asked` applies
+  `CACHE_ENVIRON_KEY` on CKAN's host too (Cache-Control, no Set-Cookie). The form's first-page
+  frame drops `allow-same-origin`, asks with `*` and accepts `"null"` (`data-opaque`). PDF.js
+  runs without its worker there (Chrome refuses a module worker in an opaque frame; Firefox
+  logs "may not load data"). Tests: `TestOnCkanHost` (`ckan_host_pdf` fixture: CKAN applies
+  module `ckan_config` markers after class ones, so it sets config after `with_plugins`), and
+  `browser_tests/test_pdf_ckan_host.py` against a second CKAN (`WVP_NO_ORIGIN_URL`; CI runs
+  `ci_no_origin.ini` on port 5002, same database). Locally: run a second `ckan run -t -p 5002`
+  in ckan-dev with the content origin env var unset, plus a socat container forwarding 5002;
+  it builds its asset bundle once at start, so restart it after editing the script.
 - `repos.py` + `RepoViewPlusPlugin` (`plugin.py`): the `repo_view_plus` view type (a plugin
   of its own, needing `webpage_view_plus`, nh3 and cmarkgfm, the `[repos]` extra). A `Host`
   (kind `github`/`gitea`/`gitlab`/`bitbucket`, web host, API base, site name) comes from

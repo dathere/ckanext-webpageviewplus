@@ -401,9 +401,18 @@ def _revalidate_if_asked(environ: dict[str, Any], start_response: Any) -> Any:
     """On CKAN's host: a view that set REVALIDATE_ENVIRON_KEY (a public
     response with an ETag, like a thumbnail) gets REVALIDATE. CKAN's own
     response hook runs after the view and would set
-    max-age=ckan.cache_expires, so it's replaced here."""
+    max-age=ckan.cache_expires, so it's replaced here. pdf_view_plus on
+    CKAN's host (pdf_without_content_origin) sets CACHE_ENVIRON_KEY, as on
+    the content host: its files get the same Cache-Control and never set a
+    cookie, being fetched without one."""
     def finish(status: str, headers: list, exc_info: Any = None):
-        if environ.get(REVALIDATE_ENVIRON_KEY) and status[:3] in ("200", "304"):
+        visibility = environ.get(CACHE_ENVIRON_KEY)
+        if visibility:
+            headers = [
+                (k, v) for k, v in headers if k.lower() not in ("set-cookie", "cache-control")
+            ]
+            headers.append(("Cache-Control", cache_control(status, visibility)))
+        elif environ.get(REVALIDATE_ENVIRON_KEY) and status[:3] in ("200", "304"):
             headers = [(k, v) for k, v in headers if k.lower() != "cache-control"]
             headers.append(("Cache-Control", REVALIDATE))
         return start_response(status, headers, exc_info)

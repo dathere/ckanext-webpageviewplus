@@ -153,6 +153,8 @@
   </div>
 {% elif frame_error == 'content_origin' %}
   <p class="text-muted">{{ _("This PDF can't be shown: the site needs a separate domain for uploaded content.") }}</p>
+{% elif frame_error == 'pdf_private' %}
+  <p class="text-muted">{{ _("This PDF can't be shown: the dataset is private, and this site shows PDFs only for public datasets.") }}</p>
 {% elif frame_error == 'pdf_url' %}
   <p class="text-muted">{{ _('There is no PDF to show: only uploaded files and http:// or https:// links are supported.') }}</p>
 {% elif frame_error == 'unsaved' %}

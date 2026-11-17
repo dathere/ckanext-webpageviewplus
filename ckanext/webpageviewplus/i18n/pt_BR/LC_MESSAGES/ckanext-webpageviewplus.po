@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 16:45+0000\n"
+"POT-Creation-Date: 2026-11-17 21:22+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: pt_BR\n"
@@ -276,15 +276,15 @@ msgstr "PDF (Plus)"
 msgid "PDF"
 msgstr "PDF"
 
-#: ckanext/webpageviewplus/plugin.py:695
+#: ckanext/webpageviewplus/plugin.py:704
 msgid "PDF document"
 msgstr "Documento PDF"
 
-#: ckanext/webpageviewplus/plugin.py:803
+#: ckanext/webpageviewplus/plugin.py:816
 msgid "Repository (Plus)"
 msgstr "Repositório (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:814 ckanext/webpageviewplus/plugin.py:861
+#: ckanext/webpageviewplus/plugin.py:827 ckanext/webpageviewplus/plugin.py:874
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:6
 msgid "Repository"
 msgstr "Repositório"
@@ -1007,13 +1007,13 @@ msgid "Take a new screenshot"
 msgstr "Tirar uma nova captura"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:245
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:71
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:72
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:46
 msgid "Hide the control bar (Open in new tab, Fullscreen, Reload)"
 msgstr "Ocultar a barra de controles (Abrir em nova aba, Tela cheia, Recarregar)"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/form.html:246
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:72
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:73
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_form.html:47
 msgid ""
 "On phones and at high zoom, Open in new tab still shows, so visitors can "
@@ -1161,15 +1161,15 @@ msgstr ""
 "escolhe, e de novo quando você edita a visualização depois que um arquivo"
 " enviado mudou, ou toda vez para um PDF vinculado de outro site."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:60
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:61
 msgid "Drawing the first page…"
 msgstr "Desenhando a primeira página…"
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:61
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:62
 msgid "The first page is ready. Save the view to use it."
 msgstr "A primeira página está pronta. Salve a visualização para usá-la."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:62
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:63
 msgid ""
 "Couldn't draw the first page. Check the PDF shows in the view, then try "
 "again."
@@ -1178,7 +1178,7 @@ msgstr ""
 "na visualização e tente de novo."
 
 # | msgid "Save the view first, then choose the first page again."
-#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:63
+#: ckanext/webpageviewplus/templates/webpageviewplus/pdf_form.html:64
 msgid "Save the view, then edit it again to draw the first page."
 msgstr ""
 "Salve a visualização e depois edite-a de novo para desenhar a primeira "
@@ -1454,13 +1454,19 @@ msgstr "Compartilhar"
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:157
 msgid ""
+"This PDF can't be shown: the dataset is private, and this site shows PDFs"
+" only for public datasets."
+msgstr "Este PDF não pode ser exibido: o conjunto de dados é privado, e este site exibe PDFs apenas de conjuntos de dados públicos."
+
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:159
+msgid ""
 "There is no PDF to show: only uploaded files and http:// or https:// "
 "links are supported."
 msgstr ""
 "Não há PDF para mostrar: apenas arquivos enviados e links http:// ou "
 "https:// são suportados."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:159
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:161
 msgid "Save the view to see the PDF."
 msgstr "Salve a visualização para ver o PDF."
 
@@ -1468,7 +1474,7 @@ msgstr "Salve a visualização para ver o PDF."
 # | such as " "https://github.com/ckan/ckan, are supported."
 #. {hosts} is a list of this site's own Git servers, such as "git.example.org,
 #. gitlab.example.org".
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:163
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:165
 #, python-brace-format
 msgid ""
 "There is no repository to show: only public repositories on GitHub, "
@@ -1481,7 +1487,7 @@ msgstr ""
 
 # | msgid "" "There is no repository to show: only public GitHub repositories,
 # | such as " "https://github.com/ckan/ckan, are supported."
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:165
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:167
 msgid ""
 "There is no repository to show: only public repositories on GitHub, "
 "GitLab, Codeberg and Bitbucket, such as https://github.com/ckan/ckan, are"
@@ -1491,11 +1497,11 @@ msgstr ""
 " do GitHub, GitLab, Codeberg e Bitbucket, como "
 "https://github.com/ckan/ckan."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:168
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:170
 msgid "Save the view to see the repository."
 msgstr "Salve a visualização para ver o repositório."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:170
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:172
 msgid ""
 "This page can't be embedded: its host isn't on this site's list of "
 "allowed hosts."
@@ -1503,7 +1509,7 @@ msgstr ""
 "Esta página não pode ser incorporada: o host dela não está na lista de "
 "hosts permitidos deste site."
 
-#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:172
+#: ckanext/webpageviewplus/templates/webpageviewplus/view.html:174
 msgid ""
 "This page cannot be embedded: only http:// and https:// URLs are "
 "supported."

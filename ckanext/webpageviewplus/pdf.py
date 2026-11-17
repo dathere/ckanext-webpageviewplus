@@ -11,6 +11,13 @@ too: an upload through ``content.stored_file``, or a PDF linked from another
 site, fetched by CKAN with the frameability guards (public addresses only,
 redirects re-checked, a size cap, a deadline) and served only if it really
 is a PDF. Private datasets' PDF URLs are signed per view, as uploads' are.
+
+With pdf_without_content_origin and no content origin, the same routes
+answer on CKAN's own host instead, for public datasets only: the frame's
+sandbox has no allow-same-origin, and every response carries it again as a
+CSP sandbox header (so the viewer opened on its own has no origin either),
+plus Access-Control-Allow-Origin: *, as a frame with no origin reads its own
+files cross-origin, without cookies.
 """
 from __future__ import annotations
 
@@ -80,6 +87,14 @@ VIEWER_CSP = (
     "font-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; "
     "base-uri 'none'; form-action 'none'; object-src 'none'"
 )
+
+# On CKAN's host: the frame's sandbox, and the same tokens as a CSP header on
+# every viewer file (allow-forms only matters to the frame). Links in a PDF
+# open in tabs that escape it: every upload such a tab can reach is
+# sandboxed by harden_downloads, which this mode needs, and the viewer by
+# this header.
+HOST_SANDBOX = "allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
+HOST_SANDBOX_CSP = "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads"
 
 pdf = Blueprint("webpageviewplus_pdf", __name__)
 
@@ -259,11 +274,26 @@ def _filename(kind: str, url: str, resource: dict[str, Any]) -> str:
     return quote(name or "document.pdf")
 
 
+def on_ckan_host() -> bool:
+    return settings.pdf_mode() == settings.PDF_ON_CKAN_HOST
+
+
+def _root_path() -> str:
+    """CKAN's root path (ckan.root_path) on its own host, as its links carry
+    it; the content origin is always served from its root."""
+    if not on_ckan_host():
+        return ""
+    marker = "/webpageviewplus/pdf-view/-"
+    path = toolkit.url_for("webpageviewplus_pdf.open_viewer", view_id="-", locale="default")
+    return path[: -len(marker)] if path.endswith(marker) else ""
+
+
 def file_path(view_id: str, kind: str, url: str, resource: dict[str, Any],
               private: bool) -> str:
-    """The PDF's path on the content origin (no origin: PDF.js opens files
+    """The PDF's path on the viewer's origin (no origin: PDF.js opens files
     from its own origin only)."""
-    path = "/webpageviewplus/pdf/{}/{}".format(view_id, _filename(kind, url, resource))
+    path = _root_path() + "/webpageviewplus/pdf/{}/{}".format(
+        view_id, _filename(kind, url, resource))
     if private:
         w = content._window()
         path += "?w={}&s={}".format(w, content._signature(_subject(view_id), w))
@@ -309,8 +339,11 @@ def pdfjs_lang(ckan_lang: str) -> str:
 
 def viewer_url(view_id: str, kind: str, url: str, resource: dict[str, Any],
                private: bool, lang: str) -> str:
+    # On CKAN's host, a path: the frame loads from whichever of CKAN's hosts
+    # the visitor is on.
+    base = _root_path() if on_ckan_host() else settings.content_origin()
     return "{}/webpageviewplus/pdfjs/{}/web/viewer.html?file={}&wvp_lang={}".format(
-        settings.content_origin(), PDFJS_VERSION,
+        base, PDFJS_VERSION,
         quote(file_path(view_id, kind, url, resource, private), safe=""),
         quote(pdfjs_lang(lang)),
     )
@@ -323,12 +356,24 @@ def open_path(view_id: str) -> str:
 # ------------------------------------------------------------------ routes
 
 
-def _no_content_host() -> None:
-    if not content.on_content_host() or not settings.isolating_content_origin():
-        abort(404)
+def _served_here() -> None:
+    """The viewer and its PDFs answer on the content host, or with
+    pdf_without_content_origin on CKAN's own host, never on both."""
+    mode = settings.pdf_mode()
+    if mode == settings.PDF_ON_CONTENT_ORIGIN and content.on_content_host():
+        return
+    if mode == settings.PDF_ON_CKAN_HOST and not content.on_content_host():
+        return
+    abort(404)
 
 
 def _headers(response: Response, policy: str) -> Response:
+    if on_ckan_host():
+        if not policy.startswith("sandbox"):
+            policy += "; " + HOST_SANDBOX_CSP
+        # The frame has no origin of its own, so its files are cross-origin
+        # to it. Never with credentials: these responses depend on no cookie.
+        response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Content-Security-Policy"] = policy + "; " + content.frame_ancestors()
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
@@ -338,7 +383,7 @@ def _headers(response: Response, policy: str) -> Response:
 @pdf.route(ASSET_PATH)
 def asset(version: str, filename: str):
     """The vendored viewer's files, on the content host only."""
-    _no_content_host()
+    _served_here()
     mimetype = ASSET_TYPES.get(os.path.splitext(filename)[1].lower())
     if version != PDFJS_VERSION or mimetype is None:
         abort(404)
@@ -364,9 +409,12 @@ def _view_and_resource(view_id: str) -> tuple[model.ResourceView, dict[str, Any]
 @pdf.route(FILE_PATH)
 def serve(view_id: str, filename: str):
     """A view's PDF, for PDF.js on the same origin."""
-    _no_content_host()
+    _served_here()
     view, resource, package = _view_and_resource(view_id)
     private = not content.is_public(package.id)
+    if private and on_ckan_host():
+        # Nothing to sign with, and no cookies from a frame with no origin.
+        abort(404)
     if private and not content.signature_valid(
         _subject(view_id), request.args.get("w", ""), request.args.get("s", "")
     ):
@@ -414,10 +462,12 @@ def open_viewer(view_id: str):
         resource = toolkit.get_action("resource_show")(context, {"id": view["resource_id"]})
     except (toolkit.NotAuthorized, toolkit.ObjectNotFound):
         abort(404)
-    if view.get("view_type") != VIEW_TYPE or not settings.isolating_content_origin():
+    if view.get("view_type") != VIEW_TYPE or not settings.pdf_mode():
         abort(404)
     found = source(view, resource)
     if found is None:
         abort(404)
     private = not content.is_public(resource["package_id"])
+    if private and on_ckan_host():
+        abort(404)
     return redirect(viewer_url(view_id, found[0], found[1], resource, private, toolkit.h.lang()))

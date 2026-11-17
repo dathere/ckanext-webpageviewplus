@@ -184,6 +184,9 @@ jobs:
       CKAN_REDIS_URL: redis://redis:6379/1
       CKAN_INI: browser_tests/ci.ini
       WVP_BASE_URL: http://localhost:5000
+      # A second CKAN on the same database, with no content origin and
+      # pdf_without_content_origin on (browser_tests/ci_no_origin.ini).
+      WVP_NO_ORIGIN_URL: http://localhost:5002
       # Firefox won't run as root with a $HOME owned by another user (the
       # runner's /github/home). Set for the whole job so the browsers are
       # installed to and launched from the same cache.
@@ -207,17 +210,19 @@ jobs:
         ckan -c "$CKAN_INI" db upgrade -p webpage_view_plus
         python browser_tests/seed.py
         nohup setsid ckan -c "$CKAN_INI" run -H 0.0.0.0 -p 5000 -r -t > /tmp/ckan.log 2>&1 &
-        python - <<'EOF' || { cat /tmp/ckan.log; exit 1; }
+        nohup setsid ckan -c browser_tests/ci_no_origin.ini run -H 0.0.0.0 -p 5002 -r -t > /tmp/ckan-no-origin.log 2>&1 &
+        python - <<'EOF' || { cat /tmp/ckan.log /tmp/ckan-no-origin.log; exit 1; }
         import os, time, urllib.request
-        url = os.environ["WVP_BASE_URL"] + "/api/3/action/status_show"
-        for _ in range(60):
-            try:
-                urllib.request.urlopen(url, timeout=5)
-                break
-            except Exception:
-                time.sleep(2)
-        else:
-            raise SystemExit("CKAN did not start")
+        for base in (os.environ["WVP_BASE_URL"], os.environ["WVP_NO_ORIGIN_URL"]):
+            url = base + "/api/3/action/status_show"
+            for _ in range(60):
+                try:
+                    urllib.request.urlopen(url, timeout=5)
+                    break
+                except Exception:
+                    time.sleep(2)
+            else:
+                raise SystemExit("CKAN did not start on " + base)
         EOF
     - name: Run browser tests
       # They use no pytest plugins; the image's CKAN plugin doesn't load
@@ -227,5 +232,5 @@ jobs:
       run: pytest -p no:cacheprovider browser_tests
     - name: CKAN log
       if: failure()
-      run: tail -200 /tmp/ckan.log
+      run: tail -200 /tmp/ckan.log /tmp/ckan-no-origin.log
 

@@ -725,9 +725,13 @@
       if (!viewId) { say("data-save-first"); return; }
       busy = true;
       say("data-working");
-      var origin = status.getAttribute("data-content-origin");
+      // With pdf_without_content_origin the viewer is on CKAN's own host, so
+      // its frame must have no origin of its own: it answers as "null", and
+      // is asked with "*".
+      var opaque = status.getAttribute("data-opaque") === "true";
+      var origin = opaque ? "null" : status.getAttribute("data-content-origin");
       var frame = document.createElement("iframe");
-      frame.setAttribute("sandbox", "allow-scripts allow-same-origin");
+      frame.setAttribute("sandbox", opaque ? "allow-scripts" : "allow-scripts allow-same-origin");
       frame.setAttribute("aria-hidden", "true");
       frame.setAttribute("tabindex", "-1");
       frame.setAttribute("title", "");
@@ -757,7 +761,7 @@
       }
       window.addEventListener("message", onReply);
       frame.addEventListener("load", function () {
-        if (frame.contentWindow) frame.contentWindow.postMessage({type: PDF_THUMBNAIL}, origin);
+        if (frame.contentWindow) frame.contentWindow.postMessage({type: PDF_THUMBNAIL}, opaque ? "*" : origin);
       });
       frame.src = status.getAttribute("data-open-url");
       document.body.appendChild(frame);

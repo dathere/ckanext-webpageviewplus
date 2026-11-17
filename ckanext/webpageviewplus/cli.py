@@ -210,14 +210,16 @@ def migrate_pdf(dry_run: bool):
 
     Keeps each view's id, title, description, order and pdf_url (both view
     types name the field alike). Needs the pdf_view_plus plugin and a
-    content origin, without which the converted views couldn't show.
+    content origin, without which the converted views couldn't show, or
+    pdf_without_content_origin, which converts public datasets' views only.
     """
     if not _plugin_loaded(pdf.VIEW_TYPE):
         raise click.UsageError("add pdf_view_plus to ckan.plugins first")
-    if not settings.isolating_content_origin():
+    if not settings.pdf_mode():
         raise click.UsageError(
             "pdf_view_plus needs ckanext.webpageviewplus.content_origin "
-            "(with harden_downloads on)")
+            "or pdf_without_content_origin (either with harden_downloads on)")
+    public_only = pdf.on_ckan_host()
     views = (
         model.Session.query(model.ResourceView)
         .filter(model.ResourceView.view_type == "pdf_view")
@@ -234,6 +236,9 @@ def migrate_pdf(dry_run: bool):
         problem = None
         if resource is None:
             problem = "its resource is gone"
+        elif public_only and not content.is_public(resource.package_id):
+            problem = ("its dataset is private, and pdf_without_content_origin "
+                       "shows public datasets only")
         elif pdf_url and not frame.is_http_url(pdf_url):
             problem = "its pdf_url isn't an http(s) URL"
         elif found is None and resource.url_type == "upload":
@@ -628,8 +633,12 @@ def diagnose() -> list[tuple[str, str]]:
         found.append(("note", "No content origin (ckanext.webpageviewplus.content_origin): "
                       "third-party pages run as their presets, External included, but "
                       "uploads stay sandboxed on CKAN's origin, Data schematic runs as "
-                      "Interactive, and PDF (Plus) is never offered. See the README's "
-                      "'A separate domain for uploads'."))
+                      "Interactive, and PDF (Plus) is "
+                      + ("shown from CKAN's own host, for public datasets only "
+                         "(pdf_without_content_origin)."
+                         if settings.pdf_mode() else
+                         "never offered (unless pdf_without_content_origin is on).")
+                      + " See the README's 'A separate domain for uploads'."))
     else:
         found.append(("warn", "harden_downloads is off, so uploads could run as CKAN: "
                       "External and Data schematic run as Interactive, so YouTube, "

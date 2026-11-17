@@ -639,7 +639,12 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
         }
 
     def can_view(self, data_dict: dict[str, Any]) -> bool:
-        if not settings.isolating_content_origin():
+        mode = settings.pdf_mode()
+        if not mode:
+            return False
+        if mode == settings.PDF_ON_CKAN_HOST and (data_dict.get("package") or {}).get(
+                "private", True):
+            # On CKAN's host the frame sends no cookies: public datasets only.
             return False
         resource = data_dict["resource"]
         if resource.get("url_type") == "upload" and pdf.source({}, resource) is None:
@@ -667,7 +672,8 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
                 and (request.endpoint or "").endswith(("edit_view", "new_view"))
                 else False
             ),
-            "isolated": settings.isolating_content_origin(),
+            "isolated": bool(settings.pdf_mode()),
+            "pdf_on_ckan_host": pdf.on_ckan_host(),
             "allowed_hosts": settings.allowed_hosts(),
             # The images this view may use, when thumbnails are on.
             "thumbnail_choices": (
@@ -675,7 +681,7 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
                 if thumbnails.enabled() else None
             ),
         }
-        if not settings.isolating_content_origin():
+        if not settings.pdf_mode():
             return dict(form_vars, frame=None, frame_error="content_origin")
         found = pdf.source(resource_view, resource)
         if found is None:
@@ -691,6 +697,9 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
 
         package_id = (data_dict.get("package") or {}).get("id") or resource.get("package_id")
         private = not content.is_public(package_id)
+        on_ckan_host = pdf.on_ckan_host()
+        if private and on_ckan_host:
+            return dict(form_vars, frame=None, frame_error="pdf_private")
         lang = toolkit.h.lang() if has_request_context() else "en"
         title = resource_view.get("title") or toolkit._("PDF document")
         mode = resource_view.get("height_mode") or pdf.DEFAULT_HEIGHT[0]
@@ -698,10 +707,14 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
             pdf.DEFAULT_HEIGHT[1] if mode == pdf.DEFAULT_HEIGHT[0] else "80")
         built = frame.build_frame(
             pdf.viewer_url(view_id, kind, url, resource, bool(private), lang),
-            "data-schematic",
+            # On CKAN's host: interactive's sandbox, whose links escape it
+            # (pdf.HOST_SANDBOX). No allow-same-origin, so the invariant holds.
+            "interactive" if on_ckan_host else "data-schematic",
             ckan_hosts=settings.ckan_hosts(),
             is_upload=True,
-            content_origin=settings.isolating_content_origin(),
+            content_origin=None if on_ckan_host else settings.isolating_content_origin(),
+            downloads_sandboxed=on_ckan_host,
+            sandbox_override=pdf.HOST_SANDBOX if on_ckan_host else "",
             referrer_policy=settings.referrer_policy(),
             height_mode=mode,
             height_value=value,
@@ -756,7 +769,7 @@ class PdfViewPlusPlugin(plugins.SingletonPlugin):
             show_controls=not toolkit.asbool(resource_view.get("hide_controls")),
             color_scheme=settings.color_scheme(),
             narrow_width=settings.narrow_width(),
-            preconnect=settings.content_origin(),
+            preconnect=None if on_ckan_host else settings.content_origin(),
         )
 
     def view_template(self, context: Context, data_dict: dict[str, Any]) -> str:
