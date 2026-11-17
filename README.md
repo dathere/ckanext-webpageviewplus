@@ -366,7 +366,8 @@ server request addresses that editors type, it's off by default; see
 `https://` site always gets that card, since browsers block it.)
 
 **Find broken views.** `ckan webpageviewplus check-views` lists the views (core `webpage_view`
-ones too) whose page is gone, unreachable or refuses to be embedded. Run it weekly from cron
+ones too) whose page is gone, unreachable or refuses to be embedded, and Repository (Plus) views
+whose repository is gone or private. Run it weekly from cron
 and have the output mailed to you:
 
     0 4 * * 1  ckan -c /etc/ckan/default/ckan.ini webpageviewplus check-views
@@ -1273,6 +1274,14 @@ and lists the ones that can't show their page:
 | `not-http` | not an `http://` or `https://` URL |
 | `host-not-allowed` | a page URL outside `allowed_hosts` (`webpage_view_plus` views only) |
 | `unsandboxed-upload` | with `harden_downloads = false`, a core `webpage_view` framing an upload that could run scripts (HTML, SVG or XML, or a mimetype that isn't plainly passive) unsandboxed, as CKAN; `migrate` fixes it |
+| `repo-missing` | a Repository (Plus) view's repository is gone or private |
+| `not-a-repository` | a Repository (Plus) view's link (its own, or the resource's after a change) isn't a repository's root on a built-in site or one in `repo_hosts` |
+
+With `repo_view_plus`, Repository (Plus) views are checked too, through CKAN's copy of each
+repository: one fetch per repository and branch, only when the copy is older than
+`repo_cache_seconds`, and `unreachable` when the site's API doesn't answer. A site's rate limit
+is shown in the detail column (`--all`) but isn't a problem, and the rest of that site's
+repositories aren't asked that run. `--no-store` doesn't apply to these copies: they're a cache.
 
 It fetches each URL once per run, with the same guards as the form's check (public addresses
 only, headers only), whatever `frameability_check` is set to. Uploads and CKAN's own pages
@@ -1636,7 +1645,9 @@ server reachable only inside your network shows the "couldn't be loaded" card.
   token with no permissions) for 5,000; it's sent only to `api.github.com`, never to the other
   sites or GitHub Enterprise. GitLab allows 500 requests a minute and Codeberg 2,000 every ten
   minutes without one. When a limit is reached, or the repository is missing or private, the
-  view shows a card with a link to it instead, and a copy already made keeps being shown.
+  view shows a card with a link to it instead. A copy already made keeps being shown through
+  limits and outages, but not once the site says the repository is gone or private: then the
+  copy is deleted, so a repository made private stops showing at the next refresh.
 - **A page with no scripts.** The README is cleaned with nh3 (tags and attributes from a fixed
   list; relative links point at the files on the repository's site, relative images at their
   raw addresses), and the page is served on CKAN's host with a CSP `sandbox` and
@@ -1647,8 +1658,9 @@ server reachable only inside your network shows the "couldn't be loaded" card.
   image proxies, badge services), so the consent card covers these views, naming the
   repository's host, under `privacy_profile = eu`, `consent_gate` or Global Privacy Control.
 
-Not yet: `check-views` reporting, and the Website (Plus) form offering a Repository view for
-repository links.
+`ckan webpageviewplus check-views` reports Repository views whose repository is gone or private
+(see [Finding broken views](#finding-broken-views)). Not yet: the Website (Plus) form offering a
+Repository view for repository links.
 
 ### Privacy and telemetry
 

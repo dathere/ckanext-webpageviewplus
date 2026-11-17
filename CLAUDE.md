@@ -124,8 +124,8 @@ order now being built:
 
 11. Done: `repo_view_plus` (spec section "Proposed: Repository (Plus) view"; GitHub released
    in 0.11.0; Codeberg/Gitea/Forgejo, GitLab, Bitbucket and `repo_hosts` unreleased, issue
-   #3); see `repos.py` below. Next: `check-views` reporting, and the Website (Plus) form
-   offering a Repository view for repository links (separate issues).
+   #3); see `repos.py` below. `check-views` reports Repository views (#15, unreleased).
+   Next: the Website (Plus) form offering a Repository view for repository links.
 
 12. Done (0.13.0): screenshots of pages that refuse framing (spec section "Proposed: Screenshots
    of pages that refuse framing", revision 3, every open question decided; its Build order gives
@@ -335,7 +335,11 @@ order now being built:
   (frameability's `_guarded`/`_address_kind`, redirects only within that API's base, and
   `github_token` only when the base is `GITHUB_API`, never GitHub Enterprise); `_rate_limit`
   reads every site's headers (a 429, or a 403 with none left) into `rate_limited` until the
-  reset, and a failed refresh keeps serving the old copy. GitHub's README comes rendered; the
+  reset, and a failed refresh keeps serving the old copy, except `missing` (gone or private),
+  which deletes it. `check()` (for `check-views`, `cli.repo_problem`) shares `_cached` with
+  `cached()` but reports the failure kind even while an old copy is served; its tests call
+  `cli.check_views` through click's `CliRunner`, not `ckan`, which would build its own app
+  (and `ckan.storage_path`, the dev site's) from `test.ini`. GitHub's README comes rendered; the
   others are picked from the listing (`_pick_readme`), fetched raw, and rendered by
   `render_readme` (cmarkgfm with `CMARK_OPT_UNSAFE` so raw HTML reaches nh3, plus GitHub-style
   `user-content-` heading ids; non-Markdown as `<pre>`). `clean_readme(html, blob, raw)` takes
