@@ -713,21 +713,41 @@ def cached(repo: Repo, view_id: str = "") -> tuple[Optional[dict[str, Any]], str
     file); the others serve the copy being refreshed. A failure is
     remembered for FAILED_SECONDS, or until the site's limit resets; when a
     refresh fails, the old copy keeps being served, as the repository is
-    public at its source."""
+    public at its source, except when the site says the repository is gone
+    or private (``missing``): then the copy is deleted."""
+    data, problem, _until = _cached(repo, view_id)
+    return (data, "") if data is not None else (None, problem)
+
+
+def check(repo: Repo) -> tuple[str, float]:
+    """Why the repository can't be fetched now ("" if it can), and until when
+    for ``rate_limited``, through the same copy, lock and failure memory as
+    rendering. Unlike ``cached``, a failure is reported even while an old
+    copy is still being served (the API failed or hit its limit). A copy
+    within repo_cache_seconds counts as fine unfetched."""
+    _data, problem, until = _cached(repo)
+    return problem, until
+
+
+def _cached(repo: Repo, view_id: str = "") -> tuple[Optional[dict[str, Any]], str, float]:
+    """The copy to serve (possibly stale), why the latest fetch failed (""
+    when the copy is current), and until when that failure is remembered."""
     folder = _folder()
     if folder is None:
-        return None, "no_storage"
+        return None, "no_storage", 0.0
     base = os.path.join(folder, hashlib.sha256(repo.key.encode()).hexdigest())
     path = base + ".json"
     stale = _read(path)
     if stale is not None and pdf._age(path) < settings.repo_cache_seconds():
-        return stale, ""
+        return stale, "", 0.0
     failed = _read(base + ".failed")
     if failed is not None and time.time() < float(failed.get("until") or 0):
-        return (stale, "") if stale is not None else (None, str(failed.get("kind")))
+        kind = str(failed.get("kind"))
+        return (None if kind == "missing" else stale), kind, float(failed.get("until") or 0)
     os.makedirs(folder, exist_ok=True)
     if not pdf._lock(base + ".lock"):
-        return (stale, "") if stale is not None else (None, "failed")
+        # Another worker is refreshing it: no answer yet.
+        return stale, "" if stale is not None else "failed", 0.0
     try:
         try:
             data = fetch(repo, time.monotonic() + FETCH_SECONDS)
@@ -736,10 +756,14 @@ def cached(repo: Repo, view_id: str = "") -> tuple[Optional[dict[str, Any]], str
             _write(base + ".failed", {"kind": problem.kind, "until": until})
             events.emit("repo_fetch_failed", view_id=view_id, reason=problem.kind,
                         host=repo.host.host)
-            return (stale, "") if stale is not None else (None, problem.kind)
+            if problem.kind == "missing":
+                # Deleted, or made private on purpose: stop showing it.
+                pdf._remove(path)
+                return None, problem.kind, until
+            return stale, problem.kind, until
         _write(path, data)
         pdf._remove(base + ".failed")
-        return data, ""
+        return data, "", 0.0
     finally:
         pdf._remove(base + ".lock")
 

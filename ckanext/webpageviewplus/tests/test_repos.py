@@ -211,6 +211,28 @@ class TestCached:
         assert repos.cached(repos.Repo("ckan", "ckan")) == (old, "")
         assert len(calls) == fetched
 
+    def test_gone_or_private_drops_the_copy(self, api, ckan_config, monkeypatch):
+        answers, calls = api
+        assert repos.cached(repos.Repo("ckan", "ckan"))[0] is not None
+        monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.repo_cache_seconds", 0)
+        answers["/repos/ckan/ckan"] = (200, json.dumps(dict(INFO, private=True)).encode())
+        assert repos.cached(repos.Repo("ckan", "ckan")) == (None, "missing")
+        fetched = len(calls)
+        # Remembered, and no copy comes back while it is.
+        assert repos.cached(repos.Repo("ckan", "ckan")) == (None, "missing")
+        assert len(calls) == fetched
+
+    def test_remembered_missing_never_serves_a_copy(self, api, ckan_config, monkeypatch):
+        import hashlib
+        import os
+        repo = repos.Repo("ckan", "ckan")
+        copy, _ = repos.cached(repo)
+        monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.repo_cache_seconds", 0)
+        base = os.path.join(repos._folder(), hashlib.sha256(repo.key.encode()).hexdigest())
+        repos._write(base + ".failed", {"kind": "missing", "until": time.time() + 60})
+        assert os.path.exists(base + ".json")
+        assert repos.cached(repo) == (None, "missing")
+
     def test_no_storage_path(self, api, ckan_config, monkeypatch):
         monkeypatch.setitem(ckan_config, "ckan.storage_path", "")
         assert repos.cached(repos.Repo("ckan", "ckan")) == (None, "no_storage")
@@ -920,3 +942,110 @@ class TestOtherSitesView:
         text = BeautifulSoup(app.get(_read(dataset, resource, view)).body,
                              "html.parser").get_text()
         assert "GitHub, GitLab, Codeberg, Bitbucket and git.example.org, such as" in text
+
+
+@pytest.mark.ckan_config("ckan.plugins", "webpage_view_plus repo_view_plus")
+@pytest.mark.ckan_config("ckan.views.default_views", "")
+@pytest.mark.usefixtures("non_clean_db", "with_plugins", "storage")
+class TestCheckViews:
+    def _run(self, cli, dataset, *args):
+        # Called directly, not through `ckan`, which would build its own app
+        # from test.ini, without the storage fixture's path.
+        from click.testing import CliRunner
+        from ckanext.webpageviewplus import cli as wvp_cli
+        return CliRunner().invoke(
+            wvp_cli.check_views, ["--dataset", dataset["name"], *args])
+
+    def _views(self, *urls):
+        dataset = factories.Dataset()
+        views = [_view(factories.Resource(package_id=dataset["id"], url=url)) for url in urls]
+        return dataset, views
+
+    def test_fine_repository_fetched_once(self, cli, api):
+        _, calls = api
+        dataset, _ = self._views(REPO, REPO + "/")
+        result = self._run(cli, dataset)
+        assert result.exit_code == 0, result.output
+        assert "2 view(s) checked, 0 with problems." in result.output
+        assert len(calls) == 3
+        # A copy within repo_cache_seconds isn't fetched again.
+        assert self._run(cli, dataset).exit_code == 0
+        assert len(calls) == 3
+
+    def test_missing_repository(self, cli, api):
+        dataset, (view,) = self._views("https://github.com/ckan/nope")
+        result = self._run(cli, dataset)
+        assert result.exit_code == 1, result.output
+        assert "repo-missing\trepo_view_plus\t{}\t{}".format(
+            dataset["name"], view["id"]) in result.output
+        assert "no such public repository on GitHub" in result.output
+
+    def test_deleted_after_its_copy_was_made(self, cli, api, ckan_config, monkeypatch):
+        # Rendering keeps serving the old copy; check-views must not.
+        answers, _ = api
+        old, _ = repos.cached(repos.Repo("ckan", "ckan"))
+        monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.repo_cache_seconds", 0)
+        answers["/repos/ckan/ckan"] = (404, b"{}")
+        dataset, _ = self._views(REPO)
+        result = self._run(cli, dataset)
+        assert result.exit_code == 1, result.output
+        assert "repo-missing" in result.output
+        # Gone or private: the old copy is deleted, so visitors see the card.
+        assert old is not None
+        assert repos.cached(repos.Repo("ckan", "ckan")) == (None, "missing")
+
+    def test_failure_reported_while_the_old_copy_is_served(
+            self, cli, api, ckan_config, monkeypatch):
+        answers, _ = api
+        old, _ = repos.cached(repos.Repo("ckan", "ckan"))
+        monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.repo_cache_seconds", 0)
+        answers["/repos/ckan/ckan"] = repos.Unavailable("failed")
+        dataset, _ = self._views(REPO)
+        result = self._run(cli, dataset)
+        assert result.exit_code == 1, result.output
+        assert "unreachable\trepo_view_plus" in result.output
+        assert repos.cached(repos.Repo("ckan", "ckan")) == (old, "")
+
+    def test_api_failure_is_unreachable(self, cli, api):
+        answers, _ = api
+        answers["/repos/ckan/ckan"] = repos.Unavailable("failed")
+        dataset, _ = self._views(REPO)
+        result = self._run(cli, dataset)
+        assert result.exit_code == 1, result.output
+        assert "unreachable\trepo_view_plus" in result.output
+
+    def test_not_a_repository(self, cli, api):
+        # Refused at save, so only after the resource's link changes.
+        from ckan.tests import helpers
+        _, calls = api
+        dataset, _ = self._views(REPO)
+        resource = helpers.call_action("package_show", id=dataset["id"])["resources"][0]
+        helpers.call_action("resource_patch", id=resource["id"], url=REPO + "/issues")
+        result = self._run(cli, dataset)
+        assert result.exit_code == 1, result.output
+        assert "not-a-repository\trepo_view_plus" in result.output
+        assert calls == []
+
+    def test_view_repo_url_beats_the_resource_url(self, cli, api):
+        dataset = factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url="https://example.com/")
+        _view(resource, repo_url=REPO)
+        assert self._run(cli, dataset).exit_code == 0
+
+    def test_rate_limit_reported_not_a_problem(self, cli, api):
+        answers, calls = api
+        answers["/repos/ckan/ckan"] = repos.Unavailable("rate_limited", time.time() + 3600)
+        dataset, _ = self._views(REPO, "https://github.com/ckan/ckanext-other")
+        result = self._run(cli, dataset, "--all")
+        assert result.exit_code == 0, result.output
+        assert result.output.count("not checked: GitHub's rate limit") == 2
+        assert " UTC" in result.output
+        # The second repository on the same site wasn't asked.
+        assert calls == ["/repos/ckan/ckan"]
+
+    def test_json(self, cli, api):
+        dataset, (view,) = self._views("https://github.com/ckan/nope")
+        out = self._run(cli, dataset, "--json").output
+        rows = json.loads(out[out.index("[\n"):out.rindex("]") + 1])
+        assert [(r["view_id"], r["view_type"], r["problem"]) for r in rows] == [
+            (view["id"], repos.VIEW_TYPE, "repo-missing")]

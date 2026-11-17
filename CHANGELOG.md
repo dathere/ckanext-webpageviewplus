@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `ckan webpageviewplus check-views` checks Repository (Plus) views too (with
+  `repo_view_plus`): `repo-missing` for a repository that's gone or private,
+  `not-a-repository` for a link that's no longer a repository's root, and `unreachable` when
+  the site's API doesn't answer. Each repository is fetched at most once per run, only when
+  CKAN's copy is older than `repo_cache_seconds`; a site's rate limit is reported but doesn't
+  set the exit status. (#15)
+
+### Changed
+
+- A Repository (Plus) view no longer keeps showing its copy of a repository that's been
+  deleted or made private: when the site says so, the copy is deleted and the view shows its
+  "missing" card. Copies are still kept through rate limits and outages.
+
 ## 0.13.0 (2026-11-16)
 
 ### Added

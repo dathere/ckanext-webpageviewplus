@@ -428,6 +428,51 @@ def assess(
     return result()
 
 
+def repo_problem(
+    view: model.ResourceView,
+    resource: model.Resource,
+    checked: dict[str, tuple[str, float]],
+    limited: set[str],
+) -> dict[str, str]:
+    """A Repository (Plus) view's problem ("" if none) and detail. Each
+    repository is checked once per run (``checked``, by ``Repo.key``), and a
+    site that answered rate_limited isn't asked again this run
+    (``limited``). Rate limits and a missing storage path are reported but
+    aren't problems: they say nothing about the repository."""
+    from ckanext.webpageviewplus import repos
+
+    url = repos.repo_url(view.config or {}, {"url": resource.url})
+
+    def result(problem: str = "", detail: str = "") -> dict[str, str]:
+        return {"problem": problem, "detail": detail, "url": url}
+
+    found = repos.parse(url) if frame.is_http_url(url) else None
+    if found is None:
+        return result(
+            "not-a-repository",
+            "not a repository's root on a built-in site or one in "
+            "ckanext.webpageviewplus.repo_hosts")
+    if found.key not in checked:
+        if found.host.host in limited:
+            checked[found.key] = ("rate_limited", 0.0)
+        else:
+            checked[found.key] = repos.check(found)
+    problem, until = checked[found.key]
+    if problem == "rate_limited":
+        limited.add(found.host.host)
+        when = " until {} UTC".format(
+            datetime.datetime.fromtimestamp(until, datetime.timezone.utc)
+            .strftime("%Y-%m-%d %H:%M")) if until else ""
+        return result(detail="not checked: {}'s rate limit{}".format(found.host.site, when))
+    if problem == "no_storage":
+        return result(detail="not checked: ckan.storage_path isn't set")
+    if problem == "missing":
+        return result("repo-missing", "no such public repository on {}".format(found.host.site))
+    if problem:
+        return result("unreachable", "{}'s API didn't answer".format(found.host.site))
+    return result()
+
+
 @webpageviewplus.command("check-views")
 @click.option("--dataset", help="Only this dataset (name or id).")
 @click.option("--all", "show_all", is_flag=True, help="List every view, not only broken ones.")
@@ -438,7 +483,8 @@ def assess(
 @click.option(
     "--no-store", is_flag=True,
     help="Don't save the results (they decide which views show the "
-    "can't-be-embedded card).")
+    "can't-be-embedded card). Repository (Plus) views' copies are still "
+    "refreshed: they're a cache.")
 def check_views(
     dataset: Optional[str], show_all: bool, as_json: bool, timeout: float, no_store: bool
 ):
@@ -456,6 +502,12 @@ def check_views(
     and a worker reading the queue, a view whose page refuses to be framed
     and has no screenshot of it gets a screenshot job, unless that page's
     last attempt failed within a week.
+
+    With repo_view_plus, Repository (Plus) views are checked too: a link
+    that isn't a repository's root, a repository that's gone or private,
+    and a site whose API doesn't answer. Each repository is fetched at most
+    once, only when its copy is older than repo_cache_seconds; a site's rate
+    limit is reported but isn't a problem.
     """
     from ckanext.webpageviewplus import screenshots
 
@@ -501,6 +553,26 @@ def check_views(
             dataset=package.name, resource_id=resource.id, view_id=view.id,
             view_type=view.view_type)
         rows.append(row)
+    if _plugin_loaded("repo_view_plus"):
+        repo_views = (
+            model.Session.query(model.ResourceView, model.Resource, model.Package)
+            .join(model.Resource, model.Resource.id == model.ResourceView.resource_id)
+            .join(model.Package, model.Package.id == model.Resource.package_id)
+            .filter(model.ResourceView.view_type == "repo_view_plus")
+            .filter(model.Resource.state == "active", model.Package.state == "active")
+            .order_by(model.Package.name, model.Resource.position, model.ResourceView.order)
+        )
+        if dataset:
+            repo_views = repo_views.filter(
+                (model.Package.name == dataset) | (model.Package.id == dataset))
+        checked: dict[str, tuple[str, float]] = {}
+        limited: set[str] = set()
+        for view, resource, package in repo_views:
+            row = repo_problem(view, resource, checked, limited)
+            row.update(
+                dataset=package.name, resource_id=resource.id, view_id=view.id,
+                view_type=view.view_type)
+            rows.append(row)
     if remake:
         # PDF (Plus) views have no page to check, only a thumbnail to remake.
         pdf_views = (
