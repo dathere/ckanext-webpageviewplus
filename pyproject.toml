@@ -42,7 +42,7 @@ repo_view_plus = "ckanext.webpageviewplus.plugin:RepoViewPlusPlugin"
 
 
 [build-system]
-requires = ["setuptools<82"]
+requires = ["setuptools<85"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
