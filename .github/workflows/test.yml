@@ -210,7 +210,8 @@ jobs:
         ckan -c "$CKAN_INI" db upgrade -p webpage_view_plus
         python browser_tests/seed.py
         nohup setsid ckan -c "$CKAN_INI" run -H 0.0.0.0 -p 5000 -r -t > /tmp/ckan.log 2>&1 &
-        nohup setsid ckan -c browser_tests/ci_no_origin.ini run -H 0.0.0.0 -p 5002 -r -t > /tmp/ckan-no-origin.log 2>&1 &
+        # The image's CKAN_SITE_URL (localhost:5000) beats the ini's site_url.
+        CKAN_SITE_URL="$WVP_NO_ORIGIN_URL" nohup setsid ckan -c browser_tests/ci_no_origin.ini run -H 0.0.0.0 -p 5002 -r -t > /tmp/ckan-no-origin.log 2>&1 &
         python - <<'EOF' || { cat /tmp/ckan.log /tmp/ckan-no-origin.log; exit 1; }
         import os, time, urllib.request
         for base in (os.environ["WVP_BASE_URL"], os.environ["WVP_NO_ORIGIN_URL"]):
@@ -232,5 +233,5 @@ jobs:
       run: pytest -p no:cacheprovider browser_tests
     - name: CKAN log
       if: failure()
-      run: tail -200 /tmp/ckan.log /tmp/ckan-no-origin.log
+      run: tail -n 200 /tmp/ckan.log /tmp/ckan-no-origin.log
 

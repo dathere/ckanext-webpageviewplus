@@ -343,7 +343,7 @@ order now being built:
   `allow-popups-to-escape-sandbox`) and a relative src (`pdf._root_path`, for
   `ckan.root_path`). `pdf._headers` adds `HOST_SANDBOX_CSP` to every viewer file (the header,
   not the frame, is what stops the viewer opened on its own from running as CKAN; the PDF keeps
-  `sandbox; default-src 'none'`) and `Access-Control-Allow-Origin: *` (the frame reads its own
+  `sandbox; default-src 'none'`), names the request's host after every `'self'` (WebKit matches `'self'` to nothing in a document with no origin and refused the viewer's fetches), and `Access-Control-Allow-Origin: *` (the frame reads its own
   files cross-origin, without cookies). `content._revalidate_if_asked` applies
   `CACHE_ENVIRON_KEY` on CKAN's host too (Cache-Control, no Set-Cookie). The form's first-page
   frame drops `allow-same-origin`, asks with `*` and accepts `"null"` (`data-opaque`). PDF.js

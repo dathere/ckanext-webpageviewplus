@@ -40,8 +40,11 @@ PROBE = """() => {
 
 # PDF.js's worker can't start in a frame with no origin (Chrome refuses a
 # module worker there, Firefox says the worker file "may not load data"), so
-# it runs on the page instead: expected here, any other error isn't.
-WORKER_REFUSED = re.compile(r"may not load data from \S+/pdf\.worker\.mjs")
+# it runs on the page instead. WebKit refuses PDF.js's own fullscreen there
+# (the control bar's Fullscreen is on the CKAN page). Expected here, any other
+# error isn't.
+WORKER_REFUSED = re.compile(r"may not load data from \S+/pdf\.worker\.mjs"
+                            r"|^Permission policy 'Fullscreen' check failed for document with origin ''\.$")
 
 
 @pytest.fixture

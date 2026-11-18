@@ -384,6 +384,9 @@ def _served_here() -> None:
 
 def _headers(response: Response, policy: str) -> Response:
     if on_ckan_host():
+        # WebKit matches 'self' against nothing in a document with no origin,
+        # refusing the viewer's own fetches (locale, the PDF): name the host.
+        policy = policy.replace("'self'", "'self' " + request.host_url.rstrip("/"))
         if not policy.startswith("sandbox"):
             policy += "; " + HOST_SANDBOX_CSP
         # The frame has no origin of its own, so its files are cross-origin

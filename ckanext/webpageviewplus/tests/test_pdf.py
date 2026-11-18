@@ -519,6 +519,9 @@ class TestOnCkanHost:
         csp = response.headers["Content-Security-Policy"]
         assert "; " + pdf.HOST_SANDBOX_CSP + "; frame-ancestors " in csp
         assert "allow-same-origin" not in csp
+        # WebKit's 'self' matches nothing with no origin: the host is named.
+        assert "connect-src 'self' http://test.ckan.net;" in csp
+        assert "script-src 'self' http://test.ckan.net " in csp
         assert response.headers["Access-Control-Allow-Origin"] == "*"
         assert "Access-Control-Allow-Credentials" not in response.headers
         assert response.headers["Cache-Control"] == "public, max-age=31536000, immutable"
