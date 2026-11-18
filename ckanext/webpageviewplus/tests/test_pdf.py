@@ -612,10 +612,16 @@ class TestOnCkanHost:
         ).body
         assert "Use a PDF (Plus) view instead." not in body
 
-    def test_refusals_are_not_stored(self, app):
+    @pytest.mark.parametrize("path", [
+        "/webpageviewplus/pdf/no-such-view/document.pdf",
+        "/webpageviewplus/pdfjs/0.0.0/web/viewer.html",
+        "/webpageviewplus/pdfjs/{}/web/no-such-file.html".format(pdf.PDFJS_VERSION),
+        "/webpageviewplus/pdfjs/{}/web/../../pdf.py".format(pdf.PDFJS_VERSION),
+    ])
+    def test_refusals_are_not_stored(self, app, path):
         # Marked before the route can fail: no-store and no cookie, as on the
         # content host, not CKAN's default caching of a 404.
-        response = app.get("/webpageviewplus/pdf/no-such-view/document.pdf", status=404)
+        response = app.get(path, status=404)
         assert response.headers["Cache-Control"] == "no-store"
         _no_cookie(response)
 
