@@ -114,20 +114,20 @@ order now being built:
    `service_format` (`thumbnails.service_format`, after each view save: `resource_patch`
    with `ignore_auth`, only for an empty or HTML format and a resource's only view, never on
    a harvested dataset: `_harvested`, a `harvest_object_id` extra).
-10. Done (unreleased, for 0.8.0): `pdf_view_plus` (spec section "PDF viewer on the content
+10. Done (0.8.0): `pdf_view_plus` (spec section "PDF viewer on the content
    origin"): PDF.js from the content origin for uploaded and linked PDFs; see `pdf.py` below.
    `ckan webpageviewplus migrate-pdf` converts ckanext-pdfview's `pdf_view` views (same
    `pdf_url` field); its tests patch `cli._plugin_loaded`, never `ckan.plugins.plugin_loaded`
    (that fools `with_plugins`' teardown on CKAN 2.10).
    Uploads `pdf.source` can't read (a cloud storage extension on 2.10/2.11) are never
    offered the view (`can_view`) and `migrate-pdf` leaves their `pdf_view` views alone.
-   Unreleased: `pdf_without_content_origin` (spec section "Proposed: PDF (Plus) without a
+   0.14.0: `pdf_without_content_origin` (spec section "Proposed: PDF (Plus) without a
    content origin", decided 2026-11-17), see `pdf.py` below.
 
 11. Done: `repo_view_plus` (spec section "Proposed: Repository (Plus) view"; GitHub released
-   in 0.11.0; Codeberg/Gitea/Forgejo, GitLab, Bitbucket and `repo_hosts` unreleased, issue
-   #3); see `repos.py` below. `check-views` reports Repository views (#15, unreleased).
-   The Website (Plus) form offers a Repository view (#17, unreleased):
+   in 0.11.0; Codeberg/Gitea/Forgejo, GitLab, Bitbucket and `repo_hosts` in 0.12.0, issue
+   #3); see `repos.py` below. `check-views` reports Repository views (#15, 0.14.0).
+   The Website (Plus) form offers a Repository view (#17, 0.14.0):
    `actions.service_answer(..., repo_views=)` answers `use_repo_view` (built-in sites) or
    `use_repo_view_self_hosted` (`repo_hosts`) for a `repos.parse()` root, after `suggest()`;
    `plugin._repo_view_url` is CKAN's new-view link (`data-repo-view-url`, the script adds
