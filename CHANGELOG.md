@@ -4,6 +4,13 @@
 
 ### Added
 
+- PDF (Plus) without a content origin: `pdf_without_content_origin` (default off) serves
+  PDF.js from CKAN's own domain, for public datasets only, in a frame with no origin of its
+  own. Its sandbox has no `allow-same-origin`, and every viewer file sends the same sandbox
+  as a `Content-Security-Policy` header, so the viewer opened on its own has no origin either.
+  It needs `harden_downloads` (the default). With a content origin set, nothing changes.
+  `migrate-pdf` converts public datasets' views in this mode, and `doctor` says which mode
+  PDF (Plus) runs in.
 - The Website (Plus) form offers a Repository (Plus) view for a repository's address (with
   `repo_view_plus`): its warning links to the Repository form for the same resource, with the
   address filled in. For a saved Website (Plus) view, the Repository form offers (ticked) to

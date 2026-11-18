@@ -56,6 +56,7 @@
          data-ready="{{ 'true' if first_page_ready else 'false' }}"
          data-open-url="{{ h.url_for('webpageviewplus_pdf.open_viewer', view_id=data.id) if data.id else '' }}"
          data-content-origin="{{ content_origin or '' }}"
+         data-opaque="{{ 'true' if pdf_on_ckan_host else 'false' }}"
          data-api="{{ h.url_for('api.action', ver=3, logic_function='webpageviewplus_pdf_thumbnail') }}"
          data-working="{{ _('Drawing the first page…') }}"
          data-done="{{ _('The first page is ready. Save the view to use it.') }}"

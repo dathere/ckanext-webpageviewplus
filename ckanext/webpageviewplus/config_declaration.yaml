@@ -370,6 +370,19 @@ groups:
           as before.
           Linked PDFs need ckan.storage_path, where the copies are kept.
 
+      - key: ckanext.webpageviewplus.pdf_without_content_origin
+        default: false
+        type: bool
+        description: |
+          pdf_view_plus on a site with no content origin: serve PDF.js from
+          CKAN's own host, in a frame with no origin of its own (a sandbox
+          without allow-same-origin, also sent as a CSP sandbox header so the
+          viewer opened on its own has none either). Public datasets only, as
+          such a frame sends no cookies and there is nothing to sign its URLs
+          with. Needs harden_downloads. Ignored when a content origin is set,
+          which keeps PDF.js on a site of its own: a bug in PDF.js would then
+          also be on another site, a second layer this mode does without.
+
       - key: ckanext.webpageviewplus.repo_cache_seconds
         default: 3600
         type: int

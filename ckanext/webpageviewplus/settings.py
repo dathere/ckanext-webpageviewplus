@@ -315,6 +315,21 @@ def isolating_content_origin() -> Optional[str]:
     return content_origin() if harden_downloads() else None
 
 
+PDF_ON_CONTENT_ORIGIN = "content"
+PDF_ON_CKAN_HOST = "host"
+
+
+def pdf_mode() -> str:
+    """Where pdf_view_plus runs PDF.js: on the isolating content origin, on
+    CKAN's own host with no origin of its own (pdf_without_content_origin,
+    public datasets only), or "" when neither is possible."""
+    if isolating_content_origin():
+        return PDF_ON_CONTENT_ORIGIN
+    if toolkit.asbool(_get("pdf_without_content_origin")) and harden_downloads():
+        return PDF_ON_CKAN_HOST
+    return ""
+
+
 def _check_content_origin(origin: str) -> None:
     key = PREFIX + "content_origin"
     parts = urlsplit(origin)

@@ -11,7 +11,7 @@ from ckan.exceptions import CkanConfigurationException
 from ckan.plugins.toolkit import url_for
 from ckan.tests import factories, helpers
 
-from ckanext.webpageviewplus import content, frameability, pdf, plugin
+from ckanext.webpageviewplus import content, frameability, pdf, plugin, settings
 
 CONTENT = "http://127.0.0.1"
 SECRET = "k" * 40
@@ -481,3 +481,179 @@ def test_needs_main_plugin(monkeypatch):
         plugin_loaded=lambda name: False, SingletonPlugin=plugin.plugins.SingletonPlugin))
     with pytest.raises(CkanConfigurationException):
         plugin.PdfViewPlusPlugin().configure({})
+
+
+@pytest.mark.parametrize("origin, harden, setting, expected", [
+    (CONTENT, "true", "false", "content"),
+    (CONTENT, "true", "true", "content"),  # a content origin always wins
+    ("", "true", "true", "host"),
+    ("", "true", "false", ""),
+    ("", "false", "true", ""),  # needs harden_downloads
+    (CONTENT, "false", "true", ""),  # harden_downloads off: neither
+])
+def test_pdf_mode(ckan_config, monkeypatch, origin, harden, setting, expected):
+    monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.content_origin", origin)
+    monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.harden_downloads", harden)
+    monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.pdf_without_content_origin", setting)
+    assert plugin.settings.pdf_mode() == expected
+
+
+@pytest.fixture
+def ckan_host_pdf(with_plugins, ckan_config, monkeypatch):
+    """pdf_without_content_origin on a site with no content origin. Set here,
+    after the plugins load: CKAN applies the module's ckan_config markers
+    last, so a class marker couldn't unset content_origin."""
+    monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.content_origin", "")
+    monkeypatch.setitem(ckan_config, "ckanext.webpageviewplus.pdf_without_content_origin", "true")
+
+
+def _no_cookie(response):
+    assert "Set-Cookie" not in response.headers
+
+
+@pytest.mark.usefixtures("ckan_host_pdf", "local_storage")
+class TestOnCkanHost:
+    def test_viewer_page_sandboxed_by_header(self, app):
+        response = app.get("/webpageviewplus/pdfjs/{}/web/viewer.html".format(pdf.PDFJS_VERSION))
+        assert response.status_code == 200
+        csp = response.headers["Content-Security-Policy"]
+        assert "; " + pdf.HOST_SANDBOX_CSP + "; frame-ancestors " in csp
+        assert "allow-same-origin" not in csp
+        # WebKit's 'self' matches nothing with no origin: CKAN's hosts are
+        # named, from config, whatever Host a proxy passes on.
+        # CI's image sets CKAN_SITE_URL, which beats test.ini's site_url.
+        named = "'self' http://{0}:* https://{0}:*".format(settings.ckan_hosts()[0])
+        assert "connect-src " + named + ";" in csp
+        assert "script-src " + named + " " in csp
+        proxied = app.get("/webpageviewplus/pdfjs/{}/web/viewer.html".format(pdf.PDFJS_VERSION),
+                          headers={"Host": "ckan:5000"})
+        assert proxied.headers["Content-Security-Policy"] == csp
+        assert response.headers["Access-Control-Allow-Origin"] == "*"
+        assert "Access-Control-Allow-Credentials" not in response.headers
+        assert response.headers["Cache-Control"] == "public, max-age=31536000, immutable"
+        _no_cookie(response)
+
+    def test_script_sandboxed_too(self, app):
+        response = app.get("/webpageviewplus/pdfjs/{}/build/pdf.mjs".format(pdf.PDFJS_VERSION))
+        assert pdf.HOST_SANDBOX_CSP in response.headers["Content-Security-Policy"]
+
+    def test_off_without_the_setting(self, app, ckan_config, monkeypatch):
+        monkeypatch.setitem(
+            ckan_config, "ckanext.webpageviewplus.pdf_without_content_origin", "false")
+        path = "/webpageviewplus/pdfjs/{}/web/viewer.html".format(pdf.PDFJS_VERSION)
+        assert app.get(path, status=404).status_code == 404
+
+    def test_public_upload(self, app):
+        resource = _upload(factories.Dataset())
+        view = _view(resource)
+        found = pdf.source(view, resource)
+        with app.flask_app.test_request_context():
+            path = pdf.file_path(view["id"], found[0], found[1], resource, False)
+        response = app.get(path)
+        assert response.data == PDF
+        assert response.headers["Content-Security-Policy"].startswith(
+            "sandbox; default-src 'none'; frame-ancestors ")
+        assert response.headers["Access-Control-Allow-Origin"] == "*"
+        assert response.headers["Cache-Control"] == "public, no-cache"
+        _no_cookie(response)
+
+    def test_private_refused_even_signed(self, app):
+        resource = _upload(_private_dataset())
+        view = _view(resource)
+        found = pdf.source(view, resource)
+        with app.flask_app.test_request_context():
+            path = pdf.file_path(view["id"], found[0], found[1], resource, True)
+        assert "&s=" in path
+        assert app.get(path, status=404).status_code == 404
+
+    def test_rendered_without_an_origin(self, app):
+        dataset = factories.Dataset()
+        resource = _upload(dataset)
+        view = _view(resource)
+        html = BeautifulSoup(app.get("/dataset/{}/resource/{}?view_id={}".format(
+            dataset["name"], resource["id"], view["id"])).body, "html.parser")
+        iframe = html.find("iframe")
+        assert " ".join(iframe.get_attribute_list("sandbox")) == pdf.HOST_SANDBOX
+        assert iframe["src"].startswith(
+            "/webpageviewplus/pdfjs/{}/web/viewer.html?file=".format(pdf.PDFJS_VERSION))
+        assert iframe["data-opaque"] == "true"
+        assert not html.find("link", rel="preconnect")
+
+    def test_private_dataset_shows_a_card(self, app):
+        dataset = _private_dataset()
+        resource = _upload(dataset)
+        view = _view(resource)
+        sysadmin = factories.SysadminWithToken()
+        body = app.get(
+            "/dataset/{}/resource/{}?view_id={}".format(dataset["name"], resource["id"], view["id"]),
+            headers={"Authorization": sysadmin["token"]}).body
+        assert "the dataset is private, and this site shows PDFs only for public datasets" in body
+        assert "/webpageviewplus/pdfjs/" not in body
+
+    def test_offered_where_anyone_may_see_the_dataset(self):
+        # The same check render and the routes use: drafts aren't public.
+        view_plugin = plugin.PdfViewPlusPlugin()
+        resource = {"format": "PDF", "url": "https://a.org/b.pdf"}
+        public, private = factories.Dataset(), _private_dataset()
+        draft = factories.Dataset(state="draft")
+        assert view_plugin.can_view({"resource": resource, "package": public})
+        assert not view_plugin.can_view({"resource": resource, "package": private})
+        assert not view_plugin.can_view({"resource": resource, "package": draft})
+        assert not view_plugin.can_view({"resource": resource})
+
+    def test_website_form_skips_unreadable_uploads(self, app, monkeypatch):
+        # As can_view: an upload a 2.10/2.11 cloud storage keeps isn't offered.
+        dataset = factories.Dataset()
+        resource = _upload(dataset)
+        monkeypatch.setattr(content, "_readable_uploader", lambda resource: None)
+        sysadmin = factories.SysadminWithToken()
+        body = app.get(
+            url_for("dataset_resource.edit_view", id=dataset["name"],
+                    resource_id=resource["id"], view_type="webpage_view_plus"),
+            headers={"Authorization": sysadmin["token"]},
+        ).body
+        assert "Use a PDF (Plus) view instead." not in body
+
+    @pytest.mark.parametrize("path", [
+        "/webpageviewplus/pdf/no-such-view/document.pdf",
+        "/webpageviewplus/pdfjs/0.0.0/web/viewer.html",
+        "/webpageviewplus/pdfjs/{}/web/no-such-file.html".format(pdf.PDFJS_VERSION),
+        "/webpageviewplus/pdfjs/{}/web/../../pdf.py".format(pdf.PDFJS_VERSION),
+    ])
+    def test_refusals_are_not_stored(self, app, path):
+        # Marked before the route can fail: no-store and no cookie, as on the
+        # content host, not CKAN's default caching of a 404.
+        response = app.get(path, status=404)
+        assert response.headers["Cache-Control"] == "no-store"
+        _no_cookie(response)
+
+    def test_open_viewer_stays_on_ckan_host(self, app):
+        resource = _upload(factories.Dataset())
+        view = _view(resource)
+        response = app.get("/webpageviewplus/pdf-view/{}".format(view["id"]), follow_redirects=False)
+        assert response.status_code == 302
+        location = urlsplit(response.headers["Location"])
+        assert location.path == "/webpageviewplus/pdfjs/{}/web/viewer.html".format(pdf.PDFJS_VERSION)
+        file = unquote(parse_qs(location.query)["file"][0])
+        assert file == "/webpageviewplus/pdf/{}/document.pdf".format(view["id"])
+
+    def test_open_viewer_refuses_private(self, app):
+        resource = _upload(_private_dataset())
+        view = _view(resource)
+        sysadmin = factories.SysadminWithToken()
+        response = app.get("/webpageviewplus/pdf-view/{}".format(view["id"]),
+                           headers={"Authorization": sysadmin["token"]}, status=404)
+        assert response.headers["Cache-Control"] == "no-store"
+        _no_cookie(response)
+
+    @pytest.mark.parametrize("private, offered", [(False, True), (True, False)])
+    def test_website_form_points_to_pdf_plus_where_it_shows(self, app, private, offered):
+        dataset = _private_dataset() if private else factories.Dataset()
+        resource = factories.Resource(package_id=dataset["id"], url=LINK, format="PDF")
+        sysadmin = factories.SysadminWithToken()
+        body = app.get(
+            url_for("dataset_resource.edit_view", id=dataset["name"],
+                    resource_id=resource["id"], view_type="webpage_view_plus"),
+            headers={"Authorization": sysadmin["token"]},
+        ).body
+        assert ("Use a PDF (Plus) view instead." in body) is offered
