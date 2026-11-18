@@ -1590,9 +1590,10 @@ on any version. Then remove `pdf_view` from
   kept in Git LFS isn't: its raw address holds a pointer, not the PDF. CKAN keeps one copy under
   `ckan.storage_path` for `pdf_cache_seconds` (default an hour) and serves every visitor from
   it, so a popular view doesn't make CKAN download the file again and again. `allowed_hosts`
-  applies to these links too, and they need `ckan.storage_path` set. A linked PDF in a private
-  dataset is still a public file on its own site: the signed address hides which view shows it,
-  not the file.
+  applies to these links too, and they need `ckan.storage_path` set. With a content origin, a
+  linked PDF in a private dataset is still a public file on its own site: the signed address
+  hides which view shows it, not the file. Without one, a private dataset's linked PDF isn't
+  shown either, even though the file itself is public.
 - **A thumbnail** in the dataset's resource list, with the thumbnails plugin: the PDF's first
   page, drawn in the editor's browser, or an image the editor picks. See
   [Thumbnails in the resource list](#thumbnails-in-the-resource-list).
@@ -1609,9 +1610,10 @@ served with a CSP `sandbox`, so opened on its own it can't run anything.
 With `pdf_without_content_origin`, PDF.js runs on CKAN's domain instead, in the `interactive`
 sandbox (plus `allow-popups-to-escape-sandbox`, so a PDF's links open as ordinary tabs) and with
 no origin of its own; the CSP `sandbox` header on every viewer file keeps it that way even when
-it's opened on its own. Its page may load files only from CKAN's own addresses (`ckan.site_url`
-and `site_aliases`), named in its CSP from your config rather than from each request, so a proxy
-that rewrites the `Host` header doesn't break it.
+it's opened on its own. Its page may load files only from CKAN's own hostnames (those of
+`ckan.site_url` and `site_aliases`, over http or https and on any port, as the extension treats
+hosts everywhere: cookies aren't separated by port either), named in its CSP from your config
+rather than from each request, so a proxy that rewrites the `Host` header doesn't break it.
 
 **Languages.** The viewer follows the CKAN page's language. It ships English and the ten
 languages CKAN portals most often use, from the [datashades.info](https://datashades.info)
@@ -1889,7 +1891,8 @@ themselves (CKAN's fixtures drop them when they reset the test database).
 `.github/workflows/test.yml` for how CI starts and seeds one. The CKAN under test needs all four
 plugins, `webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus repo_view_plus` (so the
 `[thumbnails,repos]` extras), and a content origin, as in `browser_tests/ci.ini`.
-`test_pdf_ckan_host.py` also needs a second CKAN on the same database with no content origin
+`test_pdf_ckan_host.py` also needs a second CKAN on the same database and upload storage
+(`ckan.storage_path`; `ci_no_origin.ini` inherits both from `ci.ini`) with no content origin
 and `pdf_without_content_origin` on (`browser_tests/ci_no_origin.ini`, on port 5002 in CI), at
 `WVP_NO_ORIGIN_URL`; without it, those tests skip. Set its `CKAN_SITE_URL` too if your
 environment sets one, as it overrides the ini's `site_url`.

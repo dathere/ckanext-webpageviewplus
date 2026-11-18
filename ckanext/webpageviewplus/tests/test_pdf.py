@@ -566,22 +566,29 @@ class TestOnCkanHost:
         assert "&s=" in path
         assert app.get(path, status=404).status_code == 404
 
-    @pytest.mark.parametrize("root_path", ["/data", "/data/{{LANG}}"])
-    def test_paths_carry_root_path(self, app, ckan_config, monkeypatch, root_path):
+    @pytest.mark.parametrize("root_path, prefix", [
+        ("", ""), ("/data", "/data"), ("/data/{{LANG}}", "/data")])
+    def test_paths_carry_root_path(self, app, ckan_config, monkeypatch, root_path, prefix):
         # The frame's src and the PDF's path are relative on CKAN's host, so
-        # they must carry ckan.root_path as CKAN's own links do (never a
-        # language: PDF.js's language is its wvp_lang parameter).
+        # they must carry ckan.root_path as CKAN's own links do, but never the
+        # page's language (PDF.js's language is its wvp_lang parameter): on a
+        # Spanish page, CKAN's links gain /es.
         monkeypatch.setitem(ckan_config, "ckan.root_path", root_path)
         resource = _upload(factories.Dataset())
         view = _view(resource)
         found = pdf.source(view, resource)
-        with app.flask_app.test_request_context():
+        spanish = {"CKAN_LANG": "es", "CKAN_LANG_IS_DEFAULT": False}
+        with app.flask_app.test_request_context(environ_overrides=spanish):
+            if "{{LANG}}" in root_path or not root_path:
+                assert "/es/" in url_for("dataset.search")
             viewer = pdf.viewer_url(view["id"], found[0], found[1], resource, False, "es")
             path = pdf.file_path(view["id"], found[0], found[1], resource, False)
-        assert viewer.startswith("/data/webpageviewplus/pdfjs/{}/web/viewer.html?".format(
+        assert viewer.startswith(prefix + "/webpageviewplus/pdfjs/{}/web/viewer.html?".format(
             pdf.PDFJS_VERSION))
-        assert path.startswith("/data/webpageviewplus/pdf/{}/".format(view["id"]))
-        assert parse_qs(urlsplit(viewer).query)["file"] == [path]
+        assert path.startswith(prefix + "/webpageviewplus/pdf/{}/".format(view["id"]))
+        query = parse_qs(urlsplit(viewer).query)
+        assert query["file"] == [path]
+        assert query["wvp_lang"] == [pdf.pdfjs_lang("es")]
 
     def test_rendered_without_an_origin(self, app):
         dataset = factories.Dataset()
