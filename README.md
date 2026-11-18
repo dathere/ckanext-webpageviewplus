@@ -1522,7 +1522,8 @@ everywhere, and it runs in a sandbox.
 [A separate domain for uploads](#a-separate-domain-for-uploads)): PDF.js then runs with a real
 origin of its own, served from the content domain, never with CKAN's. Your proxy must forward
 `/webpageviewplus/pdfjs/` and `/webpageviewplus/pdf/` on the content domain to CKAN (see
-[Deploying a content origin](#deploying-a-content-origin)).
+[Deploying a content origin](#deploying-a-content-origin)). Or, for public datasets only,
+without one: see below.
 
 **Without a separate domain** (off by default), set
 `ckanext.webpageviewplus.pdf_without_content_origin = true` (with `harden_downloads` on, the
@@ -1543,8 +1544,9 @@ would also be on another site. Two limits:
   without its worker, PDF.js can't load its colour-management code, so a PDF with embedded
   colour profiles (ICC) is drawn with approximate colours.
 
-Links inside a PDF open in an ordinary new tab. Setting a content origin later switches every
-PDF (Plus) view over to it, with nothing to migrate.
+Links inside a PDF open in an ordinary new tab. The viewer's paths follow `ckan.root_path`, and
+no proxy changes are needed: everything is served under CKAN's own address. Setting a content
+origin later switches every PDF (Plus) view over to it, with nothing to migrate.
 
 **Enable it.** Add the plugin after `webpage_view_plus`:
 
@@ -1573,10 +1575,12 @@ on any version. Then remove `pdf_view` from
 
 **What it shows.**
 
-- **Uploaded PDFs**, from CKAN's own storage (on CKAN 2.12, cloud storage too). Private
-  datasets get signed addresses, as uploaded HTML does.
+- **Uploaded PDFs**, from CKAN's own storage (on CKAN 2.12, cloud storage too). With a content
+  origin, private datasets get signed addresses, as uploaded HTML does; without one, they
+  aren't shown.
 - **PDFs on other sites.** Set the view's **PDF url**, or leave it empty for a resource that
-  links to a PDF. CKAN fetches the file and serves it from the content domain, so visitors
+  links to a PDF. CKAN fetches the file and serves it from the content domain (or, without
+  one, from CKAN's own), so visitors
   reading it in the view never contact the other site (Open in new tab opens the original
   file there). The fetch has the same guards as the frameability check:
   public addresses only, redirects checked, a 30-second deadline, at most `pdf_max_size` MB
@@ -1601,6 +1605,13 @@ and Open buttons are hidden: the control bar's Open in new tab reaches the file,
 original (CKAN's download address for an upload, the other site's for a link) in the browser's
 own viewer, which may run a PDF's scripts as it would for any PDF. The copy the view reads is
 served with a CSP `sandbox`, so opened on its own it can't run anything.
+
+With `pdf_without_content_origin`, PDF.js runs on CKAN's domain instead, in the `interactive`
+sandbox (plus `allow-popups-to-escape-sandbox`, so a PDF's links open as ordinary tabs) and with
+no origin of its own; the CSP `sandbox` header on every viewer file keeps it that way even when
+it's opened on its own. Its page may load files only from CKAN's own addresses (`ckan.site_url`
+and `site_aliases`), named in its CSP from your config rather than from each request, so a proxy
+that rewrites the `Host` header doesn't break it.
 
 **Languages.** The viewer follows the CKAN page's language. It ships English and the ten
 languages CKAN portals most often use, from the [datashades.info](https://datashades.info)
@@ -1878,6 +1889,10 @@ themselves (CKAN's fixtures drop them when they reset the test database).
 `.github/workflows/test.yml` for how CI starts and seeds one. The CKAN under test needs all four
 plugins, `webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus repo_view_plus` (so the
 `[thumbnails,repos]` extras), and a content origin, as in `browser_tests/ci.ini`.
+`test_pdf_ckan_host.py` also needs a second CKAN on the same database with no content origin
+and `pdf_without_content_origin` on (`browser_tests/ci_no_origin.ini`, on port 5002 in CI), at
+`WVP_NO_ORIGIN_URL`; without it, those tests skip. Set its `CKAN_SITE_URL` too if your
+environment sets one, as it overrides the ini's `site_url`.
 
 #### Releasing a new version of ckanext-webpageviewplus
 
