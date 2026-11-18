@@ -385,8 +385,11 @@ def _served_here() -> None:
 def _headers(response: Response, policy: str) -> Response:
     if on_ckan_host():
         # WebKit matches 'self' against nothing in a document with no origin,
-        # refusing the viewer's own fetches (locale, the PDF): name the host.
-        policy = policy.replace("'self'", "'self' " + request.host_url.rstrip("/"))
+        # refusing the viewer's own fetches (locale, the PDF): name CKAN's
+        # hosts. From config, not the request's Host, which a proxy may
+        # rewrite, and these responses are cached for a year.
+        hosts = " ".join("http://{0}:* https://{0}:*".format(host) for host in settings.ckan_hosts())
+        policy = policy.replace("'self'", "'self' " + hosts)
         if not policy.startswith("sandbox"):
             policy += "; " + HOST_SANDBOX_CSP
         # The frame has no origin of its own, so its files are cross-origin
