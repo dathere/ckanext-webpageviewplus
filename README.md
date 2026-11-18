@@ -1891,8 +1891,8 @@ themselves (CKAN's fixtures drop them when they reset the test database).
 `.github/workflows/test.yml` for how CI starts and seeds one. The CKAN under test needs all four
 plugins, `webpage_view_plus webpage_view_plus_thumbnails pdf_view_plus repo_view_plus` (so the
 `[thumbnails,repos]` extras), and a content origin, as in `browser_tests/ci.ini`.
-`test_pdf_ckan_host.py` also needs a second CKAN on the same database and upload storage
-(`ckan.storage_path`; `ci_no_origin.ini` inherits both from `ci.ini`) with no content origin
+`test_pdf_ckan_host.py` also needs a second CKAN reading the same database and uploaded files
+(`ci_no_origin.ini` inherits both from `ci.ini`) with no content origin
 and `pdf_without_content_origin` on (`browser_tests/ci_no_origin.ini`, on port 5002 in CI), at
 `WVP_NO_ORIGIN_URL`; without it, those tests skip. Set its `CKAN_SITE_URL` too if your
 environment sets one, as it overrides the ini's `site_url`.
