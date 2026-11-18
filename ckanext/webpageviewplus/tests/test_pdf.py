@@ -11,7 +11,7 @@ from ckan.exceptions import CkanConfigurationException
 from ckan.plugins.toolkit import url_for
 from ckan.tests import factories, helpers
 
-from ckanext.webpageviewplus import content, frameability, pdf, plugin
+from ckanext.webpageviewplus import content, frameability, pdf, plugin, settings
 
 CONTENT = "http://127.0.0.1"
 SECRET = "k" * 40
@@ -521,8 +521,10 @@ class TestOnCkanHost:
         assert "allow-same-origin" not in csp
         # WebKit's 'self' matches nothing with no origin: CKAN's hosts are
         # named, from config, whatever Host a proxy passes on.
-        assert "connect-src 'self' http://test.ckan.net:* https://test.ckan.net:*;" in csp
-        assert "script-src 'self' http://test.ckan.net:* https://test.ckan.net:* " in csp
+        # CI's image sets CKAN_SITE_URL, which beats test.ini's site_url.
+        named = "'self' http://{0}:* https://{0}:*".format(settings.ckan_hosts()[0])
+        assert "connect-src " + named + ";" in csp
+        assert "script-src " + named + " " in csp
         proxied = app.get("/webpageviewplus/pdfjs/{}/web/viewer.html".format(pdf.PDFJS_VERSION),
                           headers={"Host": "ckan:5000"})
         assert proxied.headers["Content-Security-Policy"] == csp
