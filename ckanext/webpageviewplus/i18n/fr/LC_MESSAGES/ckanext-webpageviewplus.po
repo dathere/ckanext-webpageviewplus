@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-webpageviewplus 0.1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 21:22+0000\n"
+"POT-Creation-Date: 2026-11-18 18:15+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -262,27 +262,27 @@ msgstr "Cochez au moins une vue."
 msgid "Website (Plus)"
 msgstr "Site web (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:385
+#: ckanext/webpageviewplus/plugin.py:387
 msgid "Embedded web page"
 msgstr "Page web intégrée"
 
-#: ckanext/webpageviewplus/plugin.py:625
+#: ckanext/webpageviewplus/plugin.py:627
 msgid "PDF (Plus)"
 msgstr "PDF (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:638
+#: ckanext/webpageviewplus/plugin.py:640
 msgid "PDF"
 msgstr "PDF"
 
-#: ckanext/webpageviewplus/plugin.py:704
+#: ckanext/webpageviewplus/plugin.py:701
 msgid "PDF document"
 msgstr "Document PDF"
 
-#: ckanext/webpageviewplus/plugin.py:816
+#: ckanext/webpageviewplus/plugin.py:813
 msgid "Repository (Plus)"
 msgstr "Dépôt (Plus)"
 
-#: ckanext/webpageviewplus/plugin.py:827 ckanext/webpageviewplus/plugin.py:874
+#: ckanext/webpageviewplus/plugin.py:824 ckanext/webpageviewplus/plugin.py:871
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:6
 msgid "Repository"
 msgstr "Dépôt"
@@ -1473,7 +1473,9 @@ msgstr "Partager"
 msgid ""
 "This PDF can't be shown: the dataset is private, and this site shows PDFs"
 " only for public datasets."
-msgstr "Ce PDF ne peut pas être affiché : le jeu de données est privé, et ce site n’affiche les PDF que pour les jeux de données publics."
+msgstr ""
+"Ce PDF ne peut pas être affiché : le jeu de données est privé, et ce site"
+" n’affiche les PDF que pour les jeux de données publics."
 
 #: ckanext/webpageviewplus/templates/webpageviewplus/view.html:159
 msgid ""

@@ -7,9 +7,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: ckanext-webpageviewplus 0.13.0\n"
+"Project-Id-Version: ckanext-webpageviewplus 0.14.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-17 21:22+0000\n"
+"POT-Creation-Date: 2026-11-18 18:15+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -223,27 +223,27 @@ msgstr ""
 msgid "Website (Plus)"
 msgstr ""
 
-#: ckanext/webpageviewplus/plugin.py:385
+#: ckanext/webpageviewplus/plugin.py:387
 msgid "Embedded web page"
 msgstr ""
 
-#: ckanext/webpageviewplus/plugin.py:625
+#: ckanext/webpageviewplus/plugin.py:627
 msgid "PDF (Plus)"
 msgstr ""
 
-#: ckanext/webpageviewplus/plugin.py:638
+#: ckanext/webpageviewplus/plugin.py:640
 msgid "PDF"
 msgstr ""
 
-#: ckanext/webpageviewplus/plugin.py:704
+#: ckanext/webpageviewplus/plugin.py:701
 msgid "PDF document"
 msgstr ""
 
-#: ckanext/webpageviewplus/plugin.py:816
+#: ckanext/webpageviewplus/plugin.py:813
 msgid "Repository (Plus)"
 msgstr ""
 
-#: ckanext/webpageviewplus/plugin.py:827 ckanext/webpageviewplus/plugin.py:874
+#: ckanext/webpageviewplus/plugin.py:824 ckanext/webpageviewplus/plugin.py:871
 #: ckanext/webpageviewplus/templates/webpageviewplus/repo_page.html:6
 msgid "Repository"
 msgstr ""
